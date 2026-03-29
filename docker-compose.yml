@@ -27,7 +27,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
+      - ./.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/airdrop_works
       - REDIS_URL=redis://redis:6379/0
@@ -92,7 +92,7 @@ services:
     volumes:
       - ./backend:/app
     env_file:
-      - ./backend/.env
+      - ./.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/airdrop_works
       - REDIS_URL=redis://redis:6379/0
@@ -116,7 +116,7 @@ services:
     volumes:
       - ./backend:/app
     env_file:
-      - ./backend/.env
+      - ./.env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/airdrop_works
       - REDIS_URL=redis://redis:6379/0

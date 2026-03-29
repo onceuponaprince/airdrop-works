@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # ── Dependencies ─────────────────────────────────────────────────────────────
 node_modules/
 .venv/
@@ -8,13 +7,6 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-
-# ── Environment ───────────────────────────────────────────────────────────────
-.env
-.env.local
-.env.production
-.env.staging
-*.env
 
 # ── Build outputs ─────────────────────────────────────────────────────────────
 .next/
@@ -48,46 +40,15 @@ coverage.xml
 # ── Docker ────────────────────────────────────────────────────────────────────
 *.override.yml
 
+# ── Vercel ────────────────────────────────────────────────────────────────────
+.vercel
+
+# ── TypeScript ────────────────────────────────────────────────────────────────
+*.tsbuildinfo
+next-env.d.ts
+
 # ── Misc ──────────────────────────────────────────────────────────────────────
 *.pem
 *.key
 pnpm-lock.yaml
 uv.lock
-=======
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
-.env
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
->>>>>>> refs/remotes/origin/main

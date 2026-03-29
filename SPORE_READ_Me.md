@@ -88,7 +88,7 @@ Key files:
 
 ### Env template
 
-`backend/.env.example` has SPORE variables documented.
+`.env.example` has SPORE variables documented.
 
 ---
 
@@ -238,7 +238,7 @@ docker compose up postgres redis qdrant backend celery_worker celery_beat -d
 
 ### B) Ensure env values
 
-In `backend/.env` include:
+In the root `.env` include:
 
 - `SPORE_QDRANT_ENABLED=true`
 - `SPORE_QDRANT_URL=http://qdrant:6333` (docker network)
@@ -330,7 +330,7 @@ POST /api/v1/spore/briefs/generate/
 - `backend/apps/ai_core/workflow.py`
 - `backend/config/settings/base.py`
 - `backend/config/urls.py`
-- `backend/.env.example`
+- `.env.example`
 - `docker-compose.yml`
 - `.github/workflows/ci.yml`
 

@@ -30,10 +30,9 @@ AI(r)Drop is a gamified airdrop scoring platform that uses an AI Judge (powered 
 ## Quick Start
 
 ```bash
-# 1. Set up environment files
-cp backend/.env.example backend/.env
-cp frontend/.env.local.example frontend/.env.local
-# Edit both files with your API keys
+# 1. Set up environment file
+cp .env.example .env
+# Edit .env with your API keys
 
 # 2. Full-stack via Docker (recommended)
 docker compose up --build
@@ -113,13 +112,13 @@ python manage.py createsuperuser
 
 ## Environment Variables
 
-See `frontend/.env.local.example` and `backend/.env.example` for all variables. Minimum required:
+All variables live in a single root `.env` file. See `.env.example` for the full list. Minimum required:
 
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `SECRET_KEY` | backend/.env | Django secret key |
-| `ANTHROPIC_API_KEY` | frontend/.env.local | AI Judge scoring |
-| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` | frontend/.env.local | Wallet connect |
+| Variable | Purpose |
+|----------|---------|
+| `SECRET_KEY` | Django secret key |
+| `ANTHROPIC_API_KEY` | AI Judge scoring |
+| `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` | Wallet connect |
 
 ## License
 

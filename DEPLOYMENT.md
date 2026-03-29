@@ -43,17 +43,16 @@
 
 ## Local Development
 
-### 1. Clone and set up environment files
+### 1. Clone and set up environment file
 
 ```bash
-# Copy example env files
-cp backend/.env.example backend/.env
-cp frontend/.env.local.example frontend/.env.local
+# Copy example env file
+cp .env.example .env
 ```
 
-Edit both files and fill in your API keys. The minimum for a working demo:
-- `backend/.env`: `SECRET_KEY` (any random string for dev)
-- `frontend/.env.local`: `ANTHROPIC_API_KEY` (for AI Judge demo)
+Edit `.env` and fill in your API keys. The minimum for a working demo:
+- `SECRET_KEY` (any random string for dev)
+- `ANTHROPIC_API_KEY` (for AI Judge demo)
 
 ### 2. Start the backend
 
@@ -112,9 +111,9 @@ uv run celery -A config beat -l info
 The simplest way to run everything together:
 
 ```bash
-# Copy env files
-cp backend/.env.example backend/.env
-# Edit backend/.env with your API keys
+# Copy env file
+cp .env.example .env
+# Edit .env with your API keys
 
 # Build and start all services
 docker compose up --build
@@ -198,8 +197,8 @@ Best for: production. Vercel handles frontend CDN + edge, Django runs on a VPS.
 git clone <repo-url> /opt/airdrop-works
 cd /opt/airdrop-works
 
-cp backend/.env.example backend/.env
-# Edit backend/.env with production values
+cp .env.example .env
+# Edit .env with production values
 
 # Start backend services only
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d \
@@ -246,17 +245,10 @@ git clone <repo-url> /opt/airdrop-works
 cd /opt/airdrop-works
 
 # 2. Create production env file
-cp backend/.env.example backend/.env
-# Edit with production values
+cp .env.example .env
+# Edit .env with production values
 
-# 3. Create a root .env for frontend build args
-cat > .env <<'EOF'
-NEXT_PUBLIC_SITE_URL=https://airdrop.works
-NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=your-dynamic-env-id
-ANTHROPIC_API_KEY=sk-ant-...
-EOF
-
-# 4. Build and deploy with production overrides
+# 3. Build and deploy with production overrides
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 
 # 5. Run migrations and seed (first deploy only)
@@ -282,7 +274,7 @@ certbot --nginx -d api.airdrop.works
 
 ## Environment Variables Reference
 
-### Backend (`backend/.env`)
+### Backend (`.env` — backend section)
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -300,7 +292,7 @@ certbot --nginx -d api.airdrop.works
 | `SENTRY_DSN` | For monitoring | — | Sentry error tracking DSN |
 | `RESEND_API_KEY` | For email | — | Resend transactional email key |
 
-### Frontend (`frontend/.env.local` or Vercel dashboard)
+### Frontend (`.env` — frontend section, or Vercel dashboard)
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
@@ -448,11 +440,11 @@ docker compose exec backend uv run python manage.py migrate
 
 ### AI Judge demo returns mock data
 
-Set `ANTHROPIC_API_KEY` in `frontend/.env.local`. The judge API route falls back to mock responses when the key is missing.
+Set `ANTHROPIC_API_KEY` in the root `.env`. The judge API route falls back to mock responses when the key is missing.
 
 ### Wallet connect doesn't work
 
-Set `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` in `frontend/.env.local`. Get it from https://app.dynamic.xyz/ (free tier).
+Set `NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID` in the root `.env`. Get it from https://app.dynamic.xyz/ (free tier).
 
 Without it, the app shows a dev-mode warning banner and wallet functionality is disabled. The dev login bypass on `/login` works in development mode.
 
@@ -462,11 +454,11 @@ Ensure `output: "standalone"` is set in `next.config.ts`. This enables the produ
 
 ### Redis connection errors in Celery
 
-Inside Docker Compose, Redis is at `redis://redis:6379/0` (hostname `redis`), not `localhost`. Check `REDIS_URL` in your `.env`.
+Inside Docker Compose, Redis is at `redis://redis:6379/0` (hostname `redis`), not `localhost`. Check `REDIS_URL` in the root `.env`.
 
 ### CORS errors in browser
 
-Check that `CORS_ALLOWED_ORIGINS` in the backend `.env` matches your frontend URL exactly (including protocol and port).
+Check that `CORS_ALLOWED_ORIGINS` in the root `.env` matches your frontend URL exactly (including protocol and port).
 
 ---
 

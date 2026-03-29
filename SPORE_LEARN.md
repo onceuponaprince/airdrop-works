@@ -184,7 +184,7 @@ Requires:
 
 ## 5) Environment Switches to Know
 
-In `backend/.env`:
+In the root `.env`:
 
 - `SPORE_QDRANT_ENABLED` -> enable vector indexing/search
 - `SPORE_QDRANT_URL` -> Qdrant URL

@@ -64,7 +64,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </code>{" "}
             in{" "}
             <code className="rounded bg-black/35 px-1.5 py-0.5 font-mono text-xs">
-              .env.local
+              .env
             </code>{" "}
             (from the Dynamic dashboard) to enable wallet connect and remove SDK
             network errors.

@@ -188,10 +188,10 @@ You should see:
 
 ## Post-deployment: Connect to Django backend
 
-Add your deployed contract addresses to the Django backend `.env`:
+Add your deployed contract addresses to the root `.env`:
 
 ```bash
-# In backend/.env — add these after deployment
+# In .env — add these after deployment
 
 # Avalanche Fuji
 FUJI_INNOVATOR_TOKEN=0x...

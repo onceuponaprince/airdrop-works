@@ -10,6 +10,9 @@
 
 ### For Solo Developer (Prince)
 ```bash
+# Set up env (once)
+cp .env.example .env   # edit with your keys
+
 # Frontend
 cd frontend && pnpm install && pnpm dev
 # → http://localhost:3000
@@ -160,7 +163,6 @@ frontend/
 ├── next.config.ts
 ├── tailwind.config.ts
 ├── tsconfig.json
-├── .env.local.example
 └── package.json
 ```
 
@@ -445,39 +447,38 @@ All variants defined in `src/lib/animations.ts`. Key presets: `pageEnter`, `stag
 
 ## Environment Variables
 
-### Frontend (.env.local)
+All services share a single root `.env` file. See `.env.example` for the full list.
+
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=
-NEXT_PUBLIC_GA_ID=
-NEXT_PUBLIC_SENTRY_DSN=
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-NEXT_PUBLIC_TWITTER_CALLBACK_URL=http://localhost:3000/api/auth/twitter/callback
-ANTHROPIC_API_KEY=                    # Server-side only (AI Judge proxy)
+cp .env.example .env
+# Edit .env with your values
 ```
 
-### Backend (.env)
+Key variables (grouped by service):
+
 ```bash
+# ── Shared ──
+ANTHROPIC_API_KEY=                   # AI Judge (backend + frontend server-side)
+TWITTER_BEARER_TOKEN=                # Twitter API v2
+RESEND_API_KEY=                      # Transactional email
+DYNAMIC_API_KEY=                     # Wallet auth (backend)
+NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID=  # Wallet connect (frontend)
+
+# ── Backend ──
 SECRET_KEY=
-DJANGO_SETTINGS_MODULE=config.settings.development
-ALLOWED_HOSTS=localhost,127.0.0.1
-DATABASE_URL=postgres://postgres:postgres@db:5432/airdrop_works
-REDIS_URL=redis://redis:6379/0
-CORS_ALLOWED_ORIGINS=http://localhost:3000
-ANTHROPIC_API_KEY=
-TWITTER_CLIENT_ID=
-TWITTER_CLIENT_SECRET=
-DYNAMIC_API_KEY=
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-RESEND_API_KEY=
-EMAIL_FROM_NAME=AI(r)Drop
-EMAIL_FROM_ADDRESS=hello@airdrop.works
-SENTRY_DSN=
-GRAPH_NODE_URL=https://api.thegraph.com/subgraphs/name/your-subgraph
-SUBGRAPH_DEPLOY_KEY=
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/airdrop_works
+REDIS_URL=redis://localhost:6379/0
+
+# ── Frontend ──
+BACKEND_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# ── Contracts ──
+DEPLOYER_PRIVATE_KEY=0xYOUR_KEY
+ETHERSCAN_API_KEY=
+```
 
 ---
 

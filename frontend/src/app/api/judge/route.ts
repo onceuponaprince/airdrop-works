@@ -126,7 +126,7 @@ function createScoreStream(result: JudgeResult) {
 
 function anthropicErrorResponse(err: unknown): NextResponse | null {
   if (err instanceof Anthropic.AuthenticationError) {
-    console.error("[AI Judge] Invalid API key — update ANTHROPIC_API_KEY in .env.local")
+    console.error("[AI Judge] Invalid API key — update ANTHROPIC_API_KEY in root .env")
     return NextResponse.json({ error: "AI Judge configuration error." }, { status: 500 })
   }
   if (err instanceof Anthropic.RateLimitError) {

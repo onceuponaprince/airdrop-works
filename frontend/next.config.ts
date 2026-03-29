@@ -1,4 +1,8 @@
 import type { NextConfig } from "next"
+import { config as dotenvConfig } from "dotenv"
+import { resolve } from "path"
+
+dotenvConfig({ path: resolve(process.cwd(), "..", ".env") })
 
 /**
  * Proxy /api/v1/* to the Django backend so the browser never calls
