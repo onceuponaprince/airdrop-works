@@ -1,0 +1,12 @@
+{
+  "network": "fuji",
+  "chainId": "43113",
+  "deployer": "0xC81DFbBF585Ca73ba7e59267cCc1fcE8f689Ce12",
+  "timestamp": "2026-03-27T03:15:43.920Z",
+  "contracts": {
+    "InnovatorToken": "0x321C565962d52f1DdAcFb0486B61cE9B2613F5DE",
+    "ProfileNFT": "0xdCfc12B0C68833c1A33c03e39D4A81402a6e17bC",
+    "CampaignEscrow": "0xDE3a8301e78A0d730e4d139be2024F4451918A98",
+    "RewardDistributor": "0x2105Ec890751b165A80cb207EBE9e12053cD34a6"
+  }
+}

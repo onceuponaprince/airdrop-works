@@ -1,0 +1,25 @@
+{
+  "name": "airdrop-works-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "size": "hardhat size-contracts",
+    "deploy:fuji": "hardhat run scripts/deploy.ts --network fuji",
+    "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
+    "deploy:local": "hardhat run scripts/deploy.ts --network hardhat",
+    "verify:fuji": "hardhat run scripts/verify.ts --network fuji",
+    "verify:baseSepolia": "hardhat run scripts/verify.ts --network baseSepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0",
+    "hardhat-contract-sizer": "^2.10.0",
+    "typescript": "^5.5.0",
+    "ts-node": "^10.9.0"
+  }
+}
