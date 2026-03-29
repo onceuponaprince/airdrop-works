@@ -2,8 +2,15 @@
 .env
 .env.local
 .env.production
-*.env
+**/.env
+**/.env.local
+**/.env.production
+
+# Allow example/template env files
 !.env.example
+!**/.env.example
+!**/.env.local.example
+!**/.env.production
 
 # ── Python ────────────────────────────────────────────────────────────────────
 *.pyc
