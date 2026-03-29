@@ -12,7 +12,7 @@ services:
         NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
         NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY:-}
     environment:
-      - BACKEND_URL=http://backend:8000
+      - BACKEND_URL=${BACKEND_URL:-https://unstemmed-martine-renowned.ngrok-free.dev}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN:-}
       - RESEND_API_KEY=${RESEND_API_KEY:-}
