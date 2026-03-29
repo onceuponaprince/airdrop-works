@@ -94,6 +94,7 @@ class Command(BaseCommand):
             user, created = User.objects.get_or_create(
                 wallet_address=user_data["wallet"],
                 defaults={
+                    "username": user_data["name"].lower(),
                     "email": user_data["email"],
                     "display_name": user_data["name"],
                 },
@@ -117,9 +118,12 @@ class Command(BaseCommand):
                 tweet = random.choice(SAMPLE_TWEETS)
                 score = random.randint(30, 95)
                 farming = random.choice(["genuine", "genuine", "genuine", "ambiguous"])
+                platform = random.choice(["twitter", "discord", "telegram"])
+                content_id = f"demo-{user_data['wallet'][:8]}-{i}-{random.randint(100000, 999999)}"
                 Contribution.objects.create(
                     user=user,
-                    platform=random.choice(["twitter", "discord", "telegram"]),
+                    platform=platform,
+                    platform_content_id=content_id,
                     content_text=tweet,
                     content_url=f"https://twitter.com/{user_data['name']}/status/{random.randint(1700000000000000000, 1900000000000000000)}",
                     teaching_value=random.randint(20, 100),

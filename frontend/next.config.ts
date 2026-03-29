@@ -29,17 +29,26 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  skipTrailingSlashRedirect: true,
   async rewrites() {
-    return [
-      {
-        source: "/api/v1/:path*",
-        destination: `${BACKEND_URL}/api/v1/:path*`,
-      },
-      {
-        source: "/health",
-        destination: `${BACKEND_URL}/health/`,
-      },
-    ]
+    return {
+      beforeFiles: [
+        {
+          source: "/api/:path(.*)",
+          destination: `${BACKEND_URL}/api/:path`,
+        },
+        {
+          source: "/health/:path(.*)",
+          destination: `${BACKEND_URL}/health/:path`,
+        },
+        {
+          source: "/health",
+          destination: `${BACKEND_URL}/health/`,
+        },
+      ],
+      afterFiles: [],
+      fallback: [],
+    }
   },
 }
 
