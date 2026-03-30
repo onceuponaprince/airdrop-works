@@ -22,12 +22,26 @@ ALLOWED_HOSTS = config(
     default="api.airdrop.works",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
+_extra_hosts = config(
+    "EXTRA_ALLOWED_HOSTS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
+)
+if _extra_hosts:
+    ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS + _extra_hosts))
 
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
     default="https://airdrop.works",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
+_cors_extra = config(
+    "EXTRA_CORS_ORIGINS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
+)
+if _cors_extra:
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys(CORS_ALLOWED_ORIGINS + _cors_extra))
 CORS_ALLOW_CREDENTIALS = True
 
 # ── Security ─────────────────────────────────────────────────────────────────

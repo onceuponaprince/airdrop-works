@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk"
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const MAX_TWEETS = 15
+const MAX_TWEETS = 25
 const TWITTER_API_BASE = "https://api.twitter.com/2"
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────

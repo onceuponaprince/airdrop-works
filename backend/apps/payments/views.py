@@ -12,14 +12,20 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.payments.models import Subscription
-from apps.payments.serializers import CheckoutSessionSerializer, PortalSessionSerializer
+from apps.payments.models import CREDIT_PACK_CHOICES, Subscription, UserSubscription
+from apps.payments.serializers import CheckoutSessionSerializer, PortalSessionSerializer, UserCheckoutSerializer
 from apps.payments.services import (
     configure_stripe,
     ensure_stripe_customer,
+    ensure_user_stripe_customer,
+    get_credit_pack_price_id,
+    get_or_create_user_sub,
     get_price_id_for_plan,
+    get_user_plan_price_id,
     sync_subscription_from_checkout_session,
     sync_subscription_from_subscription_payload,
+    sync_user_credit_pack_from_checkout,
+    sync_user_subscription_from_webhook,
     upsert_subscription,
 )
 from apps.spore.security.tenancy import has_tenant_admin_role
@@ -171,13 +177,18 @@ class StripeWebhookView(APIView):
 
         if event_type == "checkout.session.completed":
             sync_subscription_from_checkout_session(obj, event_id=event_id)
+            sync_user_credit_pack_from_checkout(obj)
         elif event_type in {"customer.subscription.created", "customer.subscription.updated"}:
             sync_subscription_from_subscription_payload(obj, event_id=event_id)
+            sync_user_subscription_from_webhook(obj, event_id=event_id)
         elif event_type == "customer.subscription.deleted":
             sync_subscription_from_subscription_payload(
                 obj,
                 event_id=event_id,
                 explicit_status="cancelled",
+            )
+            sync_user_subscription_from_webhook(
+                {**obj, "status": "cancelled"}, event_id=event_id
             )
         elif event_type == "invoice.payment_failed":
             sync_subscription_from_subscription_payload(
@@ -193,3 +204,97 @@ class StripeWebhookView(APIView):
             )
 
         return Response({"received": True}, status=status.HTTP_200_OK)
+
+
+# ── Per-user subscription + credit endpoints ─────────────────────────────────
+
+
+class UserSubscriptionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        sub = get_or_create_user_sub(request.user)
+        return Response({
+            "plan": sub.plan,
+            "status": sub.status,
+            "monthly_credits": sub.monthly_credits,
+            "credits_remaining": sub.credits_remaining,
+            "credits_reset_at": sub.credits_reset_at,
+            "current_period_end": sub.current_period_end,
+            "cancel_at_period_end": sub.cancel_at_period_end,
+            "portal_available": bool(sub.stripe_customer_id),
+        })
+
+
+class UserCheckoutView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        assert_stripe_configured()
+        serializer = UserCheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        sub = get_or_create_user_sub(request.user)
+        customer_id = ensure_user_stripe_customer(sub, request.user)
+
+        if data.get("plan"):
+            price_id = get_user_plan_price_id(data["plan"])
+            if not price_id:
+                raise ValidationError("No Stripe price configured for this plan")
+            session = stripe.checkout.Session.create(
+                mode="subscription",
+                customer=customer_id,
+                line_items=[{"price": price_id, "quantity": 1}],
+                success_url=settings.STRIPE_SUCCESS_URL,
+                cancel_url=settings.STRIPE_CANCEL_URL,
+                metadata={
+                    "user_id": str(request.user.id),
+                    "type": "user_subscription",
+                    "plan": data["plan"],
+                },
+                subscription_data={
+                    "metadata": {
+                        "user_id": str(request.user.id),
+                        "type": "user_subscription",
+                        "plan": data["plan"],
+                    }
+                },
+            )
+        else:
+            pack_key = data["credit_pack"]
+            price_id = get_credit_pack_price_id(pack_key)
+            if not price_id:
+                raise ValidationError("No Stripe price configured for this credit pack")
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                customer=customer_id,
+                line_items=[{"price": price_id, "quantity": 1}],
+                success_url=settings.STRIPE_SUCCESS_URL,
+                cancel_url=settings.STRIPE_CANCEL_URL,
+                metadata={
+                    "user_id": str(request.user.id),
+                    "type": "user_credit_pack",
+                    "credit_pack": pack_key,
+                },
+            )
+
+        return Response(
+            {"checkout_url": session["url"], "session_id": session["id"]},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class UserPortalView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        assert_stripe_configured()
+        sub = get_or_create_user_sub(request.user)
+        if not sub.stripe_customer_id:
+            raise ValidationError("No Stripe customer found")
+        session = stripe.billing_portal.Session.create(
+            customer=sub.stripe_customer_id,
+            return_url=settings.STRIPE_SUCCESS_URL,
+        )
+        return Response({"portal_url": session["url"]}, status=status.HTTP_200_OK)

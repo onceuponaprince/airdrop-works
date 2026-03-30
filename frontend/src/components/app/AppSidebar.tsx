@@ -17,6 +17,7 @@ const NAVIGATION: {
   icon?: string;
 }[] = [
   { label: 'Dashboard', href: '/dashboard' },
+  { label: 'AI Judge', href: '/judge' },
   { label: 'Quests', href: '/quests' },
   { label: 'Leaderboard', href: '/leaderboard' },
   { label: 'Referrals', href: '/referrals' },

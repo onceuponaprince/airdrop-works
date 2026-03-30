@@ -15,6 +15,8 @@ RUN corepack enable && corepack prepare pnpm@latest --activate
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Next may omit `public/` from the repo; runtime stage COPY requires this path to exist.
+RUN mkdir -p public
 
 # Build-time env vars baked into the Next.js bundle.
 # BACKEND_URL is server-side only (used by rewrites proxy at runtime).

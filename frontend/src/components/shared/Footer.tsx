@@ -5,7 +5,9 @@ const FOOTER_LINKS = {
   Product: [
     { label: "Features",      href: "/#features" },
     { label: "AI Judge Demo", href: "/#ai-judge-demo" },
+    { label: "Pricing",       href: "/pricing" },
     { label: "Roadmap",       href: "/#roadmap" },
+    { label: "Donate",        href: "/donate" },
     { label: "Docs",          href: "#",            soon: true },
   ],
   Community: [

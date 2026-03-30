@@ -3,13 +3,27 @@ from .base import *  # noqa
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0"]
+# Base hosts + optional extras (ngrok, tunnel URLs, preview deploys).
+# Set EXTRA_ALLOWED_HOSTS=abc123.ngrok-free.app,your-app.vercel.app
+_base_hosts = ["localhost", "127.0.0.1", "0.0.0.0"]
+_extra = config(
+    "EXTRA_ALLOWED_HOSTS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
+)
+ALLOWED_HOSTS = list(dict.fromkeys(_base_hosts + _extra))
 
-# CORS — allow Next.js dev server
-CORS_ALLOWED_ORIGINS = [
+# CORS — dev + optional preview / production frontends
+_cors_base = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
+_cors_extra = config(
+    "EXTRA_CORS_ORIGINS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
+)
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_cors_base + _cors_extra))
 CORS_ALLOW_CREDENTIALS = True
 
 # Looser throttling in dev

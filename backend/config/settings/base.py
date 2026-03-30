@@ -2,11 +2,41 @@
 Base Django settings for airdrop-works.
 Shared across local, production, and test environments.
 """
+import os
 from pathlib import Path
 
-from decouple import config
-
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+
+def _load_backend_env_file(path: Path) -> None:
+    """Apply KEY=VALUE lines into os.environ only if the key is unset (orchestrator/env_file wins)."""
+    if not path.is_file():
+        return
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        if not key:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
+_settings_mod = os.environ.get("DJANGO_SETTINGS_MODULE", "")
+if os.environ.get("DJANGO_ENV") == "production" or _settings_mod.endswith(
+    ".production"
+):
+    _load_backend_env_file(BASE_DIR / ".env.production")
+
+from decouple import config
 
 SECRET_KEY = config("SECRET_KEY", default="insecure-dev-key-change-in-production")
 
@@ -269,6 +299,10 @@ STRIPE_WEBHOOK_SECRET = config("STRIPE_WEBHOOK_SECRET", default="")
 STRIPE_PRICE_STARTER = config("STRIPE_PRICE_STARTER", default="")
 STRIPE_PRICE_GROWTH = config("STRIPE_PRICE_GROWTH", default="")
 STRIPE_PRICE_ENTERPRISE = config("STRIPE_PRICE_ENTERPRISE", default="")
+STRIPE_PRICE_USER_PRO = config("STRIPE_PRICE_USER_PRO", default="")
+STRIPE_PRICE_USER_TEAM = config("STRIPE_PRICE_USER_TEAM", default="")
+STRIPE_PRICE_CREDIT_50 = config("STRIPE_PRICE_CREDIT_50", default="")
+STRIPE_PRICE_CREDIT_200 = config("STRIPE_PRICE_CREDIT_200", default="")
 STRIPE_SUCCESS_URL = config("STRIPE_SUCCESS_URL", default="http://localhost:3000/settings?billing=success")
 STRIPE_CANCEL_URL = config("STRIPE_CANCEL_URL", default="http://localhost:3000/settings?billing=cancelled")
 

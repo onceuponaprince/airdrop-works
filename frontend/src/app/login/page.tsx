@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useOptionalDynamicContext } from '@/hooks/useOptionalDynamicContext';
@@ -56,7 +58,14 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen bg-[--background] text-[--foreground] px-4 py-24">
-      <div className="max-w-md mx-auto rounded-lg border border-[--border] bg-[--card] p-6 space-y-6">
+      <div className="max-w-md mx-auto rounded-lg border border-[--border] bg-[--card] p-6 space-y-6 relative">
+        <Link
+          href="/"
+          className="absolute top-4 right-4 p-2 rounded hover:bg-[--secondary] text-[--muted-foreground] hover:text-[--foreground] transition-colors"
+          aria-label="Back to home"
+        >
+          <ArrowLeft size={18} />
+        </Link>
         <div className="space-y-2">
           <h1 className="font-display text-2xl text-[--primary]">Login</h1>
           <p className="text-sm text-[--muted-foreground]">

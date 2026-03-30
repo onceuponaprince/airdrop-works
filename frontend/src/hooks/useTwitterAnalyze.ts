@@ -1,155 +1,159 @@
-"use client"
+'use client';
 
-import { useState, useCallback } from "react"
-import type { TweetScore, AccountAnalysis } from "@/types/api"
-import { useNotificationStore } from "@/stores/useNotificationStore"
+import { useState, useCallback } from 'react';
+import type { TweetScore, AccountAnalysis } from '@/types/api';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 
-interface AnalyzeState {
-  status: "idle" | "fetching" | "scoring" | "complete" | "error"
-  analysis: AccountAnalysis | null
-  tweetScores: TweetScore[]
-  tweetsFetched: number
-  username: string
-  displayName: string
-  avatarUrl: string | undefined
-  error: string | null
-  statusMessage: string | null
-}
-
-const INITIAL_STATE: AnalyzeState = {
-  status: "idle",
-  analysis: null,
-  tweetScores: [],
-  tweetsFetched: 0,
-  username: "",
-  displayName: "",
-  avatarUrl: undefined,
-  error: null,
-  statusMessage: null,
+interface TwitterAnalyzeState {
+  status: 'idle' | 'fetching' | 'scoring' | 'complete' | 'error';
+  tweets: TweetScore[];
+  accountResult: AccountAnalysis | null;
+  tweetCount: number;
+  username: string;
+  displayName: string;
+  avatarUrl: string;
+  error: string | null;
+  creditsRemaining: number | null;
 }
 
 export function useTwitterAnalyze() {
-  const notify = useNotificationStore((s) => s.push)
-  const [state, setState] = useState<AnalyzeState>(INITIAL_STATE)
+  const notify = useNotificationStore((s) => s.push);
+  const [state, setState] = useState<TwitterAnalyzeState>({
+    status: 'idle',
+    tweets: [],
+    accountResult: null,
+    tweetCount: 0,
+    username: '',
+    displayName: '',
+    avatarUrl: '',
+    error: null,
+    creditsRemaining: null,
+  });
 
   const analyze = useCallback(async (username: string) => {
-    setState({
-      ...INITIAL_STATE,
-      status: "fetching",
-      username,
-      statusMessage: `Looking up @${username}…`,
-    })
+    const handle = username.replace(/^@/, '').trim();
+    setState((s) => ({
+      ...s,
+      status: 'fetching',
+      tweets: [],
+      accountResult: null,
+      error: null,
+      username: handle,
+      creditsRemaining: null,
+    }));
 
     try {
-      const res = await fetch("/api/twitter-analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username }),
-      })
+      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      const res = await fetch('/api/v1/judge/score-account/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ username: handle }),
+      });
 
       if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `Analysis failed (${res.status})`)
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Analysis failed (${res.status})`);
       }
 
-      const reader = res.body?.getReader()
-      if (!reader) throw new Error("Stream unavailable")
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('Streaming not available');
 
-      const decoder = new TextDecoder()
-      let buffer = ""
-      const collectedScores: TweetScore[] = []
+      const decoder = new TextDecoder();
+      let buffer = '';
 
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
 
-        let newLineIdx = buffer.indexOf("\n")
-        while (newLineIdx !== -1) {
-          const line = buffer.slice(0, newLineIdx).trim()
-          buffer = buffer.slice(newLineIdx + 1)
+        let nlIdx = buffer.indexOf('\n');
+        while (nlIdx !== -1) {
+          const line = buffer.slice(0, nlIdx).trim();
+          buffer = buffer.slice(nlIdx + 1);
 
           if (line) {
-            const msg = JSON.parse(line)
+            try {
+              const msg = JSON.parse(line);
 
-            switch (msg.type) {
-              case "tweets_fetched":
-                setState((prev) => ({
-                  ...prev,
-                  status: "fetching",
-                  tweetsFetched: msg.count,
+              if (msg.type === 'tweets_fetched') {
+                setState((s) => ({
+                  ...s,
+                  status: 'scoring',
+                  tweetCount: msg.count,
                   username: msg.username,
                   displayName: msg.displayName || msg.username,
-                  avatarUrl: msg.avatarUrl,
-                  statusMessage: `Found ${msg.count} tweets from @${msg.username}`,
-                }))
-                break
-
-              case "status":
-                setState((prev) => ({
-                  ...prev,
-                  status: msg.phase === "scoring" ? "scoring" : prev.status,
-                  statusMessage: msg.message || null,
-                }))
-                break
-
-              case "tweet_score": {
-                const score: TweetScore = {
-                  index: msg.index,
-                  tweetId: msg.tweetId,
-                  text: msg.text,
-                  url: msg.url,
-                  teachingValue: msg.score.teachingValue,
-                  originality: msg.score.originality,
-                  communityImpact: msg.score.communityImpact,
-                  compositeScore: msg.score.compositeScore,
-                  farmingFlag: msg.score.farmingFlag,
-                  oneLiner: msg.score.oneLiner,
-                }
-                collectedScores.push(score)
-                setState((prev) => ({
-                  ...prev,
-                  tweetScores: [...collectedScores],
-                }))
-                break
+                  avatarUrl: msg.avatarUrl || '',
+                }));
               }
 
-              case "final":
-                setState((prev) => ({
-                  ...prev,
-                  status: "complete",
-                  analysis: msg.analysis,
-                  tweetScores: msg.analysis.tweets,
-                  statusMessage: null,
-                }))
-                notify({
-                  type: "success",
-                  title: "Account analysis complete",
-                  message: `@${msg.analysis.username}: ${msg.analysis.aggregate.overallScore}/100`,
-                })
-                break
+              if (msg.type === 'tweet_score') {
+                const score = msg.score || msg;
+                const ts: TweetScore = {
+                  index: score.index,
+                  tweetId: score.tweetId,
+                  text: score.text,
+                  url: score.url,
+                  teachingValue: score.teachingValue,
+                  originality: score.originality,
+                  communityImpact: score.communityImpact,
+                  compositeScore: score.compositeScore,
+                  farmingFlag: score.farmingFlag,
+                  oneLiner: score.oneLiner,
+                };
+                setState((s) => ({
+                  ...s,
+                  tweets: [...s.tweets, ts],
+                }));
+              }
 
-              case "error":
-                throw new Error(msg.message)
+              if (msg.type === 'final') {
+                setState((s) => ({
+                  ...s,
+                  status: 'complete',
+                  accountResult: msg.analysis,
+                  creditsRemaining: msg.credits_remaining ?? null,
+                }));
+                notify({
+                  type: 'success',
+                  title: 'Account analysis complete',
+                  message: `@${msg.analysis.username}: ${msg.analysis.aggregate.overallScore}/100`,
+                });
+              }
+
+              if (msg.type === 'error') {
+                throw new Error(msg.message);
+              }
+            } catch (parseErr) {
+              if (parseErr instanceof SyntaxError) continue;
+              throw parseErr;
             }
           }
-
-          newLineIdx = buffer.indexOf("\n")
+          nlIdx = buffer.indexOf('\n');
         }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Analysis failed. Please try again."
-      setState((prev) => ({
-        ...prev,
-        status: "error",
-        error: message,
-        statusMessage: null,
-      }))
-      notify({ type: "error", title: "Account analysis failed", message })
+      const message = err instanceof Error ? err.message : 'Analysis failed';
+      setState((s) => ({ ...s, status: 'error', error: message }));
+      notify({ type: 'error', title: 'Account analysis failed', message });
     }
-  }, [notify])
+  }, [notify]);
 
-  const reset = useCallback(() => setState(INITIAL_STATE), [])
+  const reset = useCallback(() => {
+    setState({
+      status: 'idle',
+      tweets: [],
+      accountResult: null,
+      tweetCount: 0,
+      username: '',
+      displayName: '',
+      avatarUrl: '',
+      error: null,
+      creditsRemaining: null,
+    });
+  }, []);
 
-  return { ...state, analyze, reset }
+  return { ...state, analyze, reset };
 }

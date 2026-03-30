@@ -7,6 +7,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core"
 import { EthereumWalletConnectors } from "@dynamic-labs/ethereum"
+import { SolanaWalletConnectors } from "@dynamic-labs/solana"
 import { WagmiProvider, createConfig, http } from "wagmi"
 import { avalanche, base } from "wagmi/chains"
 import { useState } from "react"
@@ -78,7 +79,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <DynamicContextProvider
       settings={{
         environmentId: dynamicEnvironmentId,
-        walletConnectors: [EthereumWalletConnectors],
+        walletConnectors: [EthereumWalletConnectors, SolanaWalletConnectors],
       }}
     >
       {inner}

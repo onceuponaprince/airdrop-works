@@ -85,7 +85,14 @@ class AICoreScoringService:
             logger.error("[AICore] Anthropic API error %s: %s", exc.status_code, exc.message)
             raise ValueError("AI core unavailable") from exc
 
-        response_text = message.content[0].text if message.content else ""
+        response_text = message.content[0].text.strip() if message.content else ""
+
+        # Claude may wrap JSON in ```json ... ``` fences — strip them.
+        if response_text.startswith("```"):
+            first_nl = response_text.index("\n") if "\n" in response_text else 3
+            response_text = response_text[first_nl + 1 :]
+            if response_text.endswith("```"):
+                response_text = response_text[: -3].strip()
 
         try:
             data = json.loads(response_text)

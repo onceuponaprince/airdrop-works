@@ -5,8 +5,16 @@ from typing import Any
 
 import stripe
 from django.conf import settings
+from django.db import transaction
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
-from apps.payments.models import Subscription
+from apps.payments.models import (
+    CREDIT_PACK_CHOICES,
+    USER_PLAN_CREDITS,
+    CreditTransaction,
+    Subscription,
+    UserSubscription,
+)
 from apps.spore.models import Tenant
 
 PLAN_QUOTAS: dict[str, dict[str, int]] = {
@@ -231,3 +239,132 @@ def sync_subscription_from_subscription_payload(
         cancel_at_period_end=bool(payload.get("cancel_at_period_end", False)),
         metadata=payload.get("metadata") or {},
     )
+
+
+# ── Per-user credit system ────────────────────────────────────────────────────
+
+
+def get_or_create_user_sub(user) -> UserSubscription:
+    sub, _ = UserSubscription.objects.get_or_create(user=user)
+    return sub
+
+
+def deduct_credit(user, reason: str, amount: int = 1) -> int:
+    """Atomically deduct credits. Returns remaining balance or raises."""
+    with transaction.atomic():
+        sub = UserSubscription.objects.select_for_update().get(user=user)
+        if sub.credits_remaining < amount:
+            raise DRFValidationError(
+                {"detail": "Insufficient credits", "credits_remaining": sub.credits_remaining}
+            )
+        sub.credits_remaining -= amount
+        sub.save(update_fields=["credits_remaining", "updated_at"])
+        CreditTransaction.objects.create(
+            user=user,
+            amount=-amount,
+            reason=reason,
+            balance_after=sub.credits_remaining,
+        )
+    return sub.credits_remaining
+
+
+def add_credits(user, amount: int, reason: str) -> int:
+    with transaction.atomic():
+        sub = UserSubscription.objects.select_for_update().get(user=user)
+        sub.credits_remaining += amount
+        sub.save(update_fields=["credits_remaining", "updated_at"])
+        CreditTransaction.objects.create(
+            user=user,
+            amount=amount,
+            reason=reason,
+            balance_after=sub.credits_remaining,
+        )
+    return sub.credits_remaining
+
+
+def get_user_plan_price_id(plan: str) -> str:
+    return {
+        "pro": settings.STRIPE_PRICE_USER_PRO,
+        "team": settings.STRIPE_PRICE_USER_TEAM,
+    }.get(plan, "")
+
+
+def get_credit_pack_price_id(pack: str) -> str:
+    return {
+        "50": settings.STRIPE_PRICE_CREDIT_50,
+        "200": settings.STRIPE_PRICE_CREDIT_200,
+    }.get(pack, "")
+
+
+def ensure_user_stripe_customer(sub: UserSubscription, user) -> str:
+    configure_stripe()
+    if sub.stripe_customer_id:
+        return sub.stripe_customer_id
+    customer = stripe.Customer.create(
+        email=getattr(user, "email", "") or None,
+        metadata={"user_id": str(user.id), "type": "user_subscription"},
+    )
+    sub.stripe_customer_id = customer["id"]
+    sub.save(update_fields=["stripe_customer_id", "updated_at"])
+    return sub.stripe_customer_id
+
+
+def sync_user_subscription_from_webhook(payload: dict[str, Any], event_id: str = "") -> UserSubscription | None:
+    """Handle Stripe webhook events for per-user subscriptions."""
+    metadata = payload.get("metadata") or {}
+    if metadata.get("type") != "user_subscription":
+        return None
+    user_id = metadata.get("user_id")
+    if not user_id:
+        return None
+
+    try:
+        sub = UserSubscription.objects.get(user_id=user_id)
+    except UserSubscription.DoesNotExist:
+        return None
+
+    items = payload.get("items", {}).get("data", [])
+    first_item = items[0] if items else {}
+    price_id = str(first_item.get("price", {}).get("id", ""))
+
+    plan_map = {
+        settings.STRIPE_PRICE_USER_PRO: "pro",
+        settings.STRIPE_PRICE_USER_TEAM: "team",
+    }
+    plan = plan_map.get(price_id, sub.plan)
+    sub_status = str(payload.get("status", sub.status))
+
+    sub.plan = plan
+    sub.status = sub_status
+    sub.stripe_subscription_id = str(payload.get("id", sub.stripe_subscription_id))
+    sub.stripe_price_id = price_id or sub.stripe_price_id
+    sub.monthly_credits = USER_PLAN_CREDITS.get(plan, 10)
+    sub.current_period_end = timestamp_to_datetime(payload.get("current_period_end"))
+    sub.cancel_at_period_end = bool(payload.get("cancel_at_period_end", False))
+
+    if sub_status in {"active", "trialing"}:
+        sub.credits_remaining = sub.monthly_credits
+    sub.save()
+    return sub
+
+
+def sync_user_credit_pack_from_checkout(session: dict[str, Any]) -> UserSubscription | None:
+    """Handle completed checkout for credit packs."""
+    metadata = session.get("metadata") or {}
+    if metadata.get("type") != "user_credit_pack":
+        return None
+    user_id = metadata.get("user_id")
+    pack_key = metadata.get("credit_pack")
+    if not user_id or pack_key not in CREDIT_PACK_CHOICES:
+        return None
+
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return None
+
+    pack = CREDIT_PACK_CHOICES[pack_key]
+    add_credits(user, pack["credits"], f"credit_pack_{pack_key}")
+    return UserSubscription.objects.get(user=user)
