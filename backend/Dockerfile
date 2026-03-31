@@ -30,6 +30,7 @@ ENV PATH="/app/.venv/bin:/usr/local/bin:$PATH"
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DJANGO_ENV=production
+ENV DJANGO_SETTINGS_MODULE=config.settings.production
 
 EXPOSE 8000
 

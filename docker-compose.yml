@@ -32,6 +32,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/airdrop_works
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_ENV=local
+      - DJANGO_SETTINGS_MODULE=config.settings.local
       - SPORE_NEO4J_ENABLED=${SPORE_NEO4J_ENABLED:-false}
       - SPORE_NEO4J_URI=${SPORE_NEO4J_URI:-bolt://neo4j:7687}
       - SPORE_NEO4J_USER=${SPORE_NEO4J_USER:-neo4j}
@@ -97,6 +98,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/airdrop_works
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_ENV=local
+      - DJANGO_SETTINGS_MODULE=config.settings.local
       - SPORE_NEO4J_ENABLED=${SPORE_NEO4J_ENABLED:-false}
       - SPORE_NEO4J_URI=${SPORE_NEO4J_URI:-bolt://neo4j:7687}
       - SPORE_NEO4J_USER=${SPORE_NEO4J_USER:-neo4j}
@@ -121,6 +123,7 @@ services:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/airdrop_works
       - REDIS_URL=redis://redis:6379/0
       - DJANGO_ENV=local
+      - DJANGO_SETTINGS_MODULE=config.settings.local
     depends_on:
       db:
         condition: service_healthy
