@@ -4,7 +4,6 @@
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install",
   "outputDirectory": ".next",
-  "rootDirectory": "frontend",
   "git": {
     "deploymentEnabled": {
       "main": true,
