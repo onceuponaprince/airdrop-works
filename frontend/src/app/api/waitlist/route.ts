@@ -27,9 +27,36 @@ function checkRateLimit(ip: string): boolean {
   return true
 }
 
+// ── Cloudflare Turnstile verification ─────────────────────────────────────────
+// Validates the CAPTCHA token server-side. Skipped when TURNSTILE_SECRET_KEY
+// is not set (local dev without Cloudflare).
+
+const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET_KEY ?? ""
+
+async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
+  if (!TURNSTILE_SECRET) return true // skip in dev when not configured
+
+  try {
+    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        secret: TURNSTILE_SECRET,
+        response: token,
+        remoteip: ip,
+      }),
+    })
+    const data = await res.json() as { success: boolean }
+    return data.success === true
+  } catch {
+    console.error("[Waitlist] Turnstile verification request failed")
+    return false
+  }
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-/** Accepts email (+ optional wallet/branch/referral); returns rank, referral code/URL, and `alreadyExists` when duplicate. */
+/** Accepts email (+ optional wallet/branch/referral/turnstile); returns rank, referral code/URL, and `alreadyExists` when duplicate. */
 export async function POST(req: NextRequest) {
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -43,11 +70,28 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let body: { email?: string; walletAddress?: string; primaryBranch?: string; referralCode?: string }
+  let body: {
+    email?: string
+    walletAddress?: string
+    primaryBranch?: string
+    referralCode?: string
+    turnstileToken?: string
+  }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+  }
+
+  // Verify Turnstile CAPTCHA before proceeding (when configured)
+  if (TURNSTILE_SECRET && !body.turnstileToken) {
+    return NextResponse.json({ error: "CAPTCHA verification required" }, { status: 400 })
+  }
+  if (body.turnstileToken) {
+    const valid = await verifyTurnstile(body.turnstileToken, ip)
+    if (!valid) {
+      return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 })
+    }
   }
 
   const email = body.email?.toLowerCase().trim()

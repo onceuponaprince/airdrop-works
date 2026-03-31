@@ -5,6 +5,7 @@ import { motion } from "framer-motion"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { Turnstile } from "@marsidev/react-turnstile"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { Input } from "@/components/ui/input"
@@ -18,6 +19,8 @@ import { BRANCHES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import { scoreReveal } from "@/styles/theme"
 import type { Branch } from "@/lib/constants"
+
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""
 
 const schema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -98,6 +101,7 @@ function SuccessCard({
 export function WaitlistForm() {
   const { status, rank, referralUrl, alreadyExists, error, submit } = useWaitlist()
   const inboundReferralCode = useReferral()
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormValues>({
     resolver: zodResolver(schema),
   })
@@ -108,10 +112,13 @@ export function WaitlistForm() {
       walletAddress: data.walletAddress || undefined,
       primaryBranch: data.primaryBranch as Branch | undefined,
       referralCode: inboundReferralCode || undefined,
+      turnstileToken: turnstileToken || undefined,
     })
   }
 
   const isSubmitting = status === "submitting"
+  // Disable submit until Turnstile token is obtained (when key is configured)
+  const captchaPending = TURNSTILE_SITE_KEY.length > 0 && !turnstileToken
 
   if (status === "success" && rank) {
     return (
@@ -191,12 +198,25 @@ export function WaitlistForm() {
         </p>
       )}
 
+      {/* CAPTCHA — Cloudflare Turnstile (invisible/managed mode) */}
+      {TURNSTILE_SITE_KEY && (
+        <div className="flex justify-center">
+          <Turnstile
+            siteKey={TURNSTILE_SITE_KEY}
+            onSuccess={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+            options={{ theme: "dark", size: "flexible" }}
+          />
+        </div>
+      )}
+
       {/* Submit */}
       <ArcadeButton
         type="submit"
         size="lg"
         className="w-full"
         loading={isSubmitting}
+        disabled={isSubmitting || captchaPending}
       >
         Join the Waitlist
       </ArcadeButton>

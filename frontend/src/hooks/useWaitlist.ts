@@ -11,6 +11,7 @@ interface WaitlistFormData {
   walletAddress?: string
   primaryBranch?: Branch
   referralCode?:  string   // from ?ref= query param
+  turnstileToken?: string  // Cloudflare Turnstile CAPTCHA token
 }
 
 interface WaitlistState {
@@ -49,10 +50,11 @@ export function useWaitlist() {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email:         data.email,
-          walletAddress: data.walletAddress || undefined,
-          primaryBranch: data.primaryBranch || undefined,
-          referralCode:  refCode,
+          email:          data.email,
+          walletAddress:  data.walletAddress || undefined,
+          primaryBranch:  data.primaryBranch || undefined,
+          referralCode:   refCode,
+          turnstileToken: data.turnstileToken || undefined,
         }),
       })
 
