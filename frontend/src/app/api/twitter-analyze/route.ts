@@ -7,6 +7,9 @@ const MAX_TWEETS = 25
 const TWITTER_API_BASE = "https://api.twitter.com/2"
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
+// In-memory, per-instance. 3 requests per 5 minutes per IP.
+// Stricter than the single-tweet judge because account analysis is
+// much more expensive (fetches tweets + larger Claude prompt).
 
 const rateLimit = new Map<string, { count: number; resetAt: number }>()
 

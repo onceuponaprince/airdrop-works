@@ -42,11 +42,19 @@ class ApiClient {
     this.accessToken = localStorage.getItem("auth_token")
   }
 
+  /**
+   * Attempt to swap the refresh token for a new access token.
+   *
+   * Deduplication: if multiple requests 401 at the same time, they all
+   * await the same `refreshPromise` rather than firing N refresh calls.
+   * The promise is cleared in `finally` so the next 401 can start fresh.
+   */
   private async tryRefreshToken(): Promise<string | null> {
     if (typeof window === "undefined") return null
     const refresh = localStorage.getItem("refresh_token")
     if (!refresh) return null
 
+    // Return the in-flight refresh if one is already running
     if (this.refreshPromise) return this.refreshPromise
 
     this.refreshPromise = (async () => {

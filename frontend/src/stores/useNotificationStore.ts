@@ -1,3 +1,15 @@
+/**
+ * In-app notification centre backed by Zustand.
+ *
+ * Notifications are stored as a FIFO queue capped at 100 items.
+ * New items are prepended (most recent first). The store supports
+ * push, read-tracking, and bulk clear for read items.
+ *
+ * This is NOT the same as the Radix toast system — toasts are
+ * ephemeral UI pop-ups, while these notifications persist in the
+ * sidebar bell icon until explicitly dismissed.
+ */
+
 import { create } from 'zustand';
 
 export type AppNotificationType =

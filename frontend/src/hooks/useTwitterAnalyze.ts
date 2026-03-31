@@ -1,5 +1,19 @@
 'use client';
 
+/**
+ * Hook for full Twitter account analysis.
+ *
+ * Calls the backend's `/api/v1/judge/score-account/` endpoint which returns
+ * an NDJSON stream with the following message sequence:
+ *
+ *   1. { type: "tweets_fetched" } — tweet count + user metadata
+ *   2. { type: "tweet_score" }    — one per tweet, with individual scores
+ *   3. { type: "final" }          — aggregate analysis for the full account
+ *   4. { type: "error" }          — only on failure
+ *
+ * State transitions: idle → fetching → scoring → complete (or error)
+ */
+
 import { useState, useCallback } from 'react';
 import type { TweetScore, AccountAnalysis } from '@/types/api';
 import { useNotificationStore } from '@/stores/useNotificationStore';
