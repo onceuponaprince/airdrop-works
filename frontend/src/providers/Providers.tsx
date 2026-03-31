@@ -90,7 +90,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <DynamicContextProvider
       settings={{
         environmentId: dynamicEnvironmentId,
-        walletConnectors: [EthereumWalletConnectors, SolanaWalletConnectors],
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        walletConnectors: [EthereumWalletConnectors, SolanaWalletConnectors] as any,
       }}
     >
       {inner}
