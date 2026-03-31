@@ -1,7 +1,14 @@
 "use client"
 
 /**
- * Root client providers: optional Dynamic.xyz (wallet), wagmi, React Query defaults, and toast UI.
+ * Root client providers — wraps the entire app with:
+ *
+ *   1. **WagmiProvider** — EVM chain config (Avalanche + Base) for on-chain reads.
+ *   2. **QueryClientProvider** — React Query with 60s stale time and single retry.
+ *   3. **DynamicContextProvider** (conditional) — wallet connect UI + session.
+ *      Only mounted when NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID is set; otherwise
+ *      a dev banner warns that wallet features are disabled.
+ *   4. **Toaster** — Radix-based toast notification outlet.
  */
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
@@ -13,6 +20,8 @@ import { avalanche, base } from "wagmi/chains"
 import { useState } from "react"
 import { Toaster } from "@/components/ui/toaster"
 
+// Wagmi needs a static config — created once outside the component to
+// avoid re-creating on every render.
 const wagmiConfig = createConfig({
   chains: [avalanche, base],
   transports: {
@@ -21,6 +30,8 @@ const wagmiConfig = createConfig({
   },
 })
 
+// Dynamic.xyz is optional — the app works without it (just no wallet connect).
+// This lets contributors run the frontend locally without a Dynamic account.
 const dynamicEnvironmentId = (
   process.env.NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID ?? ""
 ).trim()

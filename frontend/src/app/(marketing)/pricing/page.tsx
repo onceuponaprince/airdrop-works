@@ -75,7 +75,7 @@ export default function PricingPage() {
     setLoading(plan);
     try {
       const res = await api.post<{ checkout_url: string }>('/payments/user-checkout/', { plan });
-      window.location.href = res.checkout_url;
+      window.location.assign(res.checkout_url);
     } catch {
       setLoading(null);
     }
@@ -85,7 +85,7 @@ export default function PricingPage() {
     setLoading(`pack-${pack}`);
     try {
       const res = await api.post<{ checkout_url: string }>('/payments/user-checkout/', { credit_pack: pack });
-      window.location.href = res.checkout_url;
+      window.location.assign(res.checkout_url);
     } catch {
       setLoading(null);
     }

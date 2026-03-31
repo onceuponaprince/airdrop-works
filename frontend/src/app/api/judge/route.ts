@@ -36,9 +36,13 @@ Respond ONLY with valid JSON, no other text:
 }`
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
+// In-memory map — resets on cold start and is per-instance only.
+// Fine for MVP / single-instance Vercel deploys. For production scale,
+// replace with Redis/Upstash so limits survive across serverless invocations.
 
 const rateLimit = new Map<string, { count: number; resetAt: number }>()
 
+/** Returns true if the request is within the per-IP rate limit (10 req/min). */
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()
   const entry = rateLimit.get(ip)
@@ -72,6 +76,14 @@ interface JudgeResult {
   scoredAt: string
 }
 
+/**
+ * Build a ReadableStream that sends the score as staged NDJSON lines.
+ *
+ * The stream sends three "partial" messages with progressively higher
+ * scores (45% → 75% → 100% of final) before the "final" message.
+ * This creates the animated score-bar-fill effect on the client —
+ * users see bars rising in real-time rather than waiting for a spinner.
+ */
 function createScoreStream(result: JudgeResult) {
   const encoder = new TextEncoder()
   const line = (v: unknown) => encoder.encode(JSON.stringify(v) + "\n")
@@ -81,6 +93,7 @@ function createScoreStream(result: JudgeResult) {
       controller.enqueue(line({ type: "status", phase: "reading" }))
       await sleep(250)
 
+      // Stage 1: ~45% of final scores
       controller.enqueue(
         line({
           type: "partial",
@@ -93,6 +106,7 @@ function createScoreStream(result: JudgeResult) {
       )
       await sleep(300)
 
+      // Stage 2: ~75% of final scores
       controller.enqueue(
         line({
           type: "partial",
@@ -105,6 +119,7 @@ function createScoreStream(result: JudgeResult) {
       )
       await sleep(300)
 
+      // Stage 3: exact final scores
       controller.enqueue(
         line({
           type: "partial",

@@ -9,17 +9,17 @@ import { AccountScoreCard } from "@/components/app/AccountScoreCard"
 import { AnimatedSection } from "@/components/shared/AnimatedSection"
 import { useTwitterAnalyze } from "@/hooks/useTwitterAnalyze"
 import { cn } from "@/lib/utils"
-import { FARMING_FLAGS } from "@/lib/constants"
+import { FARMING_FLAGS, type FarmingFlag } from "@/lib/constants"
+import type { TweetScore } from "@/types/api"
 import { fadeInUp } from "@/styles/theme"
 
 export function TwitterAnalyzer() {
   const [handle, setHandle] = useState("")
   const {
     status,
-    analysis,
-    tweetScores,
-    tweetsFetched,
-    statusMessage,
+    accountResult: analysis,
+    tweets: tweetScores,
+    tweetCount: tweetsFetched,
     error,
     analyze,
     reset,
@@ -44,6 +44,11 @@ export function TwitterAnalyzer() {
 
   const isLoading = status === "fetching" || status === "scoring"
   const hasResult = status === "complete" && analysis
+  // Derive a human-readable status message from the hook's status enum
+  const statusMessage =
+    status === "fetching" ? "Fetching tweets…" :
+    status === "scoring"  ? "Scoring tweets…"  :
+    null
 
   return (
     <section id="twitter-analyzer" className="py-24 bg-background">
@@ -132,8 +137,8 @@ export function TwitterAnalyzer() {
                     Live Scoring — {tweetScores.length}/{tweetsFetched}
                   </p>
                   <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
-                    {tweetScores.map((ts) => {
-                      const flagConfig = FARMING_FLAGS[ts.farmingFlag]
+                    {tweetScores.map((ts: TweetScore) => {
+                      const flagConfig = FARMING_FLAGS[ts.farmingFlag as FarmingFlag]
                       return (
                         <motion.div
                           key={ts.tweetId}

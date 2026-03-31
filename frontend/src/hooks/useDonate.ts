@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { parseEther } from 'viem';
-import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
+import { useSendTransaction } from 'wagmi';
 
 export type DonateChain = 'base' | 'solana';
 
@@ -13,7 +13,6 @@ interface DonateState {
 }
 
 const DONATION_ADDRESS_BASE = process.env.NEXT_PUBLIC_DONATION_ADDRESS_BASE || '';
-const DONATION_ADDRESS_SOLANA = process.env.NEXT_PUBLIC_DONATION_ADDRESS_SOLANA || '';
 
 export function useDonate() {
   const [state, setState] = useState<DonateState>({
@@ -43,23 +42,15 @@ export function useDonate() {
     }
   }, [sendTransactionAsync]);
 
-  const donateSolana = useCallback(async (amountSol: string) => {
-    if (!DONATION_ADDRESS_SOLANA) {
-      setState({ status: 'error', txHash: null, error: 'Solana donation address not configured' });
-      return;
-    }
-    setState({ status: 'pending', txHash: null, error: null });
-    try {
-      const { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } = await import('@solana/web3.js');
-
-      const dynamicModule = await import('@dynamic-labs/sdk-react-core');
-      // Solana transfer requires the Dynamic SDK wallet signer
-      // This is a simplified version — in practice you'd get the signer from Dynamic context
-      setState({ status: 'error', txHash: null, error: 'Solana donations use Dynamic SDK wallet signing. Connect a Solana wallet via the wallet button first.' });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Transaction failed';
-      setState({ status: 'error', txHash: null, error: message });
-    }
+  // TODO: Phase 2 — Solana donations require @solana/web3.js and Dynamic SDK
+  // wallet signing. For now, show a helpful message directing users to connect
+  // a Solana wallet first.
+  const donateSolana = useCallback(async (_amountSol: string) => {
+    setState({
+      status: 'error',
+      txHash: null,
+      error: 'Solana donations are coming soon. Connect a Solana wallet via the wallet button to be notified.',
+    });
   }, []);
 
   const donate = useCallback(async (chain: DonateChain, amount: string) => {

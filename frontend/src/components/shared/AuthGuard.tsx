@@ -11,16 +11,18 @@ import { useRouter } from 'next/navigation';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
+  // Use a callback ref pattern to avoid the "setState in effect" lint rule.
+  // We read localStorage synchronously on mount — no external subscription needed.
+  const [checked] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !!localStorage.getItem('auth_token');
+  });
 
   useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (!token) {
+    if (!checked) {
       router.replace('/login');
-      return;
     }
-    setChecked(true);
-  }, [router]);
+  }, [checked, router]);
 
   if (!checked) {
     return (

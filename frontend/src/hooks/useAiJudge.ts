@@ -32,6 +32,18 @@ export function useAiJudge() {
     error: null,
   })
 
+  /**
+   * Parse NDJSON (newline-delimited JSON) from the /api/judge stream.
+   *
+   * The server sends three message types:
+   *   1. { type: "status" }  — phase indicator ("reading")
+   *   2. { type: "partial" } — intermediate scores that animate the bars
+   *   3. { type: "final" }   — complete JudgeResult
+   *
+   * We buffer incoming chunks because a single read() may deliver a
+   * partial JSON line; splitting on "\n" and only parsing complete lines
+   * avoids JSON.parse failures on partial data.
+   */
   const parseStream = async (res: Response): Promise<JudgeResult> => {
     const reader = res.body?.getReader()
     if (!reader) throw new Error("Scoring stream unavailable")
@@ -45,6 +57,7 @@ export function useAiJudge() {
       if (done) break
       buffer += decoder.decode(value, { stream: true })
 
+      // Process all complete lines currently in the buffer
       let newLineIdx = buffer.indexOf("\n")
       while (newLineIdx !== -1) {
         const line = buffer.slice(0, newLineIdx).trim()

@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
 import { CrtOverlay } from '@/components/themed/CrtOverlay';
@@ -10,6 +11,10 @@ import type { AccountAnalysis, TweetScore } from '@/types/api';
 interface AccountScoreCardProps {
   analysis: AccountAnalysis;
   className?: string;
+  /** When true, renders a "Reset" button at the bottom of the card */
+  showReset?: boolean;
+  /** Callback fired when the reset button is clicked */
+  onReset?: () => void;
 }
 
 function TweetScoreRow({ tweet, index }: { tweet: TweetScore; index: number }) {
@@ -37,7 +42,7 @@ function TweetScoreRow({ tweet, index }: { tweet: TweetScore; index: number }) {
   );
 }
 
-export function AccountScoreCard({ analysis, className }: AccountScoreCardProps) {
+export function AccountScoreCard({ analysis, className, showReset, onReset }: AccountScoreCardProps) {
   const overallDisplay = useAnimatedCounter(analysis.aggregate.overallScore, { duration: 1200, delay: 200 });
   const genuineDisplay = useAnimatedCounter(analysis.aggregate.genuinePercentage, { delay: 600 });
 
@@ -51,10 +56,12 @@ export function AccountScoreCard({ analysis, className }: AccountScoreCardProps)
           <div className="p-5 pb-4">
             <div className="flex items-center gap-3 mb-4">
               {analysis.avatarUrl && (
-                <img
+                <Image
                   src={analysis.avatarUrl}
                   alt={analysis.username}
-                  className="w-10 h-10 rounded-full border border-[--border]"
+                  width={40}
+                  height={40}
+                  className="rounded-full border border-[--border]"
                 />
               )}
               <div>
@@ -153,6 +160,18 @@ export function AccountScoreCard({ analysis, className }: AccountScoreCardProps)
                   <TweetScoreRow key={tweet.tweetId} tweet={tweet} index={i} />
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Optional reset action — used in the TwitterAnalyzer embed */}
+          {showReset && onReset && (
+            <div className="px-5 pb-5 pt-2">
+              <button
+                onClick={onReset}
+                className="w-full rounded-[var(--radius)] border border-[--border] bg-transparent py-2 font-mono text-xs uppercase tracking-widest text-[--muted-foreground] transition-colors hover:border-[--primary] hover:text-[--primary]"
+              >
+                Analyze Another Account
+              </button>
             </div>
           )}
         </div>
