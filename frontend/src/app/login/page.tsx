@@ -23,7 +23,7 @@ export default function LoginPage() {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      await login(primaryWallet.address, 'dynamic-sdk-managed');
+      await login(primaryWallet.address, 'dynamic-sdk-managed', 'dynamic-sdk-managed');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
@@ -39,7 +39,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.push('/judge');
     }
   }, [isAuthenticated, router]);
 
@@ -48,7 +48,7 @@ export default function LoginPage() {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      await login('0x0000000000000000000000000000000000000000', 'dev-bypass');
+      await login('0x0000000000000000000000000000000000000000', 'dev-bypass', 'dev-bypass');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Dev login failed');
     } finally {

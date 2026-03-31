@@ -8,6 +8,7 @@ import { ComparisonSection }  from "@/components/marketing/ComparisonSection"
 import { SocialProofSection } from "@/components/marketing/SocialProofSection"
 import { FAQSection }         from "@/components/marketing/FAQSection"
 import { CTASection }         from "@/components/marketing/CTASection"
+import { DonateSection }      from "@/components/marketing/DonateSection"
 
 export default function LandingPage() {
   return (
@@ -21,6 +22,7 @@ export default function LandingPage() {
       <ComparisonSection />
       <SocialProofSection />
       <FAQSection />
+      <DonateSection />
       <CTASection />
     </>
   )

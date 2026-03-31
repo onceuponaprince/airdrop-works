@@ -10,11 +10,11 @@ import { cn } from "@/lib/utils"
 import { mobileNavSlide } from "@/styles/theme"
 
 const NAV_LINKS = [
-  { label: "Demo",      href: "/#ai-judge-demo" },
-  { label: "Features",  href: "/#features" },
-  { label: "Pricing",   href: "/pricing" },
-  { label: "Roadmap",   href: "/#roadmap" },
-  { label: "FAQ",       href: "/#faq" },
+  { label: "Score Tweet",   href: "/#ai-judge-demo" },
+  { label: "Score Account", href: "/#twitter-analyzer" },
+  { label: "Features",      href: "/#features" },
+  { label: "Pricing",       href: "/pricing" },
+  { label: "FAQ",            href: "/#faq" },
 ]
 
 export function Navigation() {

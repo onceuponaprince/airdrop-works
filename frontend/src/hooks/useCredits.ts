@@ -38,6 +38,8 @@ export function useCredits() {
     loading,
     refresh,
     credits: sub?.credits_remaining ?? 0,
+    creditsRemaining: sub?.credits_remaining ?? 0,
+    monthlyCredits: sub?.monthly_credits ?? 0,
     plan: sub?.plan ?? 'free',
   };
 }
