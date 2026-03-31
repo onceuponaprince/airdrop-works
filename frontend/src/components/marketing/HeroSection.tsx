@@ -65,16 +65,23 @@ export function HeroSection() {
             volume. Not who has the most alts.
           </motion.p>
 
-          {/* CTAs */}
+          {/* CTAs — the 4 core actions */}
           <motion.div
             variants={staggerItem as Variants}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2"
+            className="flex flex-wrap items-center justify-center gap-3 pt-2"
           >
             <ArcadeButton
               size="lg"
               onClick={() => scrollTo("ai-judge-demo")}
             >
-              Try the AI Judge
+              Score a Tweet
+            </ArcadeButton>
+            <ArcadeButton
+              size="lg"
+              variant="secondary"
+              onClick={() => scrollTo("twitter-analyzer")}
+            >
+              Score an Account
             </ArcadeButton>
             <ArcadeButton
               size="lg"
@@ -82,6 +89,13 @@ export function HeroSection() {
               onClick={() => scrollTo("waitlist")}
             >
               Join the Waitlist
+            </ArcadeButton>
+            <ArcadeButton
+              size="lg"
+              variant="secondary"
+              onClick={() => scrollTo("donate")}
+            >
+              Donate
             </ArcadeButton>
           </motion.div>
 

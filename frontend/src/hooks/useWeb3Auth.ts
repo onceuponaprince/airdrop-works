@@ -21,7 +21,7 @@ interface AuthState {
 }
 
 export function useWeb3Auth(): AuthState & {
-  login: (walletAddress: string, signature: string) => Promise<void>;
+  login: (walletAddress: string, message: string, signature: string) => Promise<void>;
   logout: () => void;
 } {
   const dynamicContext = useOptionalDynamicContext();
@@ -39,18 +39,19 @@ export function useWeb3Auth(): AuthState & {
     queryFn: async () => {
       if (!token) return null;
       api.setToken(token);
-      return api.get<Profile>('/auth/profile/');
+      return api.get<Profile>('/auth/me/');
     },
     enabled: token !== null,
   });
 
-  const login = async (walletAddress: string, signature: string) => {
+  const login = async (walletAddress: string, message: string, signature: string) => {
     try {
       setIsAuthActionLoading(true);
       setError(null);
 
       const response = await api.post<AuthTokens>('/auth/wallet-verify/', {
         wallet_address: walletAddress,
+        message,
         signature,
         dynamic_user_id: primaryWallet?.id || undefined,
       });

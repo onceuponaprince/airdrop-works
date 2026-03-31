@@ -1,11 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { Check, Zap, Crown, Users } from 'lucide-react';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
-import { api } from '@/lib/api';
 
 const PLANS = [
   {
@@ -69,28 +68,6 @@ const CREDIT_PACKS = [
 ];
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState<string | null>(null);
-
-  const handleCheckout = async (plan: string) => {
-    setLoading(plan);
-    try {
-      const res = await api.post<{ checkout_url: string }>('/payments/user-checkout/', { plan });
-      window.location.assign(res.checkout_url);
-    } catch {
-      setLoading(null);
-    }
-  };
-
-  const handleCreditPack = async (pack: string) => {
-    setLoading(`pack-${pack}`);
-    try {
-      const res = await api.post<{ checkout_url: string }>('/payments/user-checkout/', { credit_pack: pack });
-      window.location.assign(res.checkout_url);
-    } catch {
-      setLoading(null);
-    }
-  };
-
   return (
     <section className="py-24 px-4">
       <div className="max-w-5xl mx-auto">
@@ -142,24 +119,11 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                {plan.key === 'free' ? (
-                  <ArcadeButton
-                    variant={plan.variant}
-                    className="w-full"
-                    onClick={() => (window.location.href = '/login')}
-                  >
+                <Link href="/signup" className="w-full">
+                  <ArcadeButton variant={plan.variant} className="w-full">
                     {plan.cta}
                   </ArcadeButton>
-                ) : (
-                  <ArcadeButton
-                    variant={plan.variant}
-                    className="w-full"
-                    loading={loading === plan.key}
-                    onClick={() => handleCheckout(plan.key)}
-                  >
-                    {plan.cta}
-                  </ArcadeButton>
-                )}
+                </Link>
               </ArcadeCard>
             </motion.div>
           ))}
@@ -183,15 +147,11 @@ export default function PricingPage() {
                   {pack.credits} credits
                 </p>
                 <p className="text-2xl font-bold text-primary mb-4">{pack.price}</p>
-                <ArcadeButton
-                  variant="secondary"
-                  size="sm"
-                  className="w-full"
-                  loading={loading === `pack-${pack.key}`}
-                  onClick={() => handleCreditPack(pack.key)}
-                >
-                  Buy Pack
-                </ArcadeButton>
+                <Link href="/signup" className="w-full">
+                  <ArcadeButton variant="secondary" size="sm" className="w-full">
+                    Sign Up to Buy
+                  </ArcadeButton>
+                </Link>
               </ArcadeCard>
             ))}
           </div>

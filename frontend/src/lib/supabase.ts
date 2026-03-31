@@ -82,6 +82,26 @@ export async function getReferralCount(referralCode: string): Promise<number> {
   return count ?? 0
 }
 
+/**
+ * Check if an email has been approved on the waitlist.
+ * Requires an `approved` boolean column on the `waitlist_entries` table
+ * in Supabase (default false, manually set to true for approved users).
+ */
+export async function checkWhitelistApproval(email: string): Promise<{
+  exists: boolean;
+  approved: boolean;
+  rank: number | null;
+}> {
+  const { data } = await supabase
+    .from("waitlist_entries")
+    .select("approved, rank")
+    .eq("email", email.toLowerCase().trim())
+    .maybeSingle()
+
+  if (!data) return { exists: false, approved: false, rank: null }
+  return { exists: true, approved: data.approved === true, rank: data.rank ?? null }
+}
+
 export function buildReferralUrl(referralCode: string): string {
   const base = typeof window !== "undefined" ? window.location.origin : "https://airdrop.works"
   return `${base}/?ref=${referralCode}`
