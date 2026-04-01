@@ -4,15 +4,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Mail, CheckCircle, Clock, XCircle } from 'lucide-react';
-import { Turnstile } from '@marsidev/react-turnstile';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
 import { WalletButton } from '@/components/shared/WalletButton';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useOptionalDynamicContext } from '@/hooks/useOptionalDynamicContext';
 import { checkWhitelistApproval } from '@/lib/supabase';
-
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
 type Step = 'email' | 'wallet';
 
@@ -32,8 +29,7 @@ export default function SignupPage() {
   } | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const captchaPending = TURNSTILE_SITE_KEY.length > 0 && !turnstileToken;
+  const [honeypot, setHoneypot] = useState('');
 
   // Check whitelist status for the entered email
   const handleCheckEmail = async () => {
@@ -138,22 +134,24 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* CAPTCHA — Cloudflare Turnstile */}
-            {TURNSTILE_SITE_KEY && (
-              <div className="flex justify-center">
-                <Turnstile
-                  siteKey={TURNSTILE_SITE_KEY}
-                  onSuccess={setTurnstileToken}
-                  onExpire={() => setTurnstileToken(null)}
-                  options={{ theme: 'dark', size: 'flexible' }}
-                />
-              </div>
-            )}
+            {/* Honeypot — hidden field invisible to real users, auto-filled by bots */}
+            <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
+              <label htmlFor="signup-website">Website</label>
+              <input
+                id="signup-website"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
 
             <ArcadeButton
               onClick={handleCheckEmail}
               loading={checking}
-              disabled={!email.trim() || checking || captchaPending}
+              disabled={!email.trim() || checking}
               className="w-full"
             >
               Verify Whitelist Status

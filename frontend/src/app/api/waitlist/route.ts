@@ -27,36 +27,9 @@ function checkRateLimit(ip: string): boolean {
   return true
 }
 
-// ── Cloudflare Turnstile verification ─────────────────────────────────────────
-// Validates the CAPTCHA token server-side. Skipped when TURNSTILE_SECRET_KEY
-// is not set (local dev without Cloudflare).
-
-const TURNSTILE_SECRET = process.env.TURNSTILE_SECRET_KEY ?? ""
-
-async function verifyTurnstile(token: string, ip: string): Promise<boolean> {
-  if (!TURNSTILE_SECRET) return true // skip in dev when not configured
-
-  try {
-    const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        secret: TURNSTILE_SECRET,
-        response: token,
-        remoteip: ip,
-      }),
-    })
-    const data = await res.json() as { success: boolean }
-    return data.success === true
-  } catch {
-    console.error("[Waitlist] Turnstile verification request failed")
-    return false
-  }
-}
-
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-/** Accepts email (+ optional wallet/branch/referral/turnstile); returns rank, referral code/URL, and `alreadyExists` when duplicate. */
+/** Accepts email (+ optional wallet/branch/referral); returns rank, referral code/URL, and `alreadyExists` when duplicate. */
 export async function POST(req: NextRequest) {
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -75,7 +48,7 @@ export async function POST(req: NextRequest) {
     walletAddress?: string
     primaryBranch?: string
     referralCode?: string
-    turnstileToken?: string
+    honeypot?: string
   }
   try {
     body = await req.json()
@@ -83,15 +56,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
 
-  // Verify Turnstile CAPTCHA before proceeding (when configured)
-  if (TURNSTILE_SECRET && !body.turnstileToken) {
-    return NextResponse.json({ error: "CAPTCHA verification required" }, { status: 400 })
-  }
-  if (body.turnstileToken) {
-    const valid = await verifyTurnstile(body.turnstileToken, ip)
-    if (!valid) {
-      return NextResponse.json({ error: "CAPTCHA verification failed. Please try again." }, { status: 400 })
-    }
+  // Honeypot check — the hidden "website" field is invisible to real users.
+  // If it has a value, a bot filled it in. Return a fake success so the bot
+  // thinks it worked, but don't insert anything into Supabase.
+  if (body.honeypot) {
+    return NextResponse.json({
+      rank: Math.floor(Math.random() * 500) + 100,
+      referralCode: "bot-" + Math.random().toString(36).slice(2, 8),
+      referralUrl: "https://airdrop.works",
+      alreadyExists: false,
+    })
   }
 
   const email = body.email?.toLowerCase().trim()
