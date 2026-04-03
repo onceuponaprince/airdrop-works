@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useRef, useCallback } from "react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 
@@ -7,33 +8,196 @@ interface StepEmailProps {
   onComplete: (email: string) => void
 }
 
-/** Phase 2 placeholder — will be replaced with OTP email verification. */
 export function StepEmail({ onComplete }: StepEmailProps) {
+  const [stage, setStage] = useState<"input" | "otp">("input")
+  const [email, setEmail] = useState("")
+  const [otp, setOtp] = useState<string[]>(Array(6).fill(""))
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const sendOtp = async () => {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      setStage("otp")
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send code")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const verifyOtp = useCallback(async (code: string) => {
+    if (code.length !== 6) return
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch("/api/otp/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: code }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error)
+      onComplete(email)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Verification failed")
+    } finally {
+      setLoading(false)
+    }
+  }, [email, onComplete])
+
+  const handleOtpChange = (index: number, value: string) => {
+    const digit = value.replace(/\D/, "").slice(-1)
+    const next = [...otp]
+    next[index] = digit
+    setOtp(next)
+
+    // Auto-advance to next input
+    if (digit && index < 5) {
+      inputRefs.current[index + 1]?.focus()
+    }
+
+    // Auto-submit when all 6 digits entered
+    const fullCode = next.join("")
+    if (fullCode.length === 6 && next.every(d => d !== "")) {
+      verifyOtp(fullCode)
+    }
+  }
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    if (!pasted) return
+    const next = [...otp]
+    for (let i = 0; i < pasted.length; i++) {
+      next[i] = pasted[i]
+    }
+    setOtp(next)
+    // Focus the next empty box or the last one
+    const focusIndex = Math.min(pasted.length, 5)
+    inputRefs.current[focusIndex]?.focus()
+    // Auto-submit if all 6 pasted
+    if (pasted.length === 6) {
+      verifyOtp(pasted)
+    }
+  }
+
+  // ── OTP entry stage ────────────────────────────────────────────────────────
+  if (stage === "otp") {
+    return (
+      <ArcadeCard className="space-y-4">
+        <p className="font-body text-sm text-muted-foreground">
+          Code sent to <span className="text-foreground">{email}</span>.
+          Valid for 30 minutes.
+        </p>
+
+        {/* 6-box OTP input */}
+        <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <input
+              key={i}
+              ref={(el) => { inputRefs.current[i] = el }}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={otp[i]}
+              onChange={(e) => handleOtpChange(i, e.target.value)}
+              onKeyDown={(e) => handleOtpKeyDown(i, e)}
+              className="w-10 h-12 text-center font-mono text-lg bg-background border border-border
+                         rounded-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none
+                         text-foreground transition-colors"
+            />
+          ))}
+        </div>
+
+        {error && (
+          <p className="font-body text-xs text-destructive text-center">{error}</p>
+        )}
+
+        <ArcadeButton
+          size="lg"
+          className="w-full"
+          loading={loading}
+          onClick={() => verifyOtp(otp.join(""))}
+          disabled={otp.filter(d => d !== "").length < 6}
+        >
+          Verify Code
+        </ArcadeButton>
+
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => { setStage("input"); setOtp(Array(6).fill("")); setError(null) }}
+            className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                       transition-colors uppercase tracking-widest"
+          >
+            ← Wrong email?
+          </button>
+          <button
+            type="button"
+            onClick={() => { setOtp(Array(6).fill("")); setError(null); sendOtp() }}
+            disabled={loading}
+            className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                       transition-colors uppercase tracking-widest disabled:opacity-40"
+          >
+            Resend code
+          </button>
+        </div>
+      </ArcadeCard>
+    )
+  }
+
+  // ── Email input stage ──────────────────────────────────────────────────────
   return (
     <ArcadeCard className="space-y-4">
       <p className="font-body text-sm text-muted-foreground">
-        Email verification is coming in the next update. For now, enter your email to continue.
+        We&apos;ll send a 6-digit code to verify this is a real inbox.
       </p>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          const form = e.target as HTMLFormElement
-          const email = (form.elements.namedItem("email") as HTMLInputElement).value
-          if (email) onComplete(email)
-        }}
-        className="space-y-3"
-      >
+      <div className="space-y-1.5">
+        <label htmlFor="otp-email" className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+          Email <span className="text-destructive">*</span>
+        </label>
         <input
-          name="email"
+          id="otp-email"
           type="email"
-          required
-          placeholder="you@example.com"
-          className="w-full px-4 py-2.5 rounded-sm border border-border bg-transparent text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring font-body"
+          placeholder="you@gmail.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") sendOtp() }}
+          autoComplete="email"
+          className="w-full px-4 py-2.5 rounded-sm border border-border bg-transparent text-sm
+                     text-foreground placeholder:text-muted-foreground/40 focus:outline-none
+                     focus:ring-2 focus:ring-ring font-body"
         />
-        <ArcadeButton type="submit" size="lg" className="w-full">
-          Continue →
-        </ArcadeButton>
-      </form>
+      </div>
+      {error && (
+        <p className="font-body text-xs text-destructive">{error}</p>
+      )}
+      <ArcadeButton
+        size="lg"
+        className="w-full"
+        loading={loading}
+        onClick={sendOtp}
+        disabled={!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)}
+      >
+        Send Code →
+      </ArcadeButton>
     </ArcadeCard>
   )
 }
