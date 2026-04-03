@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js"
 
 const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL  || ""
 const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
@@ -11,12 +11,30 @@ if (typeof window !== "undefined" && (!supabaseUrl || !supabaseAnon)) {
 
 export const supabase = createSupabaseClient(supabaseUrl, supabaseAnon)
 
+/** Server-only: bypasses RLS for waitlist upserts (never expose this key to the client). */
+function getWaitlistServerClient(): SupabaseClient | null {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
+  if (!supabaseUrl || !key) return null
+  return createSupabaseClient(supabaseUrl, key, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+}
+
+function waitlistDb(): SupabaseClient {
+  return getWaitlistServerClient() ?? supabase
+}
+
+export const WAITLIST_WALLET_CONFLICT = "WAITLIST_WALLET_CONFLICT"
+
 export interface WaitlistInsert {
   email:           string
+  /** Omit or undefined = do not change on update */
   wallet_address?: string | null
   primary_branch?: string | null
   referral_code?:  string | null
   source?:         string | null
+  /** Server-computed; never trust the client */
+  flagged?:        boolean
 }
 
 export interface WaitlistResult {
@@ -25,40 +43,126 @@ export interface WaitlistResult {
   alreadyExists: boolean
 }
 
+function normalizeWallet(addr: string | null | undefined): string | null {
+  const s = addr?.trim()
+  if (!s) return null
+  if (s.startsWith("0x")) return s.toLowerCase()
+  return s
+}
+
 export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<WaitlistResult> {
   const email = entry.email.toLowerCase().trim()
+  const db = waitlistDb()
+  const hasServiceRole = Boolean(getWaitlistServerClient())
 
-  // Check for existing entry first
-  const { data: existing } = await supabase
+  const { data: existing } = await db
     .from("waitlist_entries")
-    .select("rank, referral_code")
+    .select("rank, referral_code, wallet_address, primary_branch, flagged")
     .eq("email", email)
     .maybeSingle()
 
   if (existing) {
-    return { rank: existing.rank, referralCode: existing.referral_code, alreadyExists: true }
+    if (!hasServiceRole) {
+      if (entry.wallet_address != null || entry.primary_branch != null || entry.flagged) {
+        console.warn(
+          "[Waitlist] Set SUPABASE_SERVICE_ROLE_KEY so re-submits can attach a wallet without errors."
+        )
+      }
+      return {
+        rank:          existing.rank,
+        referralCode:  existing.referral_code,
+        alreadyExists: true,
+      }
+    }
+
+    const nextWallet =
+      entry.wallet_address !== undefined && entry.wallet_address !== null
+        ? normalizeWallet(entry.wallet_address)
+        : normalizeWallet(existing.wallet_address as string | null)
+    const nextBranch =
+      entry.primary_branch !== undefined && entry.primary_branch !== null
+        ? entry.primary_branch
+        : (existing.primary_branch as string | null)
+    const nextFlagged = Boolean(entry.flagged) || Boolean(existing.flagged)
+
+    if (nextWallet) {
+      const { data: walletRow } = await db
+        .from("waitlist_entries")
+        .select("email")
+        .eq("wallet_address", nextWallet)
+        .maybeSingle()
+      if (walletRow && (walletRow as { email: string }).email.toLowerCase() !== email) {
+        const err = new Error(WAITLIST_WALLET_CONFLICT)
+        throw err
+      }
+    }
+
+    const { error: upErr } = await db
+      .from("waitlist_entries")
+      .update({
+        wallet_address: nextWallet,
+        primary_branch: nextBranch,
+        flagged:        nextFlagged,
+      })
+      .eq("email", email)
+
+    if (upErr) {
+      if (upErr.code === "23505") {
+        const err = new Error(WAITLIST_WALLET_CONFLICT)
+        throw err
+      }
+      throw new Error(`Waitlist update failed: ${upErr.message}`)
+    }
+
+    return {
+      rank:          existing.rank,
+      referralCode:  existing.referral_code,
+      alreadyExists: true,
+    }
   }
 
-  const { data, error } = await supabase
+  const walletForInsert = normalizeWallet(entry.wallet_address ?? null)
+
+  if (walletForInsert) {
+    const { data: taken } = await db
+      .from("waitlist_entries")
+      .select("email")
+      .eq("wallet_address", walletForInsert)
+      .maybeSingle()
+    if (taken) {
+      const err = new Error(WAITLIST_WALLET_CONFLICT)
+      throw err
+    }
+  }
+
+  const { data, error } = await db
     .from("waitlist_entries")
     .insert({
       email,
-      wallet_address: entry.wallet_address ?? null,
+      wallet_address: walletForInsert,
       primary_branch: entry.primary_branch ?? null,
-      referred_by:    entry.referral_code  ?? null,
+      referred_by:    entry.referral_code ?? null,
       source:         entry.source ?? "organic",
+      flagged:        entry.flagged ?? false,
     })
     .select("rank, referral_code")
     .single()
 
   if (error) {
     if (error.code === "23505") {
-      const { data: raceData } = await supabase
+      const { data: raceByEmail } = await db
         .from("waitlist_entries")
         .select("rank, referral_code")
         .eq("email", email)
-        .single()
-      return { rank: raceData?.rank ?? 1, referralCode: raceData?.referral_code ?? "", alreadyExists: true }
+        .maybeSingle()
+      if (raceByEmail) {
+        return {
+          rank:          raceByEmail.rank,
+          referralCode:  raceByEmail.referral_code,
+          alreadyExists: true,
+        }
+      }
+      throw new Error(WAITLIST_WALLET_CONFLICT)
     }
     throw new Error(`Waitlist insert failed: ${error.message}`)
   }
@@ -103,6 +207,10 @@ export async function checkWhitelistApproval(email: string): Promise<{
 }
 
 export function buildReferralUrl(referralCode: string): string {
-  const base = typeof window !== "undefined" ? window.location.origin : "https://airdrop.works"
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/?ref=${referralCode}`
+  }
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://airdrop.works"
   return `${base}/?ref=${referralCode}`
 }

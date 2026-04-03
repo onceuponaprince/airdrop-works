@@ -1,44 +1,46 @@
 /**
- * Server route: rate-limited POST inserts waitlist row in Supabase and optionally sends Resend confirmation with referral link.
+ * Server route: IP rate limit (Redis or in-memory), POST inserts/updates waitlist row in Supabase, Resend emails.
  */
 
 import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
-import { insertWaitlistEntry, buildReferralUrl } from "@/lib/supabase"
+import { checkWaitlistIpRateLimit } from "@/lib/waitlist-ip-rate-limit"
+import {
+  insertWaitlistEntry,
+  buildReferralUrl,
+  WAITLIST_WALLET_CONFLICT,
+} from "@/lib/supabase"
 import type { WaitlistInsert } from "@/lib/supabase"
 
 const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null
 
-// ── Rate limiting ─────────────────────────────────────────────────────────────
-// Simple in-memory map — replace with Redis/Upstash for production scale
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 })
-    return true
-  }
-  if (entry.count >= 5) return false
-  entry.count++
-  return true
-}
+const DISPOSABLE_DOMAINS = new Set([
+  "mailinator.com",
+  "tempmail.com",
+  "throwam.com",
+  "guerrillamail.com",
+  "yopmail.com",
+  "sharklasers.com",
+  "10minutemail.com",
+  "trashmail.com",
+  "maildrop.cc",
+])
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
-/** Accepts email (+ optional wallet/branch/referral); returns rank, referral code/URL, and `alreadyExists` when duplicate. */
+/** Accepts email (+ optional wallet/branch/referral); returns rank, referral code/URL, and `alreadyExists` when duplicate email. */
 export async function POST(req: NextRequest) {
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     "unknown"
 
-  if (!checkRateLimit(ip)) {
+  const ipOk = await checkWaitlistIpRateLimit(ip)
+  if (!ipOk) {
     return NextResponse.json(
-      { error: "Too many requests. Please try again shortly." },
+      { error: "Too many signups from this IP." },
       { status: 429 }
     )
   }
@@ -73,18 +75,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Valid email required" }, { status: 400 })
   }
 
-  // ── Insert into Supabase ───────────────────────────────────────────────────
+  const emailDomain = email.split("@")[1]?.toLowerCase()
+  const flaggedAsDisposable = emailDomain ? DISPOSABLE_DOMAINS.has(emailDomain) : false
+
+  const rawWallet =
+    typeof body.walletAddress === "string" ? body.walletAddress.trim() : undefined
+  const walletForEntry = rawWallet && rawWallet.length > 0 ? rawWallet : undefined
+
+  const primaryBranch =
+    typeof body.primaryBranch === "string" && body.primaryBranch.trim().length > 0
+      ? body.primaryBranch.trim()
+      : undefined
+
   let result
   try {
     const entry: WaitlistInsert = {
       email,
-      wallet_address: body.walletAddress || null,
-      primary_branch: body.primaryBranch || null,
-      referral_code:  body.referralCode  || null,
-      source: req.headers.get("referer") || "direct",
+      wallet_address: walletForEntry,
+      primary_branch: primaryBranch,
+      referral_code:  body.referralCode?.trim() || undefined,
+      source:           req.headers.get("referer") || "direct",
+      flagged:          flaggedAsDisposable,
     }
     result = await insertWaitlistEntry(entry)
   } catch (err) {
+    if (err instanceof Error && err.message === WAITLIST_WALLET_CONFLICT) {
+      return NextResponse.json(
+        { error: "This wallet is already linked to another waitlist signup." },
+        { status: 409 }
+      )
+    }
     console.error("[Waitlist API] Supabase error:", err)
     return NextResponse.json(
       { error: "Failed to join waitlist. Please try again." },
@@ -92,12 +112,25 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // ── Fire confirmation email (async — don't block response) ─────────────────
   const referralUrl = buildReferralUrl(result.referralCode)
+  const siteBase =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://airdrop.works"
+  const walletForEmail = walletForEntry ?? null
+
   if (!result.alreadyExists) {
-    sendConfirmationEmail(email, result.rank, referralUrl, result.referralCode).catch(
-      (err) => console.error("[Waitlist API] Email send error:", err)
-    )
+    if (walletForEmail) {
+      sendConfirmationEmail(email, result.rank, referralUrl, result.referralCode).catch(
+        (err) => console.error("[Waitlist API] Email send error:", err)
+      )
+    } else {
+      sendNoWalletWelcomeEmail(
+        email,
+        result.rank,
+        referralUrl,
+        result.referralCode,
+        siteBase
+      ).catch((err) => console.error("[Waitlist API] Email send error:", err))
+    }
   }
 
   return NextResponse.json({
@@ -108,7 +141,7 @@ export async function POST(req: NextRequest) {
   })
 }
 
-// ── Email sender ──────────────────────────────────────────────────────────────
+// ── Email senders ─────────────────────────────────────────────────────────────
 
 async function sendConfirmationEmail(
   email: string,
@@ -129,6 +162,53 @@ async function sendConfirmationEmail(
     to:      email,
     subject: `You're on the AI(r)Drop waitlist — Rank #${rank}`,
     html:    buildEmailHtml({ rank, referralUrl, referralCode }),
+  })
+}
+
+async function sendNoWalletWelcomeEmail(
+  email: string,
+  rank: number,
+  referralUrl: string,
+  referralCode: string,
+  siteBase: string
+) {
+  if (!resend) {
+    console.warn("[Waitlist API] RESEND_API_KEY not set — skipping confirmation email")
+    return
+  }
+
+  const fromAddress = process.env.EMAIL_FROM_ADDRESS || "hello@airdrop.works"
+  const fromName    = process.env.EMAIL_FROM_NAME    || "AI(r)Drop"
+  const waitlistUrl = `${siteBase}/#waitlist`
+
+  await resend.emails.send({
+    from:    `${fromName} <${fromAddress}>`,
+    to:      email,
+    subject: `You're #${rank} — link your wallet to jump the queue`,
+    html: `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /></head>
+<body style="margin:0;padding:24px;background:#0A0B10;font-family:Helvetica Neue,Helvetica,Arial,sans-serif;color:#E8ECF4;">
+  <p style="margin:0 0 12px;">You're on the list at rank #${rank}.</p>
+  <p style="margin:0 0 12px;">Contributors who connect a wallet get beta access before everyone else.</p>
+  <p style="margin:0 0 24px;">
+    <a href="${waitlistUrl}" style="color:#10B981;">Go back and link your wallet →</a>
+  </p>
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#13141D;border:1px solid #1F2937;border-radius:4px;padding:16px;margin-bottom:16px;">
+    <tr><td>
+      <p style="margin:0 0 8px;font-family:monospace;font-size:10px;color:#6B7280;text-transform:uppercase;">Move up the list</p>
+      <p style="margin:0 0 8px;font-size:13px;">Each referral bumps you higher. Share your link:</p>
+      <p style="margin:0;font-family:monospace;font-size:12px;color:#10B981;word-break:break-all;">${referralUrl}</p>
+      <p style="margin:8px 0 0;font-family:monospace;font-size:11px;color:#6B7280;">Code: ${referralCode}</p>
+    </td></tr>
+  </table>
+  <p style="color:#666;font-size:12px;margin:0;">
+    Already have a wallet address? Re-submit the form with the same email and your wallet — we'll update your record.
+  </p>
+</body>
+</html>
+    `.trim(),
   })
 }
 

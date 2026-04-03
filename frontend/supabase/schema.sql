@@ -14,6 +14,7 @@ create table if not exists waitlist_entries (
   referral_code    text        unique default encode(gen_random_bytes(5), 'hex'),
   referred_by      text,       -- referral_code of the referrer
   source           text        default 'organic',
+  flagged          boolean     not null default false,  -- disposable email etc.; deprioritize for beta batches
   created_at       timestamptz default now()
 );
 
@@ -43,6 +44,11 @@ create index if not exists idx_waitlist_referral_code on waitlist_entries (refer
 create index if not exists idx_waitlist_referred_by   on waitlist_entries (referred_by);
 create index if not exists idx_waitlist_rank          on waitlist_entries (rank);
 create index if not exists idx_waitlist_created_at    on waitlist_entries (created_at desc);
+
+-- One waitlist slot per wallet (bots cannot spam many emails with the same address)
+create unique index if not exists waitlist_wallet_unique
+  on waitlist_entries (wallet_address)
+  where wallet_address is not null;
 
 -- ── Row Level Security ────────────────────────────────────────────────────────
 
@@ -97,3 +103,9 @@ create or replace view waitlist_stats as
 --   select * from waitlist_stats;
 --   insert into waitlist_entries (email) values ('test@example.com');
 --   select id, email, rank, referral_code from waitlist_entries limit 5;
+
+-- ── Migration: existing DBs created before flagged + wallet uniqueness ─────────
+-- Safe to re-run (IF NOT EXISTS).
+
+alter table waitlist_entries
+  add column if not exists flagged boolean not null default false;
