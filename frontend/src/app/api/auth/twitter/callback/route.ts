@@ -53,26 +53,35 @@ export async function GET(req: NextRequest) {
       "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    // Twitter OAuth 2.0 requires Basic Auth for confidential (Web App) clients.
-    if (clientSecret) {
+    // For confidential clients (Web App type), Twitter requires Basic Auth
+    // and does NOT want client_id/client_secret in the body.
+    // For public clients (SPA), client_id goes in the body with no secret.
+    const isConfidential = clientSecret.length > 0
+
+    if (isConfidential) {
       const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
       headers["Authorization"] = `Basic ${credentials}`
-    } else {
-      console.error("[Twitter OAuth] TWITTER_CLIENT_SECRET is not set — token exchange will fail for Web App type")
     }
 
     const tokenParams: Record<string, string> = {
       grant_type: "authorization_code",
-      client_id: clientId,
       redirect_uri: callbackUrl,
       code,
       code_verifier: codeVerifier,
     }
 
-    // Also include client_secret in body as fallback
-    if (clientSecret) {
-      tokenParams["client_secret"] = clientSecret
+    // Only include client_id in body for public clients
+    if (!isConfidential) {
+      tokenParams["client_id"] = clientId
     }
+
+    console.log("[Twitter OAuth] Exchanging code", {
+      isConfidential,
+      hasBasicAuth: "Authorization" in headers,
+      redirectUri: callbackUrl,
+      codeLength: code.length,
+      verifierLength: codeVerifier.length,
+    })
 
     const tokenRes = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
