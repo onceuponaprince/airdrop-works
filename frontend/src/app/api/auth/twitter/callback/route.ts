@@ -8,16 +8,42 @@
 
 import { NextRequest, NextResponse } from "next/server"
 
-function getSiteUrl(): string {
+function getSiteUrl(req: NextRequest): string {
+  if (process.env.NODE_ENV !== "production") {
+    return req.nextUrl.origin
+  }
+
   return (
     process.env.NEXT_PUBLIC_SITE_URL ||
+    req.nextUrl.origin ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
     "http://localhost:3000"
   )
 }
 
+function resolveTwitterCallbackUrl(req: NextRequest): string {
+  const configuredCallbackUrl = process.env.TWITTER_CALLBACK_URL
+  const requestCallbackUrl = `${req.nextUrl.origin}/api/auth/twitter/callback`
+
+  if (!configuredCallbackUrl) {
+    return requestCallbackUrl
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      if (new URL(configuredCallbackUrl).origin !== req.nextUrl.origin) {
+        return requestCallbackUrl
+      }
+    } catch {
+      return requestCallbackUrl
+    }
+  }
+
+  return configuredCallbackUrl
+}
+
 export async function GET(req: NextRequest) {
-  const siteUrl = getSiteUrl()
+  const siteUrl = getSiteUrl(req)
   const { searchParams } = new URL(req.url)
   const code = searchParams.get("code")
   const state = searchParams.get("state")
@@ -28,7 +54,7 @@ export async function GET(req: NextRequest) {
 
   const clientId = process.env.TWITTER_CLIENT_ID ?? ""
   const clientSecret = process.env.TWITTER_CLIENT_SECRET ?? ""
-  const callbackUrl = process.env.TWITTER_CALLBACK_URL ?? ""
+  const callbackUrl = resolveTwitterCallbackUrl(req)
 
   if (errorParam) {
     return postResultToOpener(siteUrl, { error: "twitter_denied" })
@@ -43,8 +69,8 @@ export async function GET(req: NextRequest) {
     return postResultToOpener(siteUrl, { error: "twitter_auth_failed" })
   }
 
-  if (!clientId || !callbackUrl) {
-    console.error("[Twitter OAuth] Missing TWITTER_CLIENT_ID or TWITTER_CALLBACK_URL")
+  if (!clientId) {
+    console.error("[Twitter OAuth] Missing TWITTER_CLIENT_ID")
     return postResultToOpener(siteUrl, { error: "twitter_error" })
   }
 

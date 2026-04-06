@@ -1,16 +1,12 @@
 'use client';
 
 /**
- * Safe wrapper around Particle Network's wallet hooks.
- * Returns a consistent interface whether or not the Particle provider
- * is mounted. Falls back gracefully when env vars are not configured.
+ * Safe wrapper around Particle wallet state.
+ * The actual ConnectKit hooks are called inside the provider bridge so pages
+ * can read wallet state even when the provider is disabled or not mounted yet.
  */
 
-import {
-  useAccount,
-  useModal,
-  useDisconnect,
-} from '@particle-network/connectkit';
+import { createContext, useContext } from 'react';
 
 export interface WalletContext {
   available: boolean;
@@ -20,29 +16,17 @@ export interface WalletContext {
   disconnect: () => void;
 }
 
-const hasParticleEnv =
-  (process.env.NEXT_PUBLIC_PROJECT_ID ?? '').trim().length > 0;
+const defaultWalletContext: WalletContext = {
+  available: false,
+  address: undefined,
+  isConnected: false,
+  openConnectModal: () => {},
+  disconnect: () => {},
+};
+
+export const ParticleWalletContext =
+  createContext<WalletContext>(defaultWalletContext);
 
 export function useParticleWallet(): WalletContext {
-  const { address, isConnected } = useAccount();
-  const { setOpen } = useModal();
-  const { disconnect } = useDisconnect();
-
-  if (!hasParticleEnv) {
-    return {
-      available: false,
-      address: undefined,
-      isConnected: false,
-      openConnectModal: () => {},
-      disconnect: () => {},
-    };
-  }
-
-  return {
-    available: true,
-    address,
-    isConnected: isConnected && !!address,
-    openConnectModal: () => setOpen(true),
-    disconnect,
-  };
+  return useContext(ParticleWalletContext);
 }

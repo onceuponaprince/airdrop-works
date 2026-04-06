@@ -8,8 +8,10 @@
  */
 
 import { ConnectKitProvider, createConfig } from "@particle-network/connectkit"
+import { useAccount, useDisconnect, useModal } from "@particle-network/connectkit"
 import { evmWalletConnectors } from "@particle-network/connectkit/evm"
 import { avalanche, base } from "wagmi/chains"
+import { ParticleWalletContext } from "@/hooks/useParticleWallet"
 
 const projectId = (process.env.NEXT_PUBLIC_PROJECT_ID ?? "").trim()
 const clientKey = (process.env.NEXT_PUBLIC_CLIENT_KEY ?? "").trim()
@@ -36,6 +38,30 @@ const particleConfig = createConfig({
   },
 })
 
+function ParticleWalletBridge({ children }: { children: React.ReactNode }) {
+  const { address, isConnected } = useAccount()
+  const { setOpen } = useModal()
+  const { disconnect } = useDisconnect()
+
+  return (
+    <ParticleWalletContext.Provider
+      value={{
+        available: true,
+        address,
+        isConnected: isConnected && !!address,
+        openConnectModal: () => setOpen(true),
+        disconnect,
+      }}
+    >
+      {children}
+    </ParticleWalletContext.Provider>
+  )
+}
+
 export function ParticleProviderWrapper({ children }: { children: React.ReactNode }) {
-  return <ConnectKitProvider config={particleConfig}>{children}</ConnectKitProvider>
+  return (
+    <ConnectKitProvider config={particleConfig}>
+      <ParticleWalletBridge>{children}</ParticleWalletBridge>
+    </ConnectKitProvider>
+  )
 }

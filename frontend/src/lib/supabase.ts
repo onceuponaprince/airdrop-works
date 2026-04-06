@@ -2,6 +2,11 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL  || ""
 const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || ""
+const supabaseKey =
+  typeof window === "undefined" && supabaseServiceRole
+    ? supabaseServiceRole
+    : supabaseAnon
 
 if (typeof window !== "undefined" && (!supabaseUrl || !supabaseAnon)) {
   console.warn(
@@ -9,7 +14,7 @@ if (typeof window !== "undefined" && (!supabaseUrl || !supabaseAnon)) {
   )
 }
 
-export const supabase = createSupabaseClient(supabaseUrl, supabaseAnon)
+export const supabase = createSupabaseClient(supabaseUrl, supabaseKey)
 
 export const WAITLIST_WALLET_CONFLICT = "WAITLIST_WALLET_CONFLICT"
 
@@ -32,6 +37,14 @@ export interface WaitlistResult {
   alreadyExists: boolean
 }
 
+type WaitlistExistingRow = {
+  rank: number
+  referral_code: string
+  wallet_address?: string | null
+  primary_branch?: string | null
+  flagged?: boolean | null
+}
+
 function normalizeWallet(addr: string | null | undefined): string | null {
   const s = addr?.trim()
   if (!s) return null
@@ -39,15 +52,133 @@ function normalizeWallet(addr: string | null | undefined): string | null {
   return s
 }
 
-export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<WaitlistResult> {
-  const email = entry.email.toLowerCase().trim()
-  const db = supabase
+function getErrorMessage(error: { message?: string } | null | undefined): string {
+  return error?.message?.toLowerCase() ?? ""
+}
 
-  const { data: existing } = await db
+function isMissingColumnError(
+  error: { message?: string } | null | undefined,
+  columnName: string
+): boolean {
+  const message = getErrorMessage(error)
+  return (
+    message.includes(columnName.toLowerCase()) &&
+    (message.includes("does not exist") ||
+      message.includes("schema cache") ||
+      message.includes("could not find"))
+  )
+}
+
+function stripUnsupportedWaitlistColumns<T extends Record<string, unknown>>(
+  payload: T,
+  error: { message?: string } | null | undefined
+): T | null {
+  const nextPayload = { ...payload }
+  let changed = false
+
+  if ("flagged" in nextPayload && isMissingColumnError(error, "flagged")) {
+    delete nextPayload.flagged
+    changed = true
+  }
+
+  const missingTwitterColumn =
+    isMissingColumnError(error, "twitter_handle") ||
+    isMissingColumnError(error, "twitter_score_data") ||
+    isMissingColumnError(error, "twitter_connected_at")
+
+  if (missingTwitterColumn) {
+    for (const key of ["twitter_handle", "twitter_score_data", "twitter_connected_at"]) {
+      if (key in nextPayload) {
+        delete nextPayload[key]
+        changed = true
+      }
+    }
+  }
+
+  return changed ? (nextPayload as T) : null
+}
+
+async function getExistingWaitlistEntry(email: string): Promise<WaitlistExistingRow | null> {
+  const fullResult = await supabase
     .from("waitlist_entries")
     .select("rank, referral_code, wallet_address, primary_branch, flagged")
     .eq("email", email)
     .maybeSingle()
+
+  if (!fullResult.error) {
+    return fullResult.data as WaitlistExistingRow | null
+  }
+
+  if (!isMissingColumnError(fullResult.error, "flagged")) {
+    throw new Error(`Waitlist lookup failed: ${fullResult.error.message}`)
+  }
+
+  const fallbackResult = await supabase
+    .from("waitlist_entries")
+    .select("rank, referral_code, wallet_address, primary_branch")
+    .eq("email", email)
+    .maybeSingle()
+
+  if (fallbackResult.error) {
+    throw new Error(`Waitlist lookup failed: ${fallbackResult.error.message}`)
+  }
+
+  return fallbackResult.data
+    ? { ...fallbackResult.data, flagged: false }
+    : null
+}
+
+async function updateWaitlistEntryByEmail(
+  email: string,
+  payload: Record<string, unknown>
+): Promise<{ message?: string; code?: string } | null> {
+  let currentPayload = payload
+
+  while (true) {
+    const { error } = await supabase
+      .from("waitlist_entries")
+      .update(currentPayload)
+      .eq("email", email)
+
+    if (!error) return null
+
+    const strippedPayload = stripUnsupportedWaitlistColumns(currentPayload, error)
+    if (!strippedPayload) return error
+    currentPayload = strippedPayload
+  }
+}
+
+async function insertWaitlistRow(
+  payload: Record<string, unknown>
+): Promise<{
+  data: { rank: number; referral_code: string } | null
+  error: { message?: string; code?: string } | null
+}> {
+  let currentPayload = payload
+
+  while (true) {
+    const { data, error } = await supabase
+      .from("waitlist_entries")
+      .insert(currentPayload)
+      .select("rank, referral_code")
+      .single()
+
+    if (!error) {
+      return { data, error: null }
+    }
+
+    const strippedPayload = stripUnsupportedWaitlistColumns(currentPayload, error)
+    if (!strippedPayload) {
+      return { data: null, error }
+    }
+    currentPayload = strippedPayload
+  }
+}
+
+export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<WaitlistResult> {
+  const email = entry.email.toLowerCase().trim()
+  const db = supabase
+  const existing = await getExistingWaitlistEntry(email)
 
   if (existing) {
     const nextWallet =
@@ -85,24 +216,7 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
       updatePayload.twitter_connected_at = new Date().toISOString()
     }
 
-    let { error: upErr } = await db
-      .from("waitlist_entries")
-      .update(updatePayload)
-      .eq("email", email)
-
-    // If update fails due to unknown twitter columns, retry without them
-    if (upErr && upErr.message?.includes("column") && entry.twitter_handle) {
-      console.warn("[Waitlist] Twitter columns not in schema, retrying update without them:", upErr.message)
-      const retry = await db
-        .from("waitlist_entries")
-        .update({
-          wallet_address: nextWallet,
-          primary_branch: nextBranch,
-          flagged:        nextFlagged,
-        })
-        .eq("email", email)
-      upErr = retry.error
-    }
+    const upErr = await updateWaitlistEntryByEmail(email, updatePayload)
 
     if (upErr) {
       if (upErr.code === "23505") {
@@ -133,8 +247,6 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
     }
   }
 
-  // Build the insert payload — twitter fields are optional and may not exist
-  // in the database schema yet. If the insert fails, retry without them.
   const basePayload = {
     email,
     wallet_address: walletForInsert,
@@ -150,24 +262,7 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
     twitter_connected_at: new Date().toISOString(),
   } : {}
 
-  let { data, error } = await db
-    .from("waitlist_entries")
-    .insert({ ...basePayload, ...twitterPayload })
-    .select("rank, referral_code")
-    .single()
-
-  // If insert fails due to unknown column (twitter fields not migrated),
-  // retry without twitter fields so signup still works.
-  if (error && error.message?.includes("column") && Object.keys(twitterPayload).length > 0) {
-    console.warn("[Waitlist] Twitter columns not in schema, retrying without them:", error.message)
-    const retry = await db
-      .from("waitlist_entries")
-      .insert(basePayload)
-      .select("rank, referral_code")
-      .single()
-    data = retry.data
-    error = retry.error
-  }
+  const { data, error } = await insertWaitlistRow({ ...basePayload, ...twitterPayload })
 
   if (error) {
     if (error.code === "23505") {
@@ -221,11 +316,23 @@ export async function checkWhitelistApproval(email: string): Promise<{
   approved: boolean;
   rank: number | null;
 }> {
-  const { data } = await supabase
+  const normalizedEmail = email.toLowerCase().trim()
+  const { data, error } = await supabase
     .from("waitlist_entries")
     .select("approved, rank")
-    .eq("email", email.toLowerCase().trim())
+    .eq("email", normalizedEmail)
     .maybeSingle()
+
+  if (error && isMissingColumnError(error, "approved")) {
+    const fallback = await supabase
+      .from("waitlist_entries")
+      .select("rank")
+      .eq("email", normalizedEmail)
+      .maybeSingle()
+
+    if (!fallback.data) return { exists: false, approved: false, rank: null }
+    return { exists: true, approved: false, rank: fallback.data.rank ?? null }
+  }
 
   if (!data) return { exists: false, approved: false, rank: null }
   return { exists: true, approved: data.approved === true, rank: data.rank ?? null }

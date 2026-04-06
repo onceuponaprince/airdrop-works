@@ -6,17 +6,42 @@
  * via JavaScript. This ensures PKCE cookies are set before navigation.
  */
 
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { randomBytes, createHash } from "crypto"
 
-export async function GET() {
-  const clientId = process.env.TWITTER_CLIENT_ID
-  const callbackUrl = process.env.TWITTER_CALLBACK_URL
+function resolveTwitterCallbackUrl(req: NextRequest): string {
+  const configuredCallbackUrl = process.env.TWITTER_CALLBACK_URL
+  const requestCallbackUrl = `${req.nextUrl.origin}/api/auth/twitter/callback`
 
-  if (!clientId || !callbackUrl) {
+  if (!configuredCallbackUrl) {
+    return requestCallbackUrl
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    try {
+      if (new URL(configuredCallbackUrl).origin !== req.nextUrl.origin) {
+        console.warn(
+          "[Twitter OAuth] Using request-origin callback in development:",
+          requestCallbackUrl
+        )
+        return requestCallbackUrl
+      }
+    } catch {
+      return requestCallbackUrl
+    }
+  }
+
+  return configuredCallbackUrl
+}
+
+export async function GET(req: NextRequest) {
+  const clientId = process.env.TWITTER_CLIENT_ID
+  const callbackUrl = resolveTwitterCallbackUrl(req)
+
+  if (!clientId) {
     return new NextResponse(
       `<html><body><p style="font-family:monospace;color:red;padding:40px;">
-        Twitter OAuth not configured. Set TWITTER_CLIENT_ID and TWITTER_CALLBACK_URL.
+        Twitter OAuth not configured. Set TWITTER_CLIENT_ID.
       </p></body></html>`,
       { status: 503, headers: { "Content-Type": "text/html" } }
     )
