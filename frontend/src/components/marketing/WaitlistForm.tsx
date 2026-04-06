@@ -8,6 +8,7 @@ import { StepTwitter } from "@/components/marketing/steps/StepTwitter"
 import { StepSubmit } from "@/components/marketing/steps/StepSubmit"
 
 const STORAGE_KEY = "airdrop_quest_state"
+const ADMIN_BYPASS_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_BYPASS ?? ""
 
 interface PersistedState {
   currentStep: QuestStep
@@ -49,9 +50,6 @@ function clearPersistedState() {
  * OAuth redirect (user leaves the page and comes back).
  */
 export function WaitlistForm() {
-  // Restore from sessionStorage so the flow survives the Twitter OAuth redirect.
-  // useState initializers are safe because this component is 'use client' and
-  // the loadPersistedState function returns null during SSR.
   const saved = loadPersistedState()
   const [hydrated] = useState(() => typeof window !== "undefined")
   const [currentStep, setCurrentStep] = useState<QuestStep>(saved?.currentStep ?? "wallet")
@@ -59,6 +57,27 @@ export function WaitlistForm() {
   const [walletAddress, setWalletAddress] = useState<string | null>(saved?.walletAddress ?? null)
   const [email, setEmail] = useState<string | null>(saved?.email ?? null)
   const [twitterHandle, setTwitterHandle] = useState<string | null>(saved?.twitterHandle ?? null)
+
+  // Hidden admin bypass — type the password anywhere on step 1 to skip to step 3.
+  // Password is set via NEXT_PUBLIC_ADMIN_BYPASS env var.
+  const [bypassBuffer, setBypassBuffer] = useState("")
+  useEffect(() => {
+    if (!ADMIN_BYPASS_PASSWORD || currentStep !== "wallet") return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key.length !== 1) return // ignore modifier keys
+      const next = (bypassBuffer + e.key).slice(-ADMIN_BYPASS_PASSWORD.length)
+      setBypassBuffer(next)
+      if (next === ADMIN_BYPASS_PASSWORD) {
+        setWalletAddress("0xADMIN")
+        setEmail("admin@airdrop.works")
+        setCompletedSteps(["wallet", "email"])
+        setCurrentStep("twitter")
+        setBypassBuffer("")
+      }
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [bypassBuffer, currentStep])
 
   // Persist state whenever it changes
   useEffect(() => {
