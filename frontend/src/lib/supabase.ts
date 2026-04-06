@@ -1,4 +1,4 @@
-import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL  || ""
 const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
@@ -10,19 +10,6 @@ if (typeof window !== "undefined" && (!supabaseUrl || !supabaseAnon)) {
 }
 
 export const supabase = createSupabaseClient(supabaseUrl, supabaseAnon)
-
-/** Server-only: bypasses RLS for waitlist upserts (never expose this key to the client). */
-function getWaitlistServerClient(): SupabaseClient | null {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()
-  if (!supabaseUrl || !key) return null
-  return createSupabaseClient(supabaseUrl, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  })
-}
-
-function waitlistDb(): SupabaseClient {
-  return getWaitlistServerClient() ?? supabase
-}
 
 export const WAITLIST_WALLET_CONFLICT = "WAITLIST_WALLET_CONFLICT"
 
@@ -52,8 +39,7 @@ function normalizeWallet(addr: string | null | undefined): string | null {
 
 export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<WaitlistResult> {
   const email = entry.email.toLowerCase().trim()
-  const db = waitlistDb()
-  const hasServiceRole = Boolean(getWaitlistServerClient())
+  const db = supabase
 
   const { data: existing } = await db
     .from("waitlist_entries")
@@ -62,19 +48,6 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
     .maybeSingle()
 
   if (existing) {
-    if (!hasServiceRole) {
-      if (entry.wallet_address != null || entry.primary_branch != null || entry.flagged) {
-        console.warn(
-          "[Waitlist] Set SUPABASE_SERVICE_ROLE_KEY so re-submits can attach a wallet without errors."
-        )
-      }
-      return {
-        rank:          existing.rank,
-        referralCode:  existing.referral_code,
-        alreadyExists: true,
-      }
-    }
-
     const nextWallet =
       entry.wallet_address !== undefined && entry.wallet_address !== null
         ? normalizeWallet(entry.wallet_address)

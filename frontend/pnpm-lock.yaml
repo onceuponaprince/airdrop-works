@@ -59,9 +59,6 @@ importers:
       '@vercel/og':
         specifier: ^0.11.1
         version: 0.11.1
-      bcryptjs:
-        specifier: ^3.0.3
-        version: 3.0.3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2853,10 +2850,6 @@ packages:
   baseline-browser-mapping@2.10.15:
     resolution: {integrity: sha512-1nfKCq9wuAZFTkA2ey/3OXXx7GzFjLdkTiFVNwlJ9WqdI706CZRIhEqjuwanjMIja+84jDLa9rcyZDPDiVkASQ==}
     engines: {node: '>=6.0.0'}
-    hasBin: true
-
-  bcryptjs@3.0.3:
-    resolution: {integrity: sha512-GlF5wPWnSa/X5LKM1o0wz0suXIINz1iHRLvTS+sLyi7XPbe5ycmYI3DlZqVGZZtDgl4DmasFg7gOB3JYbphV5g==}
     hasBin: true
 
   big.js@6.2.2:
@@ -9633,8 +9626,6 @@ snapshots:
   base64url@3.0.1: {}
 
   baseline-browser-mapping@2.10.15: {}
-
-  bcryptjs@3.0.3: {}
 
   big.js@6.2.2: {}
 

@@ -3,11 +3,24 @@
 import { useState, useRef, useCallback } from "react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
+import { supabase } from "@/lib/supabase"
 
 interface StepEmailProps {
   onComplete: (email: string) => void
 }
 
+/**
+ * Email verification step using Supabase Auth's built-in OTP.
+ *
+ * Flow:
+ *   1. User enters email → supabase.auth.signInWithOtp({ email })
+ *      Supabase sends a 6-digit code to their inbox automatically.
+ *   2. User enters code → supabase.auth.verifyOtp({ email, token, type: "email" })
+ *      Supabase validates the code server-side.
+ *   3. On success → calls onComplete(email) to advance the quest chain.
+ *
+ * No custom OTP table, no bcrypt, no /api/otp routes needed.
+ */
 export function StepEmail({ onComplete }: StepEmailProps) {
   const [stage, setStage] = useState<"input" | "otp">("input")
   const [email, setEmail] = useState("")
@@ -21,13 +34,11 @@ export function StepEmail({ onComplete }: StepEmailProps) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/otp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email,
+        options: { shouldCreateUser: true },
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error)
+      if (otpError) throw new Error(otpError.message)
       setStage("otp")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send code")
@@ -41,13 +52,12 @@ export function StepEmail({ onComplete }: StepEmailProps) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/otp/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: code }),
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: "email",
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error)
+      if (verifyError) throw new Error(verifyError.message)
       onComplete(email)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed")
@@ -62,12 +72,10 @@ export function StepEmail({ onComplete }: StepEmailProps) {
     next[index] = digit
     setOtp(next)
 
-    // Auto-advance to next input
     if (digit && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
 
-    // Auto-submit when all 6 digits entered
     const fullCode = next.join("")
     if (fullCode.length === 6 && next.every(d => d !== "")) {
       verifyOtp(fullCode)
@@ -89,10 +97,8 @@ export function StepEmail({ onComplete }: StepEmailProps) {
       next[i] = pasted[i]
     }
     setOtp(next)
-    // Focus the next empty box or the last one
     const focusIndex = Math.min(pasted.length, 5)
     inputRefs.current[focusIndex]?.focus()
-    // Auto-submit if all 6 pasted
     if (pasted.length === 6) {
       verifyOtp(pasted)
     }
@@ -104,10 +110,9 @@ export function StepEmail({ onComplete }: StepEmailProps) {
       <ArcadeCard className="space-y-4">
         <p className="font-body text-sm text-muted-foreground">
           Code sent to <span className="text-foreground">{email}</span>.
-          Valid for 30 minutes.
+          Check your inbox (and spam folder).
         </p>
 
-        {/* 6-box OTP input */}
         <div className="flex gap-2 justify-center" onPaste={handleOtpPaste}>
           {Array.from({ length: 6 }).map((_, i) => (
             <input
