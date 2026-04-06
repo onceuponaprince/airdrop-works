@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, unquote, urlencode
 from urllib.request import Request, urlopen
 
 from django.conf import settings
@@ -59,6 +59,9 @@ def _http_request_json(
     except HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="ignore")
         logger.error("[Crawler] HTTP %s for %s: %s", exc.code, url, detail)
+        detail_snippet = " ".join(detail.split())[:240]
+        if detail_snippet:
+            raise ValueError(f"HTTP {exc.code} calling {url}: {detail_snippet}") from exc
         raise ValueError(f"HTTP {exc.code} calling {url}") from exc
     except URLError as exc:
         logger.error("[Crawler] URL error for %s: %s", url, exc)
@@ -86,11 +89,19 @@ def _max_cursor_value(cursor_values: list[str]) -> str:
         return max(normalized)
 
 
+def _twitter_bearer_token() -> str:
+    raw_token = str(settings.TWITTER_BEARER_TOKEN or "").strip()
+    if not raw_token:
+        raise ValueError("TWITTER_BEARER_TOKEN is not configured")
+
+    # Some local env files store the bearer token URL-encoded (%2B, %2F, %3D).
+    # Decode once before sending it to Twitter.
+    return unquote(raw_token)
+
+
 def crawl_twitter(username: str, since_id: str | None = None) -> CrawlResult:
     """Fetch recent tweets for a username using Twitter v2 API."""
-    token = settings.TWITTER_BEARER_TOKEN
-    if not token:
-        raise ValueError("TWITTER_BEARER_TOKEN is not configured")
+    token = _twitter_bearer_token()
 
     encoded_username = quote(username.lstrip("@"))
     user_url = f"https://api.twitter.com/2/users/by/username/{encoded_username}"

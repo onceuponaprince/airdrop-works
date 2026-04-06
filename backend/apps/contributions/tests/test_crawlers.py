@@ -97,3 +97,9 @@ class RedditCrawlerTests(SimpleTestCase):
         self.assertEqual(result.items, [])
         listing_request = urlopen_mock.call_args_list[1].args[0]
         self.assertIn("before=t3_cursor", listing_request.full_url)
+
+
+class TwitterCrawlerTests(SimpleTestCase):
+    @override_settings(TWITTER_BEARER_TOKEN="abc%2B123%2Fxyz%3D")
+    def test_twitter_bearer_token_is_url_decoded(self):
+        self.assertEqual(crawlers._twitter_bearer_token(), "abc+123/xyz=")

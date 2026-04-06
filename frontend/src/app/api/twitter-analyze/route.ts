@@ -5,6 +5,8 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 const MAX_TWEETS = 25
 const TWITTER_API_BASE = "https://api.twitter.com/2"
+const RATE_LIMIT_WINDOW_MS = Number(process.env.TWITTER_ANALYZE_RATE_LIMIT_WINDOW_MS ?? 300_000)
+const RATE_LIMIT_MAX_REQUESTS = Number(process.env.TWITTER_ANALYZE_RATE_LIMIT_MAX_REQUESTS ?? 3)
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 // In-memory, per-instance. 3 requests per 5 minutes per IP.
@@ -14,13 +16,17 @@ const TWITTER_API_BASE = "https://api.twitter.com/2"
 const rateLimit = new Map<string, { count: number; resetAt: number }>()
 
 function checkRateLimit(ip: string): boolean {
+  if (process.env.NODE_ENV !== "production") {
+    return true
+  }
+
   const now = Date.now()
   const entry = rateLimit.get(ip)
   if (!entry || now > entry.resetAt) {
-    rateLimit.set(ip, { count: 1, resetAt: now + 300_000 })
+    rateLimit.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
     return true
   }
-  if (entry.count >= 3) return false
+  if (entry.count >= RATE_LIMIT_MAX_REQUESTS) return false
   entry.count++
   return true
 }
