@@ -21,9 +21,20 @@ interface StepEmailProps {
  *
  * No custom OTP table, no bcrypt, no /api/otp routes needed.
  */
+const EMAIL_STORAGE_KEY = "airdrop_quest_email_pending"
+
+/** Persist the email that's waiting for OTP so it survives page refresh. */
+function loadPendingEmail(): { email: string; stage: "input" | "otp" } {
+  if (typeof window === "undefined") return { email: "", stage: "input" }
+  const saved = sessionStorage.getItem(EMAIL_STORAGE_KEY)
+  if (saved) return { email: saved, stage: "otp" }
+  return { email: "", stage: "input" }
+}
+
 export function StepEmail({ onComplete }: StepEmailProps) {
-  const [stage, setStage] = useState<"input" | "otp">("input")
-  const [email, setEmail] = useState("")
+  const pending = loadPendingEmail()
+  const [stage, setStage] = useState<"input" | "otp">(pending.stage)
+  const [email, setEmail] = useState(pending.email)
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -39,6 +50,7 @@ export function StepEmail({ onComplete }: StepEmailProps) {
         options: { shouldCreateUser: true },
       })
       if (otpError) throw new Error(otpError.message)
+      sessionStorage.setItem(EMAIL_STORAGE_KEY, email)
       setStage("otp")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send code")
@@ -77,6 +89,7 @@ export function StepEmail({ onComplete }: StepEmailProps) {
         type: "email",
       })
       if (verifyError) throw new Error(verifyError.message)
+      sessionStorage.removeItem(EMAIL_STORAGE_KEY)
       onComplete(email)
     } catch (err) {
       setError(err instanceof Error ? err.message : "Verification failed")
@@ -167,7 +180,7 @@ export function StepEmail({ onComplete }: StepEmailProps) {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => { setStage("input"); setOtp(Array(6).fill("")); setError(null) }}
+            onClick={() => { setStage("input"); setOtp(Array(6).fill("")); setError(null); sessionStorage.removeItem(EMAIL_STORAGE_KEY) }}
             className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
                        transition-colors uppercase tracking-widest"
           >
