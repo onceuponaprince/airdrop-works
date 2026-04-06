@@ -46,6 +46,20 @@ export function StepEmail({ onComplete, onBack }: StepEmailProps) {
     setLoading(true)
     setError(null)
     try {
+      // Check if email already exists in waitlist — skip OTP if so
+      const { data: existing } = await supabase
+        .from("waitlist_entries")
+        .select("email")
+        .eq("email", email.toLowerCase().trim())
+        .maybeSingle()
+
+      if (existing) {
+        // Email already verified via a previous signup — skip straight to step 3
+        sessionStorage.removeItem(EMAIL_STORAGE_KEY)
+        onComplete(email)
+        return
+      }
+
       const { error: otpError } = await supabase.auth.signInWithOtp({
         email,
         options: { shouldCreateUser: true },
