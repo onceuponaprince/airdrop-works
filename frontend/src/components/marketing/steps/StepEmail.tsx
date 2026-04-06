@@ -5,6 +5,21 @@ import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { supabase } from "@/lib/supabase"
 
+async function checkEmailExists(email: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/waitlist/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+    if (!res.ok) return false
+    const data = await res.json()
+    return data.exists === true
+  } catch {
+    return false
+  }
+}
+
 interface StepEmailProps {
   onComplete: (email: string) => void
   onBack?: () => void
@@ -46,15 +61,10 @@ export function StepEmail({ onComplete, onBack }: StepEmailProps) {
     setLoading(true)
     setError(null)
     try {
-      // Check if email already exists in waitlist — skip OTP if so
-      const { data: existing } = await supabase
-        .from("waitlist_entries")
-        .select("email")
-        .eq("email", email.toLowerCase().trim())
-        .maybeSingle()
-
-      if (existing) {
-        // Email already verified via a previous signup — skip straight to step 3
+      // Check if email already exists in waitlist — skip OTP if so.
+      // Uses a server-side API route to avoid RLS restrictions on client-side reads.
+      const alreadyExists = await checkEmailExists(email)
+      if (alreadyExists) {
         sessionStorage.removeItem(EMAIL_STORAGE_KEY)
         onComplete(email)
         return

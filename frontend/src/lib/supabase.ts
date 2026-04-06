@@ -72,14 +72,37 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
       }
     }
 
-    const { error: upErr } = await db
+    const updatePayload: Record<string, unknown> = {
+      wallet_address: nextWallet,
+      primary_branch: nextBranch,
+      flagged:        nextFlagged,
+    }
+
+    // Include twitter fields if provided
+    if (entry.twitter_handle) {
+      updatePayload.twitter_handle = entry.twitter_handle
+      updatePayload.twitter_score_data = entry.twitter_score_data ?? null
+      updatePayload.twitter_connected_at = new Date().toISOString()
+    }
+
+    let { error: upErr } = await db
       .from("waitlist_entries")
-      .update({
-        wallet_address: nextWallet,
-        primary_branch: nextBranch,
-        flagged:        nextFlagged,
-      })
+      .update(updatePayload)
       .eq("email", email)
+
+    // If update fails due to unknown twitter columns, retry without them
+    if (upErr && upErr.message?.includes("column") && entry.twitter_handle) {
+      console.warn("[Waitlist] Twitter columns not in schema, retrying update without them:", upErr.message)
+      const retry = await db
+        .from("waitlist_entries")
+        .update({
+          wallet_address: nextWallet,
+          primary_branch: nextBranch,
+          flagged:        nextFlagged,
+        })
+        .eq("email", email)
+      upErr = retry.error
+    }
 
     if (upErr) {
       if (upErr.code === "23505") {

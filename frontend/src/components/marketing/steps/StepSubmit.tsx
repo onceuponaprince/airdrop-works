@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
@@ -19,11 +19,18 @@ interface StepSubmitProps {
   onSuccess?: () => void
 }
 
-export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreData, onBack, onSuccess: _onSuccess }: StepSubmitProps) {
+export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreData, onBack, onSuccess }: StepSubmitProps) {
   const { status, rank, referralUrl, alreadyExists, error, submit } = useWaitlist()
   const inboundReferralCode = useReferral()
   const [honeypot, setHoneypot] = useState("")
   const [copied, setCopied] = useState(false)
+
+  // Notify parent when submission succeeds so it can clear persisted state
+  useEffect(() => {
+    if (status === "success" && onSuccess) {
+      onSuccess()
+    }
+  }, [status, onSuccess])
 
   const handleSubmit = () => {
     // Strip score data to serializable essentials only
