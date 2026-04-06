@@ -1,9 +1,9 @@
 /**
  * GET /api/auth/twitter — Initiates Twitter OAuth 2.0 PKCE flow.
  *
- * Generates a code verifier + challenge, stores the verifier in an httpOnly
- * cookie, and redirects the user to Twitter's authorization page. The callback
- * route exchanges the returned code for an access token.
+ * Instead of a 302 redirect (which can fail in popups on some browsers),
+ * returns an HTML page that sets cookies via meta tags and redirects
+ * via JavaScript. This ensures PKCE cookies are set before navigation.
  */
 
 import { NextResponse } from "next/server"
@@ -14,18 +14,18 @@ export async function GET() {
   const callbackUrl = process.env.TWITTER_CALLBACK_URL
 
   if (!clientId || !callbackUrl) {
-    return NextResponse.json(
-      { error: "Twitter OAuth not configured." },
-      { status: 503 }
+    return new NextResponse(
+      `<html><body><p style="font-family:monospace;color:red;padding:40px;">
+        Twitter OAuth not configured. Set TWITTER_CLIENT_ID and TWITTER_CALLBACK_URL.
+      </p></body></html>`,
+      { status: 503, headers: { "Content-Type": "text/html" } }
     )
   }
 
-  // Generate PKCE values
   const codeVerifier = randomBytes(32).toString("base64url")
   const codeChallenge = createHash("sha256")
     .update(codeVerifier)
     .digest("base64url")
-
   const state = randomBytes(16).toString("hex")
 
   const params = new URLSearchParams({
@@ -39,24 +39,29 @@ export async function GET() {
   })
 
   const authUrl = `https://twitter.com/i/oauth2/authorize?${params}`
+  const isProduction = process.env.NODE_ENV === "production"
+  const secure = isProduction ? "; Secure" : ""
 
-  const response = NextResponse.redirect(authUrl)
-
-  // Store PKCE verifier and state in httpOnly cookies (10 min TTL)
-  response.cookies.set("twitter_code_verifier", codeVerifier, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 600,
-    path: "/",
-    sameSite: "lax",
-  })
-  response.cookies.set("twitter_oauth_state", state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 600,
-    path: "/",
-    sameSite: "lax",
-  })
+  // Return HTML that sets cookies and redirects — more reliable than
+  // NextResponse.redirect() in popup windows across browsers.
+  const response = new NextResponse(
+    `<!DOCTYPE html>
+<html><head><title>Connecting to Twitter...</title></head>
+<body>
+<script>
+  document.cookie = "twitter_code_verifier=${codeVerifier}; path=/; max-age=600; SameSite=Lax${secure}";
+  document.cookie = "twitter_oauth_state=${state}; path=/; max-age=600; SameSite=Lax${secure}";
+  window.location.href = "${authUrl}";
+</script>
+<p style="font-family:monospace;color:#6B7280;text-align:center;margin-top:40px;">
+  Redirecting to Twitter...
+</p>
+</body></html>`,
+    {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    }
+  )
 
   return response
 }
