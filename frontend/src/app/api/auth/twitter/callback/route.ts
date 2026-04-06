@@ -1,15 +1,14 @@
 /**
  * GET /api/auth/twitter/callback — Handles the Twitter OAuth 2.0 PKCE callback.
  *
- * Exchanges the authorization code for an access token using HTTP Basic Auth
- * (required for confidential clients / Web App type), fetches the user's
- * Twitter profile, then redirects back to the waitlist with the handle.
+ * When opened in a popup, renders a small HTML page that posts the result
+ * back to the opener window via postMessage, then closes itself.
+ * When opened as a redirect, falls back to redirecting to /#waitlist.
  */
 
 import { NextRequest, NextResponse } from "next/server"
 
 function getSiteUrl(): string {
-  // Vercel provides this automatically, or fall back to env var / localhost
   return (
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
@@ -31,69 +30,59 @@ export async function GET(req: NextRequest) {
   const clientSecret = process.env.TWITTER_CLIENT_SECRET ?? ""
   const callbackUrl = process.env.TWITTER_CALLBACK_URL ?? ""
 
-  // Handle user denying access
   if (errorParam) {
-    return redirectWithError(siteUrl, "twitter_denied")
+    return postResultToOpener(siteUrl, { error: "twitter_denied" })
   }
 
-  // Validate state + code + verifier
   if (!code || !state || state !== storedState || !codeVerifier) {
     console.error("[Twitter OAuth] State mismatch or missing params", {
       hasCode: !!code,
       stateMatch: state === storedState,
       hasVerifier: !!codeVerifier,
     })
-    return redirectWithError(siteUrl, "twitter_auth_failed")
+    return postResultToOpener(siteUrl, { error: "twitter_auth_failed" })
   }
 
   if (!clientId || !callbackUrl) {
     console.error("[Twitter OAuth] Missing TWITTER_CLIENT_ID or TWITTER_CALLBACK_URL")
-    return redirectWithError(siteUrl, "twitter_error")
+    return postResultToOpener(siteUrl, { error: "twitter_error" })
   }
 
   try {
-    // Twitter OAuth 2.0 token exchange.
-    // Confidential clients (Web App type) require HTTP Basic Auth with
-    // client_id:client_secret. Public clients (SPA) only need client_id in the body.
     const headers: Record<string, string> = {
       "Content-Type": "application/x-www-form-urlencoded",
     }
 
-    // Use Basic Auth if client_secret is set (confidential client)
     if (clientSecret) {
       const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
       headers["Authorization"] = `Basic ${credentials}`
     }
 
-    const tokenBody = new URLSearchParams({
-      grant_type: "authorization_code",
-      client_id: clientId,
-      redirect_uri: callbackUrl,
-      code,
-      code_verifier: codeVerifier,
-    })
-
     const tokenRes = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
       headers,
-      body: tokenBody,
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        client_id: clientId,
+        redirect_uri: callbackUrl,
+        code,
+        code_verifier: codeVerifier,
+      }),
     })
 
     if (!tokenRes.ok) {
       const errBody = await tokenRes.text()
       console.error("[Twitter OAuth] Token exchange failed:", tokenRes.status, errBody)
-      return redirectWithError(siteUrl, "twitter_token_failed")
+      return postResultToOpener(siteUrl, { error: "twitter_token_failed" })
     }
 
     const tokenData = await tokenRes.json() as { access_token?: string }
     const accessToken = tokenData.access_token
 
     if (!accessToken) {
-      console.error("[Twitter OAuth] No access_token in response")
-      return redirectWithError(siteUrl, "twitter_no_token")
+      return postResultToOpener(siteUrl, { error: "twitter_no_token" })
     }
 
-    // Fetch the authenticated user's profile
     const userRes = await fetch(
       "https://api.twitter.com/2/users/me?user.fields=public_metrics,profile_image_url",
       { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -102,42 +91,70 @@ export async function GET(req: NextRequest) {
     if (!userRes.ok) {
       const errBody = await userRes.text()
       console.error("[Twitter OAuth] User fetch failed:", userRes.status, errBody)
-      return redirectWithError(siteUrl, "twitter_user_failed")
+      return postResultToOpener(siteUrl, { error: "twitter_user_failed" })
     }
 
     const userData = await userRes.json() as {
-      data?: { username?: string; name?: string; profile_image_url?: string }
+      data?: { username?: string }
     }
     const handle = userData.data?.username
 
     if (!handle) {
-      console.error("[Twitter OAuth] No username in user data")
-      return redirectWithError(siteUrl, "twitter_no_handle")
+      return postResultToOpener(siteUrl, { error: "twitter_no_handle" })
     }
 
-    // Redirect back to waitlist with handle + token as query params
-    const redirectUrl = new URL(`${siteUrl}/#waitlist`)
-    redirectUrl.searchParams.set("twitter_handle", handle)
-    redirectUrl.searchParams.set("twitter_token", accessToken)
-
-    const response = NextResponse.redirect(redirectUrl)
-    clearOAuthCookies(response)
-    return response
+    return postResultToOpener(siteUrl, { handle, token: accessToken })
   } catch (err) {
     console.error("[Twitter OAuth] Unexpected error:", err)
-    return redirectWithError(siteUrl, "twitter_error")
+    return postResultToOpener(siteUrl, { error: "twitter_error" })
   }
 }
 
-function redirectWithError(siteUrl: string, errorCode: string) {
-  const redirectUrl = new URL(`${siteUrl}/#waitlist`)
-  redirectUrl.searchParams.set("twitter_error", errorCode)
-  const response = NextResponse.redirect(redirectUrl)
-  clearOAuthCookies(response)
-  return response
-}
+/**
+ * Returns an HTML page that posts the OAuth result to the opener window
+ * via postMessage, then closes itself. If there's no opener (direct
+ * navigation), falls back to redirecting.
+ */
+function postResultToOpener(
+  siteUrl: string,
+  result: { handle?: string; token?: string; error?: string }
+) {
+  const payload = JSON.stringify({ type: "twitter_oauth_result", ...result })
 
-function clearOAuthCookies(response: NextResponse) {
+  // Clear OAuth cookies
+  const response = new NextResponse(
+    `<!DOCTYPE html>
+<html><head><title>Connecting Twitter...</title></head>
+<body>
+<script>
+  var result = ${payload};
+  if (window.opener) {
+    window.opener.postMessage(result, "${siteUrl}");
+    window.close();
+  } else {
+    // Fallback: redirect if not in a popup
+    var url = new URL("${siteUrl}/#waitlist");
+    if (result.handle) {
+      url.searchParams.set("twitter_handle", result.handle);
+      url.searchParams.set("twitter_token", result.token || "");
+    }
+    if (result.error) {
+      url.searchParams.set("twitter_error", result.error);
+    }
+    window.location.href = url.toString();
+  }
+</script>
+<p style="font-family:monospace;color:#6B7280;text-align:center;margin-top:40px;">
+  Connecting your Twitter account...
+</p>
+</body></html>`,
+    {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    }
+  )
+
   response.cookies.delete("twitter_code_verifier")
   response.cookies.delete("twitter_oauth_state")
+  return response
 }

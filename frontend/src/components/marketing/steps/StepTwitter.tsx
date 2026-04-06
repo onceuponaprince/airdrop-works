@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Twitter, CheckCircle, AlertCircle } from "lucide-react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
@@ -10,11 +10,6 @@ interface StepTwitterProps {
   onSkip: () => void
 }
 
-/**
- * Twitter connect step — initiates OAuth 2.0 PKCE flow via /api/auth/twitter.
- * After callback, the user lands back on the page with ?twitter_handle=...
- * and ?twitter_token=... in the URL, which this component reads on mount.
- */
 const ERROR_MESSAGES: Record<string, string> = {
   twitter_denied: "You denied access. Try again or skip this step.",
   twitter_auth_failed: "Authentication failed. Please try again.",
@@ -23,45 +18,78 @@ const ERROR_MESSAGES: Record<string, string> = {
   twitter_user_failed: "Could not fetch your Twitter profile.",
   twitter_no_handle: "Could not read your Twitter handle.",
   twitter_error: "Something went wrong. Please try again.",
+  popup_blocked: "Popup was blocked. Allow popups for this site and try again.",
 }
 
-/** Read and consume Twitter OAuth callback params from the URL. */
-function readOAuthParams(): {
-  connected: { handle: string; token: string } | null
-  error: string | null
-} {
-  if (typeof window === "undefined") return { connected: null, error: null }
-
-  const params = new URLSearchParams(window.location.search)
-  const handle = params.get("twitter_handle")
-  const token = params.get("twitter_token")
-  const twitterError = params.get("twitter_error")
-
-  // Clean URL params so they don't persist on refresh
-  if (handle || twitterError) {
-    const url = new URL(window.location.href)
-    url.searchParams.delete("twitter_handle")
-    url.searchParams.delete("twitter_token")
-    url.searchParams.delete("twitter_error")
-    window.history.replaceState({}, "", url.pathname + url.hash)
-  }
-
-  if (twitterError) {
-    return { connected: null, error: ERROR_MESSAGES[twitterError] || ERROR_MESSAGES.twitter_error }
-  }
-  if (handle && token) {
-    return { connected: { handle, token }, error: null }
-  }
-  return { connected: null, error: null }
-}
-
+/**
+ * Twitter connect step — opens OAuth in a popup window.
+ *
+ * Flow:
+ *   1. User clicks "Connect Twitter" → popup opens to /api/auth/twitter
+ *   2. Popup redirects to Twitter authorization
+ *   3. Twitter redirects back to /api/auth/twitter/callback (in the popup)
+ *   4. Callback renders a small HTML page that posts the result via postMessage
+ *   5. This component receives the message and closes the popup
+ *
+ * The main page never navigates away — quest chain state is preserved.
+ */
 export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
-  // Read OAuth callback params once on mount (initializer runs client-side only)
-  const [oauthResult] = useState(readOAuthParams)
-  const [connected] = useState(oauthResult.connected)
-  const [error] = useState(oauthResult.error)
+  const [connected, setConnected] = useState<{ handle: string; token: string } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [waiting, setWaiting] = useState(false)
 
-  // Connected state — show handle and continue button
+  // Listen for postMessage from the OAuth popup
+  const handleMessage = useCallback((event: MessageEvent) => {
+    // Only accept messages from our own origin
+    if (event.origin !== window.location.origin) return
+    const data = event.data
+    if (data?.type !== "twitter_oauth_result") return
+
+    setWaiting(false)
+
+    if (data.error) {
+      setError(ERROR_MESSAGES[data.error] || ERROR_MESSAGES.twitter_error)
+    } else if (data.handle) {
+      setConnected({ handle: data.handle, token: data.token ?? "" })
+    }
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener("message", handleMessage)
+    return () => window.removeEventListener("message", handleMessage)
+  }, [handleMessage])
+
+  const openTwitterPopup = () => {
+    setError(null)
+    setWaiting(true)
+
+    const width = 600
+    const height = 700
+    const left = window.screenX + (window.outerWidth - width) / 2
+    const top = window.screenY + (window.outerHeight - height) / 2
+
+    const popup = window.open(
+      "/api/auth/twitter",
+      "twitter_oauth",
+      `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes`
+    )
+
+    if (!popup) {
+      setError(ERROR_MESSAGES.popup_blocked)
+      setWaiting(false)
+      return
+    }
+
+    // Poll to detect if user closed the popup without completing auth
+    const pollTimer = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(pollTimer)
+        setWaiting(false)
+      }
+    }, 500)
+  }
+
+  // Connected state
   if (connected) {
     return (
       <ArcadeCard className="space-y-4">
@@ -87,7 +115,7 @@ export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
     )
   }
 
-  // Default state — connect or skip
+  // Default state
   return (
     <ArcadeCard className="space-y-4">
       <p className="font-body text-sm text-muted-foreground">
@@ -105,12 +133,12 @@ export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
       <ArcadeButton
         size="lg"
         className="w-full"
-        onClick={() => {
-          window.location.href = "/api/auth/twitter"
-        }}
+        loading={waiting}
+        onClick={openTwitterPopup}
+        disabled={waiting}
       >
         <Twitter size={16} className="mr-2" />
-        Connect Twitter
+        {waiting ? "Waiting for Twitter..." : "Connect Twitter"}
       </ArcadeButton>
 
       <button
