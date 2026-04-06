@@ -3,11 +3,14 @@
 /**
  * Safe wrapper around Particle Network's wallet hooks.
  * Returns a consistent interface whether or not the Particle provider
- * is mounted. Falls back gracefully during SSR and when env vars
- * are not configured.
- *
- * Replaces the previous useOptionalDynamicContext hook.
+ * is mounted. Falls back gracefully when env vars are not configured.
  */
+
+import {
+  useAccount,
+  useModal,
+  useDisconnect,
+} from '@particle-network/connectkit';
 
 export interface WalletContext {
   available: boolean;
@@ -17,40 +20,29 @@ export interface WalletContext {
   disconnect: () => void;
 }
 
-const FALLBACK: WalletContext = {
-  available: false,
-  address: undefined,
-  isConnected: false,
-  openConnectModal: () => {},
-  disconnect: () => {},
-};
-
 const hasParticleEnv =
   (process.env.NEXT_PUBLIC_PROJECT_ID ?? '').trim().length > 0;
 
 export function useParticleWallet(): WalletContext {
-  try {
-    if (!hasParticleEnv) return FALLBACK;
+  const { address, isConnected } = useAccount();
+  const { setOpen } = useModal();
+  const { disconnect } = useDisconnect();
 
-    // Lazy require to avoid SSR "Store not initialized" crashes
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { useAccount, useModal, useDisconnect } = require('@particle-network/connectkit');
-
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { address, isConnected } = useAccount() as { address?: string; isConnected: boolean };
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { openConnectModal } = useModal() as { openConnectModal: () => void };
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const { disconnect } = useDisconnect() as { disconnect: () => void };
-
+  if (!hasParticleEnv) {
     return {
-      available: true,
-      address,
-      isConnected: isConnected && !!address,
-      openConnectModal,
-      disconnect,
+      available: false,
+      address: undefined,
+      isConnected: false,
+      openConnectModal: () => {},
+      disconnect: () => {},
     };
-  } catch {
-    return FALLBACK;
   }
+
+  return {
+    available: true,
+    address,
+    isConnected: isConnected && !!address,
+    openConnectModal: () => setOpen(true),
+    disconnect,
+  };
 }

@@ -5,8 +5,7 @@
  *
  *   1. **Particle ConnectKitProvider** — wallet connect UI + session
  *      (Avalanche + Base chains, MetaMask/WalletConnect/Coinbase).
- *      Only mounted when NEXT_PUBLIC_PROJECT_ID is set; otherwise
- *      a dev banner warns that wallet features are disabled.
+ *      Only mounted when NEXT_PUBLIC_PROJECT_ID is set.
  *   2. **WagmiProvider** — EVM chain config for on-chain reads.
  *   3. **QueryClientProvider** — React Query with 60s stale time and single retry.
  *   4. **Toaster** — Radix-based toast notification outlet.
@@ -17,50 +16,7 @@ import { WagmiProvider, createConfig as createWagmiConfig, http } from "wagmi"
 import { avalanche, base } from "wagmi/chains"
 import { useState } from "react"
 import { Toaster } from "@/components/ui/toaster"
-
-// Particle Network — lazy loaded to avoid SSR issues
-let ParticleProvider: React.ComponentType<{ children: React.ReactNode }> | null = null
-
-const particleProjectId = (process.env.NEXT_PUBLIC_PROJECT_ID ?? "").trim()
-const particleClientKey = (process.env.NEXT_PUBLIC_CLIENT_KEY ?? "").trim()
-const particleAppId = (process.env.NEXT_PUBLIC_APP_ID ?? "").trim()
-const hasParticle = particleProjectId.length > 0 && particleClientKey.length > 0 && particleAppId.length > 0
-
-if (hasParticle && typeof window !== "undefined") {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { ConnectKitProvider, createConfig } = require("@particle-network/connectkit")
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { evmWalletConnectors } = require("@particle-network/connectkit/evmWalletConnectors")
-
-    const particleConfig = createConfig({
-      projectId: particleProjectId,
-      clientKey: particleClientKey,
-      appId: particleAppId,
-      chains: [avalanche, base] as const,
-      walletConnectors: [
-        evmWalletConnectors({
-          metadata: {
-            name: "AI(r)Drop",
-            url: typeof window !== "undefined" ? window.location.origin : "https://airdrop.works",
-          },
-        }),
-      ],
-      appearance: {
-        mode: "dark" as const,
-        recommendedWallets: [
-          { walletId: "metaMask", label: "Recommended" },
-        ],
-      },
-    })
-
-    ParticleProvider = function ParticleProviderWrapper({ children }: { children: React.ReactNode }) {
-      return <ConnectKitProvider config={particleConfig}>{children}</ConnectKitProvider>
-    }
-  } catch (e) {
-    console.warn("[Providers] Failed to initialize Particle ConnectKit:", e)
-  }
-}
+import { ParticleProviderWrapper } from "@/providers/ParticleProvider"
 
 // Wagmi config — used for on-chain reads independently of Particle
 const wagmiConfig = createWagmiConfig({
@@ -70,6 +26,11 @@ const wagmiConfig = createWagmiConfig({
     [base.id]: http(),
   },
 })
+
+const hasParticleEnv =
+  (process.env.NEXT_PUBLIC_PROJECT_ID ?? "").trim().length > 0 &&
+  (process.env.NEXT_PUBLIC_CLIENT_KEY ?? "").trim().length > 0 &&
+  (process.env.NEXT_PUBLIC_APP_ID ?? "").trim().length > 0
 
 /** Wraps the app with Wagmi + QueryClient; adds Particle when env vars are set. */
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -94,7 +55,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     </WagmiProvider>
   )
 
-  if (!hasParticle || !ParticleProvider) {
+  if (!hasParticleEnv) {
     return (
       <>
         {inner}
@@ -117,14 +78,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
             </code>{" "}
             in{" "}
             <code className="rounded bg-black/35 px-1.5 py-0.5 font-mono text-xs">
-              .env
+              .env.local
             </code>{" "}
-            (from the Particle dashboard) to enable wallet connect.
+            then <strong>restart the dev server</strong>.
           </div>
         ) : null}
       </>
     )
   }
 
-  return <ParticleProvider>{inner}</ParticleProvider>
+  return (
+    <ParticleProviderWrapper>{inner}</ParticleProviderWrapper>
+  )
 }
