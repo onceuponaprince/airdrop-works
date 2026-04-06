@@ -53,21 +53,31 @@ export async function GET(req: NextRequest) {
       "Content-Type": "application/x-www-form-urlencoded",
     }
 
+    // Twitter OAuth 2.0 requires Basic Auth for confidential (Web App) clients.
     if (clientSecret) {
       const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
       headers["Authorization"] = `Basic ${credentials}`
+    } else {
+      console.error("[Twitter OAuth] TWITTER_CLIENT_SECRET is not set — token exchange will fail for Web App type")
+    }
+
+    const tokenParams: Record<string, string> = {
+      grant_type: "authorization_code",
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      code,
+      code_verifier: codeVerifier,
+    }
+
+    // Also include client_secret in body as fallback
+    if (clientSecret) {
+      tokenParams["client_secret"] = clientSecret
     }
 
     const tokenRes = await fetch("https://api.twitter.com/2/oauth2/token", {
       method: "POST",
       headers,
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        client_id: clientId,
-        redirect_uri: callbackUrl,
-        code,
-        code_verifier: codeVerifier,
-      }),
+      body: new URLSearchParams(tokenParams),
     })
 
     if (!tokenRes.ok) {

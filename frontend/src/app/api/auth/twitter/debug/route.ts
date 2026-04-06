@@ -13,7 +13,8 @@ export async function GET() {
   }
 
   const clientId = process.env.TWITTER_CLIENT_ID ?? "(not set)"
-  const hasSecret = (process.env.TWITTER_CLIENT_SECRET ?? "").length > 0
+  const clientSecret = process.env.TWITTER_CLIENT_SECRET ?? ""
+  const hasSecret = clientSecret.length > 0
   const callbackUrl = process.env.TWITTER_CALLBACK_URL ?? "(not set)"
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "(not set)"
   const vercelUrl = process.env.VERCEL_URL ?? "(not set)"
@@ -21,8 +22,8 @@ export async function GET() {
   return NextResponse.json({
     status: "debug",
     config: {
-      TWITTER_CLIENT_ID: clientId.slice(0, 8) + "...",
-      TWITTER_CLIENT_SECRET: hasSecret ? "✓ set" : "✗ NOT SET",
+      TWITTER_CLIENT_ID: clientId !== "(not set)" ? clientId.slice(0, 8) + "..." : "(not set)",
+      TWITTER_CLIENT_SECRET: hasSecret ? `✓ set (${clientSecret.length} chars)` : "✗ NOT SET — this is why auth fails",
       TWITTER_CALLBACK_URL: callbackUrl,
       NEXT_PUBLIC_SITE_URL: siteUrl,
       VERCEL_URL: vercelUrl,
@@ -33,5 +34,6 @@ export async function GET() {
       callbackUrlSet: callbackUrl !== "(not set)",
       callbackMatchesSite: callbackUrl.startsWith(siteUrl) || callbackUrl.startsWith(`https://${vercelUrl}`),
     },
+    fix: hasSecret ? null : "Set TWITTER_CLIENT_SECRET in Vercel → Settings → Environment Variables → then redeploy",
   })
 }
