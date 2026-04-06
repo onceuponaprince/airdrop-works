@@ -14,14 +14,16 @@ export const supabase = createSupabaseClient(supabaseUrl, supabaseAnon)
 export const WAITLIST_WALLET_CONFLICT = "WAITLIST_WALLET_CONFLICT"
 
 export interface WaitlistInsert {
-  email:           string
+  email:               string
   /** Omit or undefined = do not change on update */
-  wallet_address?: string | null
-  primary_branch?: string | null
-  referral_code?:  string | null
-  source?:         string | null
+  wallet_address?:     string | null
+  primary_branch?:     string | null
+  referral_code?:      string | null
+  source?:             string | null
   /** Server-computed; never trust the client */
-  flagged?:        boolean
+  flagged?:            boolean
+  twitter_handle?:     string | null
+  twitter_score_data?: Record<string, unknown> | null
 }
 
 export interface WaitlistResult {
@@ -112,11 +114,14 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
     .from("waitlist_entries")
     .insert({
       email,
-      wallet_address: walletForInsert,
-      primary_branch: entry.primary_branch ?? null,
-      referred_by:    entry.referral_code ?? null,
-      source:         entry.source ?? "organic",
-      flagged:        entry.flagged ?? false,
+      wallet_address:     walletForInsert,
+      primary_branch:     entry.primary_branch ?? null,
+      referred_by:        entry.referral_code ?? null,
+      source:             entry.source ?? "organic",
+      flagged:            entry.flagged ?? false,
+      twitter_handle:     entry.twitter_handle ?? null,
+      twitter_score_data: entry.twitter_score_data ?? null,
+      twitter_connected_at: entry.twitter_handle ? new Date().toISOString() : null,
     })
     .select("rank, referral_code")
     .single()

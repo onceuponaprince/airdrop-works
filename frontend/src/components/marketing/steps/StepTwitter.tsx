@@ -1,12 +1,16 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { Twitter, CheckCircle, AlertCircle } from "lucide-react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { motion } from "framer-motion"
+import { Twitter, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
+import { ScoreReveal } from "@/components/marketing/ScoreReveal"
+import { useTwitterAnalyze } from "@/hooks/useTwitterAnalyze"
+import type { AccountAnalysis } from "@/types/api"
 
 interface StepTwitterProps {
-  onComplete: (handle: string, accessToken: string) => void
+  onComplete: (handle: string, accessToken: string, scoreData?: AccountAnalysis) => void
   onSkip: () => void
 }
 
@@ -22,25 +26,26 @@ const ERROR_MESSAGES: Record<string, string> = {
 }
 
 /**
- * Twitter connect step — opens OAuth in a popup window.
+ * Twitter connect + score step.
  *
  * Flow:
- *   1. User clicks "Connect Twitter" → popup opens to /api/auth/twitter
- *   2. Popup redirects to Twitter authorization
- *   3. Twitter redirects back to /api/auth/twitter/callback (in the popup)
- *   4. Callback renders a small HTML page that posts the result via postMessage
- *   5. This component receives the message and closes the popup
- *
- * The main page never navigates away — quest chain state is preserved.
+ *   1. User clicks "Connect Twitter" → popup opens for OAuth
+ *   2. After connect → scoring starts automatically via /api/twitter-analyze
+ *   3. Live progress shown as tweets are scored
+ *   4. ScoreReveal renders with radar chart, bar chart, composite score
+ *   5. User clicks "Continue" to advance with score data attached
  */
 export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
   const [connected, setConnected] = useState<{ handle: string; token: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(false)
 
+  // Scoring state — reuses the existing useTwitterAnalyze hook
+  const twitter = useTwitterAnalyze()
+  const scoringStarted = useRef(false)
+
   // Listen for postMessage from the OAuth popup
   const handleMessage = useCallback((event: MessageEvent) => {
-    // Accept the message if it has our expected type — the popup is ours
     const data = event.data
     if (data?.type !== "twitter_oauth_result") return
 
@@ -57,6 +62,14 @@ export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
   }, [handleMessage])
+
+  // Auto-start scoring when Twitter is connected
+  useEffect(() => {
+    if (connected && !scoringStarted.current && twitter.status === "idle") {
+      scoringStarted.current = true
+      twitter.analyze(connected.handle)
+    }
+  }, [connected, twitter])
 
   const openTwitterPopup = () => {
     setError(null)
@@ -79,7 +92,6 @@ export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
       return
     }
 
-    // Poll to detect if user closed the popup without completing auth
     const pollTimer = setInterval(() => {
       if (popup.closed) {
         clearInterval(pollTimer)
@@ -88,33 +100,119 @@ export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
     }, 500)
   }
 
-  // Connected state
-  if (connected) {
+  // ── Scoring complete — show ScoreReveal + Continue ──────────────────────
+  if (connected && twitter.status === "complete" && twitter.accountResult) {
     return (
-      <ArcadeCard className="space-y-4">
-        <div className="flex items-center gap-3">
-          <CheckCircle size={18} className="text-primary shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-foreground">
-              @{connected.handle} connected
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Ready to score your contributions.
-            </p>
-          </div>
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 mb-2">
+          <CheckCircle size={16} className="text-primary" />
+          <span className="font-mono text-xs text-primary">@{connected.handle}</span>
         </div>
+
+        <ScoreReveal analysis={twitter.accountResult} tweets={twitter.tweets} />
+
         <ArcadeButton
           size="lg"
           className="w-full"
-          onClick={() => onComplete(connected.handle, connected.token)}
+          onClick={() => onComplete(connected.handle, connected.token, twitter.accountResult ?? undefined)}
         >
           Continue →
         </ArcadeButton>
+      </div>
+    )
+  }
+
+  // ── Scoring in progress — show live progress ──────────────────────────
+  if (connected && (twitter.status === "fetching" || twitter.status === "scoring")) {
+    return (
+      <ArcadeCard className="space-y-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle size={16} className="text-primary" />
+          <span className="font-mono text-xs text-primary">@{connected.handle}</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Loader2 size={18} className="text-primary animate-spin" />
+          <div>
+            <p className="font-body text-sm text-foreground">
+              {twitter.status === "fetching"
+                ? "Fetching your tweets..."
+                : `Scoring ${twitter.tweets.length}/${twitter.tweetCount} tweets...`}
+            </p>
+            <p className="font-mono text-[10px] text-muted-foreground">
+              AI Judge is reading your contributions
+            </p>
+          </div>
+        </div>
+
+        {/* Live tweet scores as they arrive */}
+        {twitter.tweets.length > 0 && (
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {twitter.tweets.map((t) => (
+              <motion.div
+                key={t.tweetId}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center gap-2 text-xs py-1"
+              >
+                <span className="font-mono text-primary w-6 text-right shrink-0">
+                  {t.compositeScore}
+                </span>
+                <div className="flex-1 h-1.5 rounded bg-secondary overflow-hidden">
+                  <motion.div
+                    className="h-full bg-primary rounded"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${t.compositeScore}%` }}
+                    transition={{ duration: 0.3 }}
+                  />
+                </div>
+                <span className="text-muted-foreground truncate max-w-[180px]">
+                  {t.text}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        )}
       </ArcadeCard>
     )
   }
 
-  // Default state
+  // ── Scoring error — allow retry or skip ──────────────────────────────
+  if (connected && twitter.status === "error") {
+    return (
+      <ArcadeCard className="space-y-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle size={16} className="text-primary" />
+          <span className="font-mono text-xs text-primary">@{connected.handle}</span>
+        </div>
+        <div className="flex items-start gap-2 rounded-sm border border-destructive/30 bg-destructive/5 px-3 py-2">
+          <AlertCircle size={14} className="text-destructive shrink-0 mt-0.5" />
+          <p className="font-body text-xs text-destructive">
+            {twitter.error || "Scoring failed. You can continue without a score."}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <ArcadeButton
+            size="md"
+            className="flex-1"
+            onClick={() => { twitter.reset(); scoringStarted.current = false }}
+          >
+            Retry
+          </ArcadeButton>
+          <ArcadeButton
+            size="md"
+            variant="secondary"
+            className="flex-1"
+            onClick={() => onComplete(connected.handle, connected.token)}
+          >
+            Continue without score
+          </ArcadeButton>
+        </div>
+      </ArcadeCard>
+    )
+  }
+
+  // ── Default state — connect or skip ──────────────────────────────────
   return (
     <ArcadeCard className="space-y-4">
       <p className="font-body text-sm text-muted-foreground">

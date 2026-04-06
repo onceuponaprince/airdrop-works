@@ -7,11 +7,13 @@ import { buildReferralUrl } from "@/lib/supabase"
 import type { Branch } from "@/lib/constants"
 
 interface WaitlistFormData {
-  email:          string
-  walletAddress?: string
-  primaryBranch?: Branch
-  referralCode?:  string   // from ?ref= query param
-  honeypot?:      string   // hidden field — if filled, request is from a bot
+  email:             string
+  walletAddress?:    string
+  primaryBranch?:    Branch
+  referralCode?:     string   // from ?ref= query param
+  honeypot?:         string   // hidden field — if filled, request is from a bot
+  twitterHandle?:    string
+  twitterScoreData?: Record<string, unknown>
 }
 
 interface WaitlistState {
@@ -50,11 +52,13 @@ export function useWaitlist() {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email:         data.email,
-          walletAddress: data.walletAddress || undefined,
-          primaryBranch: data.primaryBranch || undefined,
-          referralCode:  refCode,
-          honeypot:      data.honeypot || undefined,
+          email:            data.email,
+          walletAddress:    data.walletAddress || undefined,
+          primaryBranch:    data.primaryBranch || undefined,
+          referralCode:     refCode,
+          honeypot:         data.honeypot || undefined,
+          twitterHandle:    data.twitterHandle || undefined,
+          twitterScoreData: data.twitterScoreData || undefined,
         }),
       })
 

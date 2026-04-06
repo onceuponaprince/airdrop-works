@@ -8,15 +8,17 @@ import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { useWaitlist } from "@/hooks/useWaitlist"
 import { useReferral } from "@/hooks/useReferral"
 import { scoreReveal } from "@/styles/theme"
+import type { AccountAnalysis } from "@/types/api"
 
 interface StepSubmitProps {
   walletAddress: string
   email: string
   twitterHandle?: string
+  twitterScoreData?: AccountAnalysis
   onSuccess?: () => void
 }
 
-export function StepSubmit({ walletAddress, email, twitterHandle, onSuccess: _onSuccess }: StepSubmitProps) {
+export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreData, onSuccess: _onSuccess }: StepSubmitProps) {
   const { status, rank, referralUrl, alreadyExists, error, submit } = useWaitlist()
   const inboundReferralCode = useReferral()
   const [honeypot, setHoneypot] = useState("")
@@ -28,6 +30,8 @@ export function StepSubmit({ walletAddress, email, twitterHandle, onSuccess: _on
       walletAddress,
       referralCode: inboundReferralCode || undefined,
       honeypot: honeypot || undefined,
+      twitterHandle,
+      twitterScoreData: twitterScoreData ? JSON.parse(JSON.stringify(twitterScoreData)) : undefined,
     })
   }
 

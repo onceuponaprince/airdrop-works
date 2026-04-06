@@ -6,6 +6,7 @@ import { StepWallet } from "@/components/marketing/steps/StepWallet"
 import { StepEmail } from "@/components/marketing/steps/StepEmail"
 import { StepTwitter } from "@/components/marketing/steps/StepTwitter"
 import { StepSubmit } from "@/components/marketing/steps/StepSubmit"
+import type { AccountAnalysis } from "@/types/api"
 
 const STORAGE_KEY = "airdrop_quest_state"
 const ADMIN_BYPASS_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_BYPASS ?? ""
@@ -57,6 +58,7 @@ export function WaitlistForm() {
   const [walletAddress, setWalletAddress] = useState<string | null>(saved?.walletAddress ?? null)
   const [email, setEmail] = useState<string | null>(saved?.email ?? null)
   const [twitterHandle, setTwitterHandle] = useState<string | null>(saved?.twitterHandle ?? null)
+  const [twitterScoreData, setTwitterScoreData] = useState<AccountAnalysis | null>(null)
 
   // Hidden admin bypass — type the password anywhere on step 1 to skip to step 3.
   // Password is set via NEXT_PUBLIC_ADMIN_BYPASS env var.
@@ -115,8 +117,9 @@ export function WaitlistForm() {
 
       {currentStep === "twitter" && (
         <StepTwitter
-          onComplete={(handle, _token) => {
+          onComplete={(handle, _token, scoreData) => {
             setTwitterHandle(handle)
+            if (scoreData) setTwitterScoreData(scoreData)
             completeStep("twitter", "submit")
           }}
           onSkip={() => completeStep("twitter", "submit")}
@@ -128,6 +131,7 @@ export function WaitlistForm() {
           walletAddress={walletAddress}
           email={email}
           twitterHandle={twitterHandle ?? undefined}
+          twitterScoreData={twitterScoreData ?? undefined}
           onSuccess={() => {
             clearPersistedState()
             completeStep("submit", "submit")

@@ -51,6 +51,8 @@ export async function POST(req: NextRequest) {
     primaryBranch?: string
     referralCode?: string
     honeypot?: string
+    twitterHandle?: string
+    twitterScoreData?: Record<string, unknown>
   }
   try {
     body = await req.json()
@@ -91,11 +93,13 @@ export async function POST(req: NextRequest) {
   try {
     const entry: WaitlistInsert = {
       email,
-      wallet_address: walletForEntry,
-      primary_branch: primaryBranch,
-      referral_code:  body.referralCode?.trim() || undefined,
-      source:           req.headers.get("referer") || "direct",
-      flagged:          flaggedAsDisposable,
+      wallet_address:     walletForEntry,
+      primary_branch:     primaryBranch,
+      referral_code:      body.referralCode?.trim() || undefined,
+      source:             req.headers.get("referer") || "direct",
+      flagged:            flaggedAsDisposable,
+      twitter_handle:     body.twitterHandle?.trim() || undefined,
+      twitter_score_data: body.twitterScoreData || undefined,
     }
     result = await insertWaitlistEntry(entry)
   } catch (err) {
