@@ -8,7 +8,7 @@ import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
 import { WalletButton } from '@/components/shared/WalletButton';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
-import { useOptionalDynamicContext } from '@/hooks/useOptionalDynamicContext';
+import { useParticleWallet } from '@/hooks/useParticleWallet';
 import { checkWhitelistApproval } from '@/lib/supabase';
 
 type Step = 'email' | 'wallet';
@@ -16,8 +16,7 @@ type Step = 'email' | 'wallet';
 export default function SignupPage() {
   const router = useRouter();
   const { isAuthenticated, login } = useWeb3Auth();
-  const dynamicContext = useOptionalDynamicContext();
-  const primaryWallet = dynamicContext.primaryWallet;
+  const wallet = useParticleWallet();
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -53,23 +52,23 @@ export default function SignupPage() {
 
   // Auto-login when wallet connects on the wallet step
   const attemptLogin = useCallback(async () => {
-    if (!primaryWallet?.address || isLoggingIn) return;
+    if (!wallet.address || isLoggingIn) return;
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      await login(primaryWallet.address, 'dynamic-sdk-managed', 'dynamic-sdk-managed');
+      await login(wallet.address, 'particle-managed', 'particle-managed');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setIsLoggingIn(false);
     }
-  }, [primaryWallet?.address, login, isLoggingIn]);
+  }, [wallet.address, login, isLoggingIn]);
 
   useEffect(() => {
-    if (step === 'wallet' && primaryWallet?.address && !isAuthenticated && !isLoggingIn) {
+    if (step === 'wallet' && wallet.address && !isAuthenticated && !isLoggingIn) {
       attemptLogin();
     }
-  }, [step, primaryWallet?.address, isAuthenticated, isLoggingIn, attemptLogin]);
+  }, [step, wallet.address, isAuthenticated, isLoggingIn, attemptLogin]);
 
   // Redirect to judge after successful auth
   useEffect(() => {

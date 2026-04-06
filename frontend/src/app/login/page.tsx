@@ -6,36 +6,35 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
-import { useOptionalDynamicContext } from '@/hooks/useOptionalDynamicContext';
+import { useParticleWallet } from '@/hooks/useParticleWallet';
 
 export default function LoginPage() {
   const router = useRouter();
   const { isAuthenticated, loading, error: authError } = useWeb3Auth();
   const { login } = useWeb3Auth();
-  const dynamicContext = useOptionalDynamicContext();
-  const primaryWallet = dynamicContext.primaryWallet;
+  const wallet = useParticleWallet();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const attemptLogin = useCallback(async () => {
-    if (!primaryWallet?.address || isLoggingIn) return;
+    if (!wallet.address || isLoggingIn) return;
 
     setIsLoggingIn(true);
     setLoginError(null);
     try {
-      await login(primaryWallet.address, 'dynamic-sdk-managed', 'dynamic-sdk-managed');
+      await login(wallet.address, 'particle-managed', 'particle-managed');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setIsLoggingIn(false);
     }
-  }, [primaryWallet?.address, login, isLoggingIn]);
+  }, [wallet.address, login, isLoggingIn]);
 
   useEffect(() => {
-    if (primaryWallet?.address && !isAuthenticated && !isLoggingIn) {
+    if (wallet.address && !isAuthenticated && !isLoggingIn) {
       attemptLogin();
     }
-  }, [primaryWallet?.address, isAuthenticated, isLoggingIn, attemptLogin]);
+  }, [wallet.address, isAuthenticated, isLoggingIn, attemptLogin]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -91,10 +90,10 @@ export default function LoginPage() {
           </div>
         )}
 
-        {process.env.NODE_ENV === 'development' && !dynamicContext.available && (
+        {process.env.NODE_ENV === 'development' && !wallet.available && (
           <div className="border-t border-[--border] pt-4 space-y-2">
             <p className="text-xs text-[--muted-foreground]">
-              Dynamic.xyz not configured. Use dev login to bypass wallet auth:
+              Particle wallet not configured. Use dev login to bypass wallet auth:
             </p>
             <button
               onClick={handleDevLogin}

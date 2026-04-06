@@ -10,7 +10,6 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type { AuthTokens, Profile } from '@/types/api';
-import { useOptionalDynamicContext } from './useOptionalDynamicContext';
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -24,9 +23,6 @@ export function useWeb3Auth(): AuthState & {
   login: (walletAddress: string, message: string, signature: string) => Promise<void>;
   logout: () => void;
 } {
-  const dynamicContext = useOptionalDynamicContext();
-  const primaryWallet = dynamicContext.primaryWallet;
-
   const [token, setToken] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('auth_token');
@@ -53,7 +49,6 @@ export function useWeb3Auth(): AuthState & {
         wallet_address: walletAddress,
         message,
         signature,
-        dynamic_user_id: primaryWallet?.id || undefined,
       });
 
       localStorage.setItem('auth_token', response.access);

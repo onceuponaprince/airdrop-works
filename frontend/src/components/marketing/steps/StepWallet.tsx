@@ -1,27 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
 import { Wallet } from "lucide-react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
-import { useOptionalDynamicContext } from "@/hooks/useOptionalDynamicContext"
+import { useParticleWallet } from "@/hooks/useParticleWallet"
 
 interface StepWalletProps {
   onComplete: (address: string) => void
 }
 
 export function StepWallet({ onComplete }: StepWalletProps) {
-  const dynamicContext = useOptionalDynamicContext()
-  const address = dynamicContext?.primaryWallet?.address
+  const { available, address, isConnected, openConnectModal } = useParticleWallet()
 
-  // Auto-advance if wallet is already connected when this step mounts
-  useEffect(() => {
-    if (address) {
-      // Don't auto-advance — let user confirm with the Continue button
-    }
-  }, [address])
-
-  if (address) {
+  if (isConnected && address) {
     return (
       <ArcadeCard className="space-y-4">
         <div className="flex items-center gap-3">
@@ -49,11 +40,11 @@ export function StepWallet({ onComplete }: StepWalletProps) {
       <p className="font-body text-sm text-muted-foreground">
         Your wallet is your identity on AI(r)Drop. One wallet, one rank — no alts, no bots.
       </p>
-      {dynamicContext.available ? (
+      {available ? (
         <ArcadeButton
           size="lg"
           className="w-full"
-          onClick={() => dynamicContext.setShowAuthFlow(true)}
+          onClick={openConnectModal}
         >
           <Wallet size={16} className="mr-2" />
           Connect Wallet
@@ -65,7 +56,7 @@ export function StepWallet({ onComplete }: StepWalletProps) {
             Wallet Unavailable
           </ArcadeButton>
           <p className="font-mono text-[10px] text-muted-foreground/40 text-center">
-            Dynamic.xyz provider not configured
+            Particle wallet provider not configured
           </p>
         </div>
       )}
