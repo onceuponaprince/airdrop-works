@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase"
 
 interface StepEmailProps {
   onComplete: (email: string) => void
+  onBack?: () => void
 }
 
 /**
@@ -31,7 +32,7 @@ function loadPendingEmail(): { email: string; stage: "input" | "otp" } {
   return { email: "", stage: "input" }
 }
 
-export function StepEmail({ onComplete }: StepEmailProps) {
+export function StepEmail({ onComplete, onBack }: StepEmailProps) {
   const pending = loadPendingEmail()
   const [stage, setStage] = useState<"input" | "otp">(pending.stage)
   const [email, setEmail] = useState(pending.email)
@@ -235,6 +236,16 @@ export function StepEmail({ onComplete }: StepEmailProps) {
       >
         Send Code →
       </ArcadeButton>
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                     transition-colors uppercase tracking-widest"
+        >
+          ← Change wallet
+        </button>
+      )}
     </ArcadeCard>
   )
 }

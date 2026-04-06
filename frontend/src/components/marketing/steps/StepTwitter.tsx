@@ -12,6 +12,7 @@ import type { AccountAnalysis } from "@/types/api"
 interface StepTwitterProps {
   onComplete: (handle: string, accessToken: string, scoreData?: AccountAnalysis) => void
   onSkip: () => void
+  onBack?: () => void
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -35,7 +36,7 @@ const ERROR_MESSAGES: Record<string, string> = {
  *   4. ScoreReveal renders with radar chart, bar chart, composite score
  *   5. User clicks "Continue" to advance with score data attached
  */
-export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
+export function StepTwitter({ onComplete, onSkip, onBack }: StepTwitterProps) {
   const [connected, setConnected] = useState<{ handle: string; token: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(false)
@@ -238,14 +239,26 @@ export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
         {waiting ? "Waiting for Twitter..." : "Connect Twitter"}
       </ArcadeButton>
 
-      <button
-        type="button"
-        onClick={onSkip}
-        className="w-full font-mono text-[10px] text-muted-foreground/40 hover:text-muted-foreground
-                   transition-colors uppercase tracking-widest"
-      >
-        Skip — join without a score
-      </button>
+      <div className="flex items-center justify-between">
+        {onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                       transition-colors uppercase tracking-widest"
+          >
+            ← Back
+          </button>
+        ) : <span />}
+        <button
+          type="button"
+          onClick={onSkip}
+          className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                     transition-colors uppercase tracking-widest"
+        >
+          Skip →
+        </button>
+      </div>
 
       <p className="font-mono text-[10px] text-muted-foreground/30 text-center">
         Read-only access · tweet.read + users.read only

@@ -15,10 +15,11 @@ interface StepSubmitProps {
   email: string
   twitterHandle?: string
   twitterScoreData?: AccountAnalysis
+  onBack?: () => void
   onSuccess?: () => void
 }
 
-export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreData, onSuccess: _onSuccess }: StepSubmitProps) {
+export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreData, onBack, onSuccess: _onSuccess }: StepSubmitProps) {
   const { status, rank, referralUrl, alreadyExists, error, submit } = useWaitlist()
   const inboundReferralCode = useReferral()
   const [honeypot, setHoneypot] = useState("")
@@ -159,6 +160,16 @@ export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreDa
       >
         Claim Your Score →
       </ArcadeButton>
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                     transition-colors uppercase tracking-widest"
+        >
+          ← Back
+        </button>
+      )}
     </ArcadeCard>
   )
 }

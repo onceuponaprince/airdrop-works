@@ -92,6 +92,15 @@ export function WaitlistForm() {
     setCurrentStep(nextStep)
   }
 
+  const goBackTo = (step: QuestStep) => {
+    // Remove the target step (and anything after it) from completedSteps
+    // so the user can redo it
+    const stepOrder: QuestStep[] = ["wallet", "email", "twitter", "submit"]
+    const targetIdx = stepOrder.indexOf(step)
+    setCompletedSteps(prev => prev.filter(s => stepOrder.indexOf(s) < targetIdx))
+    setCurrentStep(step)
+  }
+
   // Don't render until sessionStorage is checked (avoids flash of step 1)
   if (!hydrated) return null
 
@@ -112,6 +121,7 @@ export function WaitlistForm() {
             setEmail(verifiedEmail)
             completeStep("email", "twitter")
           }}
+          onBack={() => goBackTo("wallet")}
         />
       )}
 
@@ -123,6 +133,7 @@ export function WaitlistForm() {
             completeStep("twitter", "submit")
           }}
           onSkip={() => completeStep("twitter", "submit")}
+          onBack={() => goBackTo("email")}
         />
       )}
 
@@ -132,6 +143,7 @@ export function WaitlistForm() {
           email={email}
           twitterHandle={twitterHandle ?? undefined}
           twitterScoreData={twitterScoreData ?? undefined}
+          onBack={() => goBackTo("twitter")}
           onSuccess={() => {
             clearPersistedState()
             completeStep("submit", "submit")
