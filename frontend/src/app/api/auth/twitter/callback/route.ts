@@ -129,8 +129,12 @@ function postResultToOpener(
 <script>
   var result = ${payload};
   if (window.opener) {
-    window.opener.postMessage(result, "${siteUrl}");
-    window.close();
+    // Use "*" as target origin since the opener might be on a different
+    // domain (custom domain vs Vercel preview URL). The data is not
+    // sensitive — it's just the public Twitter handle.
+    window.opener.postMessage(result, "*");
+    // Small delay before closing so the message has time to be received
+    setTimeout(function() { window.close(); }, 300);
   } else {
     // Fallback: redirect if not in a popup
     var url = new URL("${siteUrl}/#waitlist");

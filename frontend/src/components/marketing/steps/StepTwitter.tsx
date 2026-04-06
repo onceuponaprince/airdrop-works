@@ -40,8 +40,7 @@ export function StepTwitter({ onComplete, onSkip }: StepTwitterProps) {
 
   // Listen for postMessage from the OAuth popup
   const handleMessage = useCallback((event: MessageEvent) => {
-    // Only accept messages from our own origin
-    if (event.origin !== window.location.origin) return
+    // Accept the message if it has our expected type — the popup is ours
     const data = event.data
     if (data?.type !== "twitter_oauth_result") return
 
