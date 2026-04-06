@@ -57,12 +57,10 @@ export function useTwitterAnalyze() {
     }));
 
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-      const res = await fetch('/api/v1/judge/score-account/', {
+      const res = await fetch('/api/twitter-analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({ username: handle }),
       });
