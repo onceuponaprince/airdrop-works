@@ -47,6 +47,25 @@ export function StepEmail({ onComplete }: StepEmailProps) {
     }
   }
 
+  // Resend uses supabase.auth.resend() which explicitly requests a new OTP
+  // instead of signInWithOtp() which may switch to a magic link for existing users.
+  const resendOtp = async () => {
+    setLoading(true)
+    setError(null)
+    setOtp(Array(6).fill(""))
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      })
+      if (resendError) throw new Error(resendError.message)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend code")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const verifyOtp = useCallback(async (code: string) => {
     if (code.length !== 6) return
     setLoading(true)
@@ -156,7 +175,7 @@ export function StepEmail({ onComplete }: StepEmailProps) {
           </button>
           <button
             type="button"
-            onClick={() => { setOtp(Array(6).fill("")); setError(null); sendOtp() }}
+            onClick={resendOtp}
             disabled={loading}
             className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
                        transition-colors uppercase tracking-widest disabled:opacity-40"
