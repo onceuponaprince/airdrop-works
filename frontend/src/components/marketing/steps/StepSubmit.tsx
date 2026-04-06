@@ -25,13 +25,26 @@ export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreDa
   const [copied, setCopied] = useState(false)
 
   const handleSubmit = () => {
+    // Strip score data to serializable essentials only
+    const scoreDataForDb = twitterScoreData ? {
+      overallScore: twitterScoreData.aggregate?.overallScore,
+      teachingValue: twitterScoreData.aggregate?.teachingValue,
+      originality: twitterScoreData.aggregate?.originality,
+      communityImpact: twitterScoreData.aggregate?.communityImpact,
+      genuinePercentage: twitterScoreData.aggregate?.genuinePercentage,
+      verdict: twitterScoreData.aggregate?.verdict,
+      tweetCount: twitterScoreData.tweetCount,
+      strengths: twitterScoreData.aggregate?.strengths,
+      weaknesses: twitterScoreData.aggregate?.weaknesses,
+    } : undefined
+
     submit({
       email,
       walletAddress,
       referralCode: inboundReferralCode || undefined,
       honeypot: honeypot || undefined,
       twitterHandle,
-      twitterScoreData: twitterScoreData ? JSON.parse(JSON.stringify(twitterScoreData)) : undefined,
+      twitterScoreData: scoreDataForDb,
     })
   }
 

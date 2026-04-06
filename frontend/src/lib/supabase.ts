@@ -110,21 +110,41 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
     }
   }
 
-  const { data, error } = await db
+  // Build the insert payload — twitter fields are optional and may not exist
+  // in the database schema yet. If the insert fails, retry without them.
+  const basePayload = {
+    email,
+    wallet_address: walletForInsert,
+    primary_branch: entry.primary_branch ?? null,
+    referred_by:    entry.referral_code ?? null,
+    source:         entry.source ?? "organic",
+    flagged:        entry.flagged ?? false,
+  }
+
+  const twitterPayload = entry.twitter_handle ? {
+    twitter_handle:       entry.twitter_handle,
+    twitter_score_data:   entry.twitter_score_data ?? null,
+    twitter_connected_at: new Date().toISOString(),
+  } : {}
+
+  let { data, error } = await db
     .from("waitlist_entries")
-    .insert({
-      email,
-      wallet_address:     walletForInsert,
-      primary_branch:     entry.primary_branch ?? null,
-      referred_by:        entry.referral_code ?? null,
-      source:             entry.source ?? "organic",
-      flagged:            entry.flagged ?? false,
-      twitter_handle:     entry.twitter_handle ?? null,
-      twitter_score_data: entry.twitter_score_data ?? null,
-      twitter_connected_at: entry.twitter_handle ? new Date().toISOString() : null,
-    })
+    .insert({ ...basePayload, ...twitterPayload })
     .select("rank, referral_code")
     .single()
+
+  // If insert fails due to unknown column (twitter fields not migrated),
+  // retry without twitter fields so signup still works.
+  if (error && error.message?.includes("column") && Object.keys(twitterPayload).length > 0) {
+    console.warn("[Waitlist] Twitter columns not in schema, retrying without them:", error.message)
+    const retry = await db
+      .from("waitlist_entries")
+      .insert(basePayload)
+      .select("rank, referral_code")
+      .single()
+    data = retry.data
+    error = retry.error
+  }
 
   if (error) {
     if (error.code === "23505") {
@@ -143,6 +163,10 @@ export async function insertWaitlistEntry(entry: WaitlistInsert): Promise<Waitli
       throw new Error(WAITLIST_WALLET_CONFLICT)
     }
     throw new Error(`Waitlist insert failed: ${error.message}`)
+  }
+
+  if (!data) {
+    throw new Error("Waitlist insert returned no data")
   }
 
   return { rank: data.rank, referralCode: data.referral_code, alreadyExists: false }
