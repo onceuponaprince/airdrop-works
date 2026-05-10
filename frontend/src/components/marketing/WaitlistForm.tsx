@@ -117,6 +117,7 @@ export function WaitlistForm() {
 
       {currentStep === "email" && (
         <StepEmail
+          walletFirstFlow
           onComplete={(verifiedEmail) => {
             setEmail(verifiedEmail)
             completeStep("email", "twitter")

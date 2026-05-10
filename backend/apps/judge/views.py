@@ -13,11 +13,13 @@ from django.conf import settings as django_settings
 from django.http import StreamingHttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+from rest_framework import status, generics
 from rest_framework.throttling import AnonRateThrottle
 
 from apps.payments.services import deduct_credit, get_or_create_user_sub
+from .models import ScoringRubric
+from .serializers import RubricSerializer
 from .service import score_contribution
 
 logger = logging.getLogger(__name__)
@@ -303,3 +305,54 @@ class JudgeScoreAccountView(APIView):
             content_type="application/x-ndjson; charset=utf-8",
             headers={"Cache-Control": "no-cache, no-transform"},
         )
+
+
+# Rubric API Views (Function 5)
+
+
+class RubricListCreateView(generics.ListCreateAPIView):
+    """Public GET: List all rubrics (for dropdown/selection).
+    Admin POST: Create new scoring rubric.
+    
+    POST body (admin only): name, teachingValueWeight, originalityWeight, 
+                           communityImpactWeight, isDefault
+    
+    Weight validation: sum should be ~1.0 (warning if not, non-blocking).
+    """
+    serializer_class = RubricSerializer
+    queryset = ScoringRubric.objects.all()
+    
+    def get_permissions(self):
+        """GET is public; POST requires admin."""
+        if self.request.method == 'POST':
+            return [IsAdminUser()]
+        return [AllowAny()]
+    
+    def get_queryset(self):
+        """Order by isDefault first, then by name."""
+        return ScoringRubric.objects.all().order_by('-is_default', 'name')
+
+
+class RubricDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """Public GET: Retrieve rubric by ID.
+    Admin PUT/PATCH: Update rubric weights/name.
+    Admin DELETE: Delete rubric (cannot delete if is_default).
+    """
+    serializer_class = RubricSerializer
+    queryset = ScoringRubric.objects.all()
+    
+    def get_permissions(self):
+        """GET is public; PUT/PATCH/DELETE require admin."""
+        if self.request.method == 'GET':
+            return [AllowAny()]
+        return [IsAdminUser()]
+    
+    def destroy(self, request, *args, **kwargs):
+        """Prevent deletion of default rubric."""
+        instance = self.get_object()
+        if instance.is_default:
+            return Response(
+                {"detail": "Cannot delete default rubric. Set another as default first."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        return super().destroy(request, *args, **kwargs)

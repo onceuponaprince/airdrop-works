@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { supabase } from "@/lib/supabase"
@@ -23,7 +23,10 @@ async function checkEmailExists(email: string): Promise<boolean> {
 interface StepEmailProps {
   onComplete: (email: string) => void
   onBack?: () => void
+  walletFirstFlow?: boolean
 }
+
+type SupabaseStatusError = Error & { status?: number }
 
 /**
  * Email verification step using Supabase Auth's built-in OTP.
@@ -38,6 +41,37 @@ interface StepEmailProps {
  * No custom OTP table, no bcrypt, no /api/otp routes needed.
  */
 const EMAIL_STORAGE_KEY = "airdrop_quest_email_pending"
+const RESEND_COOLDOWN_STORAGE_KEY = "airdrop_quest_email_resend_cooldown_until"
+const RESEND_COOLDOWN_SECONDS = 30
+
+function loadResendCooldownUntil(): number | null {
+  if (typeof window === "undefined") return null
+  const raw = sessionStorage.getItem(RESEND_COOLDOWN_STORAGE_KEY)
+  if (!raw) return null
+
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= Date.now()) {
+    sessionStorage.removeItem(RESEND_COOLDOWN_STORAGE_KEY)
+    return null
+  }
+
+  return parsed
+}
+
+function persistResendCooldownUntil(value: number | null) {
+  if (typeof window === "undefined") return
+  if (!value || value <= Date.now()) {
+    sessionStorage.removeItem(RESEND_COOLDOWN_STORAGE_KEY)
+    return
+  }
+  sessionStorage.setItem(RESEND_COOLDOWN_STORAGE_KEY, String(value))
+}
+
+function beginResendCooldown(): number {
+  const expiresAt = Date.now() + RESEND_COOLDOWN_SECONDS * 1000
+  persistResendCooldownUntil(expiresAt)
+  return expiresAt
+}
 
 /** Persist the email that's waiting for OTP so it survives page refresh. */
 function loadPendingEmail(): { email: string; stage: "input" | "otp" } {
@@ -47,14 +81,35 @@ function loadPendingEmail(): { email: string; stage: "input" | "otp" } {
   return { email: "", stage: "input" }
 }
 
-export function StepEmail({ onComplete, onBack }: StepEmailProps) {
+export function StepEmail({ onComplete, onBack, walletFirstFlow = false }: StepEmailProps) {
   const pending = loadPendingEmail()
   const [stage, setStage] = useState<"input" | "otp">(pending.stage)
   const [email, setEmail] = useState(pending.email)
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""))
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resendAvailableAt, setResendAvailableAt] = useState<number | null>(() =>
+    walletFirstFlow ? loadResendCooldownUntil() : null
+  )
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  useEffect(() => {
+    if (!walletFirstFlow || !resendAvailableAt) return
+
+    const interval = window.setInterval(() => {
+      if (resendAvailableAt <= Date.now()) {
+        setResendAvailableAt(null)
+        persistResendCooldownUntil(null)
+      }
+    }, 1000)
+
+    return () => window.clearInterval(interval)
+  }, [walletFirstFlow, resendAvailableAt])
+
+  const resendCountdownSeconds =
+    walletFirstFlow && resendAvailableAt
+      ? Math.max(0, Math.ceil((resendAvailableAt - Date.now()) / 1000))
+      : 0
 
   const sendOtp = async () => {
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return
@@ -76,6 +131,9 @@ export function StepEmail({ onComplete, onBack }: StepEmailProps) {
       })
       if (otpError) throw new Error(otpError.message)
       sessionStorage.setItem(EMAIL_STORAGE_KEY, email)
+      if (walletFirstFlow) {
+        setResendAvailableAt(beginResendCooldown())
+      }
       setStage("otp")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send code")
@@ -89,13 +147,29 @@ export function StepEmail({ onComplete, onBack }: StepEmailProps) {
   const resendOtp = async () => {
     setLoading(true)
     setError(null)
-    setOtp(Array(6).fill(""))
     try {
       const { error: resendError } = await supabase.auth.resend({
         type: "signup",
         email,
       })
-      if (resendError) throw new Error(resendError.message)
+      if (resendError) {
+        const errorWithStatus = resendError as SupabaseStatusError
+        if (walletFirstFlow && errorWithStatus.status) {
+          throw new Error(
+            errorWithStatus.status === 429
+              ? "Too many resend attempts. Please wait a moment and try again."
+              : resendError.message
+          )
+        }
+        throw new Error(resendError.message)
+      }
+
+      // In the wallet-first flow, only reset the OTP inputs after the server
+      // has confirmed the resend request succeeded.
+      setOtp(Array(6).fill(""))
+      if (walletFirstFlow) {
+        setResendAvailableAt(beginResendCooldown())
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to resend code")
     } finally {
@@ -205,7 +279,14 @@ export function StepEmail({ onComplete, onBack }: StepEmailProps) {
         <div className="flex items-center justify-between">
           <button
             type="button"
-            onClick={() => { setStage("input"); setOtp(Array(6).fill("")); setError(null); sessionStorage.removeItem(EMAIL_STORAGE_KEY) }}
+            onClick={() => {
+              setStage("input")
+              setOtp(Array(6).fill(""))
+              setError(null)
+              setResendAvailableAt(null)
+              sessionStorage.removeItem(EMAIL_STORAGE_KEY)
+              persistResendCooldownUntil(null)
+            }}
             className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
                        transition-colors uppercase tracking-widest"
           >
@@ -214,13 +295,18 @@ export function StepEmail({ onComplete, onBack }: StepEmailProps) {
           <button
             type="button"
             onClick={resendOtp}
-            disabled={loading}
+            disabled={loading || resendCountdownSeconds > 0}
             className="font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
                        transition-colors uppercase tracking-widest disabled:opacity-40"
           >
             Resend code
           </button>
         </div>
+        {walletFirstFlow && resendCountdownSeconds > 0 ? (
+          <p className="text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground/50">
+            Resend available in {resendCountdownSeconds}s
+          </p>
+        ) : null}
       </ArcadeCard>
     )
   }
