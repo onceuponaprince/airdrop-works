@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.db import connection
+from django.db.models import Avg, Count, Sum
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -45,15 +46,28 @@ class AdminOverviewView(APIView):
     def get(self, request):
         user_model = get_user_model()
         users = user_model.objects.count()
-        contributions = Contribution.objects.count()
-        unscored = Contribution.objects.filter(scored_at__isnull=True).count()
+        contribution_qs = Contribution.objects.all()
+        contributions = contribution_qs.count()
+        scored = contribution_qs.filter(scored_at__isnull=False).count()
+        unscored = contribution_qs.filter(scored_at__isnull=True).count()
         active_sources = CrawlSourceConfig.objects.filter(is_active=True).count()
+        farming_contributions = contribution_qs.filter(farming_flag="farming").count()
+        aggregate = contribution_qs.aggregate(
+            total_xp_awarded=Sum("xp_awarded"),
+            average_score=Avg("total_score"),
+            distinct_platforms=Count("platform", distinct=True),
+        )
 
         return Response(
             {
                 "users": users,
                 "contributions": contributions,
+                "scoredContributions": scored,
                 "unscoredContributions": unscored,
                 "activeCrawlSources": active_sources,
+                "farmingContributions": farming_contributions,
+                "totalXpAwarded": aggregate["total_xp_awarded"] or 0,
+                "averageContributionScore": round(aggregate["average_score"] or 0, 2),
+                "trackedPlatforms": aggregate["distinct_platforms"] or 0,
             }
         )

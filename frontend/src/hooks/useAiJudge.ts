@@ -4,7 +4,7 @@
  * Client hook for the marketing AI Judge demo: POST `/api/judge`, parse NDJSON stream for live partials and final `JudgeResult`.
  */
 
-import { useState } from "react"
+import { useCallback, useRef, useState } from "react"
 import type { JudgeResult } from "@/types/api"
 import { events } from "@/lib/analytics"
 import { useNotificationStore } from "@/stores/useNotificationStore"
@@ -17,6 +17,7 @@ interface LiveScore {
 
 interface AiJudgeState {
   status: "idle" | "scoring" | "complete" | "error"
+  phase: string | null
   result: JudgeResult | null
   liveScore: LiveScore | null
   error: string | null
@@ -25,8 +26,10 @@ interface AiJudgeState {
 /** Returns judge state, `score(text)` (streaming), and `reset`; fires analytics and toast notifications on completion/error. */
 export function useAiJudge() {
   const notify = useNotificationStore((s) => s.push)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const [state, setState] = useState<AiJudgeState>({
     status: "idle",
+    phase: null,
     result: null,
     liveScore: null,
     error: null,
@@ -44,7 +47,7 @@ export function useAiJudge() {
    * partial JSON line; splitting on "\n" and only parsing complete lines
    * avoids JSON.parse failures on partial data.
    */
-  const parseStream = async (res: Response): Promise<JudgeResult> => {
+  const parseStream = useCallback(async (res: Response, signal: AbortSignal): Promise<JudgeResult> => {
     const reader = res.body?.getReader()
     if (!reader) throw new Error("Scoring stream unavailable")
 
@@ -52,7 +55,52 @@ export function useAiJudge() {
     let buffer = ""
     let finalResult: JudgeResult | null = null
 
+    const applyLiveScore = (score: LiveScore) => {
+      setState((prev) => ({ ...prev, liveScore: score }))
+    }
+
+    const normalizeFinalResult = (value: unknown): JudgeResult | null => {
+      if (!value || typeof value !== "object") return null
+
+      const candidate = value as Partial<JudgeResult> & {
+        result?: unknown
+        analysis?: unknown
+        score?: unknown
+      }
+      const source = candidate.result ?? candidate.analysis ?? candidate.score ?? candidate
+
+      if (!source || typeof source !== "object") return null
+
+      const sourceRecord = source as Partial<JudgeResult>
+      if (
+        typeof sourceRecord.teachingValue !== "number" ||
+        typeof sourceRecord.originality !== "number" ||
+        typeof sourceRecord.communityImpact !== "number" ||
+        typeof sourceRecord.compositeScore !== "number" ||
+        typeof sourceRecord.farmingFlag !== "string"
+      ) {
+        return null
+      }
+
+      return {
+        teachingValue: sourceRecord.teachingValue,
+        originality: sourceRecord.originality,
+        communityImpact: sourceRecord.communityImpact,
+        compositeScore: sourceRecord.compositeScore,
+        farmingFlag: sourceRecord.farmingFlag as JudgeResult["farmingFlag"],
+        farmingExplanation: sourceRecord.farmingExplanation ?? "",
+        dimensionExplanations: sourceRecord.dimensionExplanations ?? {
+          teachingValue: "",
+          originality: "",
+          communityImpact: "",
+        },
+        scoredAt: sourceRecord.scoredAt ?? new Date().toISOString(),
+      }
+    }
+
     while (true) {
+      if (signal.aborted) throw new DOMException("The request was aborted.", "AbortError")
+
       const { done, value } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
@@ -66,15 +114,33 @@ export function useAiJudge() {
         if (line) {
           const msg = JSON.parse(line) as
             | { type: "partial"; partial: LiveScore }
-            | { type: "final"; result: JudgeResult }
-            | { type: "status"; phase: string }
+            | { type: "tweet_score"; score?: LiveScore; teachingValue?: number; originality?: number; communityImpact?: number }
+            | { type: "final"; result?: JudgeResult; analysis?: JudgeResult; score?: JudgeResult }
+            | { type: "status"; phase: string; message?: string }
+            | { type: "error"; message: string }
 
           if (msg.type === "partial") {
-            setState((prev) => ({ ...prev, liveScore: msg.partial }))
-          }
+            applyLiveScore(msg.partial)
+          } else if (msg.type === "tweet_score") {
+            const liveScore: LiveScore | null = msg.score ?? (
+              typeof msg.teachingValue === "number" &&
+              typeof msg.originality === "number" &&
+              typeof msg.communityImpact === "number"
+                ? {
+                    teachingValue: msg.teachingValue,
+                    originality: msg.originality,
+                    communityImpact: msg.communityImpact,
+                  }
+                : null
+            )
 
-          if (msg.type === "final") {
-            finalResult = msg.result
+            if (liveScore) applyLiveScore(liveScore)
+          } else if (msg.type === "status") {
+            setState((prev) => ({ ...prev, phase: msg.phase }))
+          } else if (msg.type === "error") {
+            throw new Error(msg.message)
+          } else if (msg.type === "final") {
+            finalResult = normalizeFinalResult(msg)
           }
         }
 
@@ -82,12 +148,23 @@ export function useAiJudge() {
       }
     }
 
+    if (buffer.trim()) {
+      const msg = JSON.parse(buffer.trim()) as { type: string }
+      if (msg.type === "final") {
+        finalResult = normalizeFinalResult(msg)
+      }
+    }
+
     if (!finalResult) throw new Error("Scoring finished without a final result")
     return finalResult
-  }
+  }, [])
 
   const score = async (text: string) => {
-    setState({ status: "scoring", result: null, liveScore: null, error: null })
+    abortControllerRef.current?.abort()
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
+    setState({ status: "scoring", phase: null, result: null, liveScore: null, error: null })
     events.aiJudgeDemo("custom")
 
     try {
@@ -95,6 +172,7 @@ export function useAiJudge() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
+        signal: abortController.signal,
       })
 
       if (!res.ok) {
@@ -102,9 +180,9 @@ export function useAiJudge() {
         throw new Error(err.error || `Scoring failed (${res.status})`)
       }
 
-      const result = await parseStream(res)
+      const result = await parseStream(res, abortController.signal)
 
-      setState({ status: "complete", result, liveScore: null, error: null })
+      setState({ status: "complete", phase: null, result, liveScore: null, error: null })
       events.aiJudgeResult(result.farmingFlag, result.compositeScore)
       notify({
         type: "success",
@@ -112,15 +190,19 @@ export function useAiJudge() {
         message: `Composite ${result.compositeScore}/100 (${result.farmingFlag})`,
       })
     } catch (err) {
+      if (abortController.signal.aborted) return
+
       const message =
         err instanceof Error ? err.message : "Scoring failed. Please try again."
-      setState({ status: "error", result: null, liveScore: null, error: message })
+      setState({ status: "error", phase: null, result: null, liveScore: null, error: message })
       notify({ type: "error", title: "Judge scoring failed", message })
     }
   }
 
-  const reset = () =>
-    setState({ status: "idle", result: null, liveScore: null, error: null })
+  const reset = () => {
+    abortControllerRef.current?.abort()
+    setState({ status: "idle", phase: null, result: null, liveScore: null, error: null })
+  }
 
   return { ...state, score, reset }
 }

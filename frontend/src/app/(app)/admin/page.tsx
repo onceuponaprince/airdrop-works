@@ -4,14 +4,20 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
+import { RubricForm } from '@/components/admin/RubricForm';
 import { staggerContainer, staggerItem } from '@/lib/animations';
 import { ApiError, api } from '@/lib/api';
 
 interface AdminOverview {
   users: number;
   contributions: number;
+  scoredContributions: number;
   unscoredContributions: number;
   activeCrawlSources: number;
+  farmingContributions: number;
+  totalXpAwarded: number;
+  averageContributionScore: number;
+  trackedPlatforms: number;
 }
 
 export default function AdminPage() {
@@ -73,6 +79,36 @@ export default function AdminPage() {
           <p className="text-xs text-[--muted-foreground]">Active Crawlers</p>
           <p className="mt-2 text-2xl font-bold text-[--primary]">{overview.data?.activeCrawlSources ?? 0}</p>
         </div>
+      </motion.section>
+
+      <motion.section variants={staggerItem} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-lg border border-[--border] bg-[--card] p-4">
+          <p className="text-xs text-[--muted-foreground]">Scored</p>
+          <p className="mt-2 text-2xl font-bold text-[--primary]">{overview.data?.scoredContributions ?? 0}</p>
+        </div>
+        <div className="rounded-lg border border-[--border] bg-[--card] p-4">
+          <p className="text-xs text-[--muted-foreground]">Farming</p>
+          <p className="mt-2 text-2xl font-bold text-[--primary]">{overview.data?.farmingContributions ?? 0}</p>
+        </div>
+        <div className="rounded-lg border border-[--border] bg-[--card] p-4">
+          <p className="text-xs text-[--muted-foreground]">XP Awarded</p>
+          <p className="mt-2 text-2xl font-bold text-[--primary]">{overview.data?.totalXpAwarded ?? 0}</p>
+        </div>
+        <div className="rounded-lg border border-[--border] bg-[--card] p-4">
+          <p className="text-xs text-[--muted-foreground]">Avg Score</p>
+          <p className="mt-2 text-2xl font-bold text-[--primary]">{overview.data?.averageContributionScore ?? 0}</p>
+        </div>
+      </motion.section>
+
+      <motion.section variants={staggerItem} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-lg border border-[--border] bg-[--card] p-4">
+          <p className="text-xs text-[--muted-foreground]">Tracked Platforms</p>
+          <p className="mt-2 text-2xl font-bold text-[--primary]">{overview.data?.trackedPlatforms ?? 0}</p>
+        </div>
+      </motion.section>
+
+      <motion.section variants={staggerItem}>
+        <RubricForm />
       </motion.section>
     </motion.main>
   );
