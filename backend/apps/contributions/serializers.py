@@ -16,6 +16,36 @@ class ContributionSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class AdminContributionSerializer(serializers.ModelSerializer):
+    userWalletAddress = serializers.CharField(source="user.wallet_address", read_only=True)
+    userDisplayName = serializers.CharField(source="user.display_name", read_only=True)
+    userDynamicId = serializers.CharField(source="user.dynamic_user_id", read_only=True)
+
+    class Meta:
+        model = Contribution
+        fields = [
+            "id",
+            "userWalletAddress",
+            "userDisplayName",
+            "userDynamicId",
+            "platform",
+            "content_text",
+            "content_url",
+            "platform_content_id",
+            "teaching_value",
+            "originality",
+            "community_impact",
+            "total_score",
+            "farming_flag",
+            "farming_explanation",
+            "xp_awarded",
+            "scored_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = fields
+
+
 class CrawlSourceConfigSerializer(serializers.ModelSerializer):
     class Meta:
         model = CrawlSourceConfig

@@ -60,6 +60,9 @@ export default function LeaderboardPage() {
         : `/leaderboard/branch/${scope}/`;
       return api.get<LeaderboardRow[]>(path);
     },
+    staleTime: 30_000,
+    gcTime: 5 * 60_000,
+    placeholderData: (previous) => previous,
   });
 
   const rows = leaderboard.data ?? [];

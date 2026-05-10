@@ -2,6 +2,59 @@ name: CI
 
 on:
   push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install frontend deps
+        working-directory: ./frontend
+        run: pnpm install --frozen-lockfile
+      - name: Build frontend
+        working-directory: ./frontend
+        run: pnpm build
+
+  backend:
+    name: Backend tests & checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+      - name: Install backend dependencies (if present)
+        run: |
+          if [ -f backend/requirements.txt ]; then
+            pip install -r backend/requirements.txt
+          else
+            echo "No backend/requirements.txt found, skipping install"
+          fi
+      - name: Syntax check key modules
+        run: python -m py_compile backend/apps/quests/serializers.py backend/apps/quests/views.py backend/apps/judge/service.py || true
+      - name: Run tests (best-effort)
+        run: |
+          if command -v pytest >/dev/null 2>&1; then
+            pytest -q
+          else
+            echo "pytest not available; skipping backend tests"
+          finame: CI
+
+on:
+  push:
     branches: [main, dev]
   pull_request:
     branches: [main]

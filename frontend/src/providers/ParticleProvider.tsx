@@ -27,7 +27,7 @@ const appId = (process.env.NEXT_PUBLIC_APP_ID ?? "").trim()
  * @returns { type: 'error'|'warning', message: string, action?: string }
  */
 export function handleWalletError(
-  error: Error | string | any,
+  error: unknown,
   retryCallback?: () => void
 ): {
   type: "error" | "warning"
@@ -35,15 +35,21 @@ export function handleWalletError(
   action?: string
   retry?: () => void
 } {
-  const errorMessage = typeof error === "string" ? error : error?.message || String(error)
-  const errorCode = error?.code || ""
+  const walletError = typeof error === "object" && error !== null
+    ? error as { message?: string; code?: string | number }
+    : null
+  const errorMessage = typeof error === "string"
+    ? error
+    : walletError?.message || String(error)
+  const errorCode = walletError?.code || ""
+  const normalizedMessage = errorMessage.toLowerCase()
 
   // User rejected transaction/connection
   if (
     errorCode === "ACTION_REJECTED" ||
-    errorMessage.toLowerCase().includes("user rejected") ||
-    errorMessage.toLowerCase().includes("user denied") ||
-    errorMessage.toLowerCase().includes("rejected")
+    normalizedMessage.includes("user rejected") ||
+    normalizedMessage.includes("user denied") ||
+    normalizedMessage.includes("rejected")
   ) {
     return {
       type: "warning",
@@ -55,9 +61,9 @@ export function handleWalletError(
 
   // Insufficient gas/funds
   if (
-    errorMessage.toLowerCase().includes("insufficient funds") ||
-    errorMessage.toLowerCase().includes("insufficient balance") ||
-    errorMessage.toLowerCase().includes("insufficient gas")
+    normalizedMessage.includes("insufficient funds") ||
+    normalizedMessage.includes("insufficient balance") ||
+    normalizedMessage.includes("insufficient gas")
   ) {
     return {
       type: "error",
@@ -69,10 +75,10 @@ export function handleWalletError(
   // Network/RPC errors
   if (
     errorCode === "SERVER_ERROR" ||
-    errorMessage.toLowerCase().includes("network error") ||
-    errorMessage.toLowerCase().includes("rpc error") ||
-    errorMessage.toLowerCase().includes("eth_call") ||
-    errorMessage.toLowerCase().includes("timeout")
+    normalizedMessage.includes("network error") ||
+    normalizedMessage.includes("rpc error") ||
+    normalizedMessage.includes("eth_call") ||
+    normalizedMessage.includes("timeout")
   ) {
     return {
       type: "error",
@@ -85,8 +91,8 @@ export function handleWalletError(
   // Wrong network
   if (
     errorCode === "NETWORK_MISMATCH" ||
-    errorMessage.toLowerCase().includes("wrong chain") ||
-    errorMessage.toLowerCase().includes("chainid")
+    normalizedMessage.includes("wrong chain") ||
+    normalizedMessage.includes("chainid")
   ) {
     return {
       type: "error",
@@ -97,8 +103,8 @@ export function handleWalletError(
 
   // Contract interaction failed
   if (
-    errorMessage.toLowerCase().includes("contract") ||
-    errorMessage.toLowerCase().includes("execution reverted")
+    normalizedMessage.includes("contract") ||
+    normalizedMessage.includes("execution reverted")
   ) {
     return {
       type: "error",
@@ -109,9 +115,9 @@ export function handleWalletError(
 
   // Wallet not connected
   if (
-    errorMessage.toLowerCase().includes("not connected") ||
-    errorMessage.toLowerCase().includes("no account") ||
-    errorMessage.toLowerCase().includes("wallet disconnected")
+    normalizedMessage.includes("not connected") ||
+    normalizedMessage.includes("no account") ||
+    normalizedMessage.includes("wallet disconnected")
   ) {
     return {
       type: "warning",
