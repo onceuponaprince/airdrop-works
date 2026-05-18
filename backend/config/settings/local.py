@@ -31,6 +31,8 @@ REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
     "anon": "1000/minute",
     "user": "1000/minute",
     "judge_demo": "100/minute",
+    "judge_score": "10/hour",
+    "judge_score_account": "10/hour",
     "spore_query": "300/minute",
     "spore_ingest": "200/minute",
     "spore_ops": "500/minute",

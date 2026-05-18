@@ -7,6 +7,7 @@ from django.core.management.base import BaseCommand
 
 from ...payouts import amount_to_wei, estimate_erc20_transfer_gas, get_token_info
 from ...signer import get_configured_signer_service
+from django.apps import apps as django_apps
 
 
 class Command(BaseCommand):
@@ -19,7 +20,11 @@ class Command(BaseCommand):
         mode.add_argument("--execute", action="store_false", dest="dry_run",
                           help="Execute the payout batch instead of simulating it.")
         parser.add_argument("--approve", action="store_true", dest="approve", default=False,
-                            help="Approve and execute payouts (requires --dry-run to be omitted).")
+                            help="Approve and execute payouts (requires --execute to be used).")
+        parser.add_argument("--approval-batch", dest="approval_batch", default=None,
+                            help="Optional batch identifier to require a matching PayoutApproval.batch_id")
+        parser.add_argument("--force", action="store_true", dest="force", default=False,
+                            help="Force execution ignoring DB approvals (use with caution).")
 
     def _load_payouts(self):
         # Skeleton: replace with DB-backed payout selection.
@@ -79,6 +84,20 @@ class Command(BaseCommand):
             if not signer or not rpc_url or not token_address:
                 self.stdout.write(self.style.ERROR("Configured signer service is unavailable or payout config is incomplete."))
                 return
+
+            # Before sending any transactions, require DB approval unless forced
+            approval_batch = options.get("approval_batch")
+            force = options.get("force", False)
+            if not force:
+                PayoutApproval = django_apps.get_model("rewards", "PayoutApprovalRecord")
+                qs = PayoutApproval.objects.filter(approved=True)
+                if approval_batch:
+                    qs = qs.filter(batch_id=approval_batch)
+                if not qs.exists():
+                    self.stdout.write(self.style.ERROR(
+                        "No matching approved PayoutApproval found. Create an approval in the admin or pass --force to override."
+                    ))
+                    return
 
             tx_hash = signer.send_erc20(token_address, payout["recipient"], amount_wei)
             self.stdout.write(self.style.SUCCESS(f"Sent payout transaction: {tx_hash}"))

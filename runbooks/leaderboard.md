@@ -9,25 +9,20 @@ Checks
 
 Common Commands
 
-- Rebuild leaderboard (dry-run):
+- Rebuild leaderboard:
   ```bash
-  uv run python manage.py shell -c "from apps.leaderboard.tasks import rebuild_all; rebuild_all(dry_run=True)"
+  uv run python manage.py shell -c "from apps.leaderboard.tasks import rebuild_leaderboard; rebuild_leaderboard()"
   ```
 
-- Rebuild leaderboard (full):
+- Rebuild leaderboard via Celery:
   ```bash
-  uv run python manage.py shell -c "from apps.leaderboard.tasks import rebuild_all; rebuild_all(dry_run=False)"
-  ```
-
-- Trigger background rebuild via Celery:
-  ```bash
-  uv run python manage.py shell -c "from apps.leaderboard.tasks import rebuild_all_task; rebuild_all_task.delay()"
+  uv run python manage.py shell -c "from apps.leaderboard.tasks import rebuild_leaderboard; rebuild_leaderboard.delay()"
   ```
 
 Troubleshooting
 - If `rebuild_all` fails with DB errors: check migrations and DB health. Restore snapshot if corruption suspected.
 - If Celery tasks queue up: restart Celery worker and beat, inspect `celery --concurrency` and memory.
-- If results look stale: confirm incremental hooks fire on `Contribution` save and that signal handlers are connected.
+- If results look stale: confirm the scheduled rebuild ran recently and that `Contribution` scoring populated `xp_awarded` / `scored_at`.
 
 Alerts and Monitoring
 - Create an alert for Celery task failures on `leaderboard.rebuild_all` (Sentry + PagerDuty integration).
