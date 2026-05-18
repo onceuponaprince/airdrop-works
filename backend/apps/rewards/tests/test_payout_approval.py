@@ -30,10 +30,16 @@ class PayoutApprovalCommandTests(TestCase):
         class DummySigner:
             def send_erc20(self, token_address, to_address, amount_wei):
                 return "0xdeadbeef"
-
         from unittest.mock import patch as _patch
 
-        with _patch("apps.rewards.management.commands.payout_batch.get_configured_signer_service", return_value=DummySigner()):
+        class DummyTokenInfo:
+            def __init__(self):
+                self.decimals = 18
+                self.symbol = "AIRDROP"
+                self.name = "Airdrop Token"
+
+        with _patch("apps.rewards.management.commands.payout_batch.get_configured_signer_service", return_value=DummySigner()), \
+             _patch("apps.rewards.management.commands.payout_batch.get_token_info", return_value=DummyTokenInfo()):
             # pass the matching approval batch id
             call_command("payout_batch", "--execute", "--approve", "--approval-batch", "test-batch", stdout=out)
 
