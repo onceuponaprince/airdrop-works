@@ -33,7 +33,7 @@ def register_reward_admins():
     definitions with the same app label.
     """
     mapping = [
-        ("PayoutApprovalRecord", _PayoutApprovalAdmin),
+        ("AirdropPayoutApproval", _PayoutApprovalAdmin),
         ("Badge", _BadgeAdmin),
         ("UserBadge", _UserBadgeAdmin),
         ("LootChest", _LootChestAdmin),

@@ -89,7 +89,7 @@ class Command(BaseCommand):
             approval_batch = options.get("approval_batch")
             force = options.get("force", False)
             if not force:
-                PayoutApproval = django_apps.get_model("rewards", "PayoutApprovalRecord")
+                PayoutApproval = django_apps.get_model("apps.rewards", "AirdropPayoutApproval")
                 qs = PayoutApproval.objects.filter(approved=True)
                 if approval_batch:
                     qs = qs.filter(batch_id=approval_batch)
