@@ -29,7 +29,10 @@ def test_judge_demo_scores_text(mock_score_contribution):
 
     assert response.status_code == 200
     assert response.json()["composite_score"] == 73
-    mock_score_contribution.assert_called_once_with("A useful post")
+    mock_score_contribution.assert_called_once()
+    args, kwargs = mock_score_contribution.call_args
+    assert args == ("A useful post",)
+    assert "quota_context" in kwargs
 
 
 @pytest.mark.django_db
@@ -70,7 +73,10 @@ def test_judge_score_requires_auth_and_returns_credits(mock_deduct_credit, mock_
     assert response.status_code == 200
     assert response.json()["credits_remaining"] == 17
     mock_deduct_credit.assert_called_once_with(user, "score_text")
-    mock_score_contribution.assert_called_once_with("Score this text")
+    mock_score_contribution.assert_called_once()
+    args, kwargs = mock_score_contribution.call_args
+    assert args == ("Score this text",)
+    assert kwargs["quota_context"]["user"] == user
 
 
 @pytest.mark.django_db
@@ -141,7 +147,7 @@ def test_judge_score_throttles_authenticated_users(mock_deduct_credit, mock_scor
     assert first_response.status_code == 200
     # Rate limiting may or may not be enforced in this environment. Accept 200 or 429.
     assert second_response.status_code in (200, 429)
-    mock_score_contribution.assert_any_call("First request")
+    mock_score_contribution.assert_any_call("First request", quota_context={"user": user})
 
 
 @pytest.mark.django_db

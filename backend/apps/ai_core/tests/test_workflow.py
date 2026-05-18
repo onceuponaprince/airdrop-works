@@ -16,7 +16,7 @@ class ScoringWorkflowTests(TestCase):
             wallet_address="0x2222222222222222222222222222222222222222",
             is_active=True,
         )
-        self.profile = Profile.objects.create(user=self.user)
+        self.profile, _ = Profile.objects.get_or_create(user=self.user)
         self.contribution = Contribution.objects.create(
             user=self.user,
             platform="twitter",

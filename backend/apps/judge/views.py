@@ -15,8 +15,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework import status, generics
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
+from rest_framework.exceptions import ValidationError as DRFValidationError
 
+from apps.ai_core.heuristics import score_text_heuristically
 from apps.payments.services import deduct_credit, get_or_create_user_sub
 from .models import ScoringRubric
 from .serializers import RubricSerializer
@@ -33,6 +35,12 @@ class JudgeDemoThrottle(AnonRateThrottle):
     """DRF throttle scope ``judge_demo`` (configure rate in ``DEFAULT_THROTTLE_RATES``)."""
 
     scope = "judge_demo"
+
+
+class JudgeScoreThrottle(ScopedRateThrottle):
+    """DRF throttle scope ``judge_score`` for authenticated single-text scoring."""
+
+    scope = "judge_score"
 
 
 class JudgeDemoView(APIView):
@@ -55,7 +63,7 @@ class JudgeDemoView(APIView):
             return Response({"detail": "text too long (max 5000 chars)"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            result = score_contribution(text)
+            result = score_contribution(text, quota_context={"user": getattr(request, "user", None)})
             return Response(result)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
@@ -67,6 +75,7 @@ class JudgeDemoView(APIView):
 class JudgeScoreView(APIView):
     """Authenticated, credit-gated single-text scoring."""
     permission_classes = [IsAuthenticated]
+    throttle_classes = [JudgeScoreThrottle]
 
     def post(self, request):
         text = request.data.get("text", "").strip()
@@ -75,9 +84,14 @@ class JudgeScoreView(APIView):
         if len(text) > 5000:
             return Response({"detail": "text too long (max 5000 chars)"}, status=status.HTTP_400_BAD_REQUEST)
 
-        remaining = deduct_credit(request.user, "score_text")
         try:
-            result = score_contribution(text)
+            remaining = deduct_credit(request.user, "score_text")
+            result = score_contribution(text, quota_context={"user": request.user})
+        except DRFValidationError as exc:
+            detail = exc.detail if isinstance(exc.detail, dict) else {"detail": str(exc.detail)}
+            remaining = detail.get("credits_remaining", 0)
+            result = score_text_heuristically(text)
+        try:
             result["credits_remaining"] = remaining
             return Response(result)
         except ValueError as e:
@@ -177,6 +191,7 @@ class JudgeScoreAccountView(APIView):
     Streams NDJSON events: tweets_fetched -> status -> tweet_score* -> final | error
     """
     permission_classes = [IsAuthenticated]
+    throttle_classes = [JudgeScoreThrottle]
 
     def post(self, request):
         username = (request.data.get("username") or "").strip().lstrip("@")

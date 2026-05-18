@@ -1,7 +1,7 @@
 import logging
 
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -28,7 +28,7 @@ class AICoreScoreView(APIView):
             return Response({"detail": "text is required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            score = AICoreScoringService.score_text(text=text)
+            score = AICoreScoringService.score_text(text=text, quota_context={"user": request.user})
         except ValueError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as exc:
@@ -36,6 +36,18 @@ class AICoreScoreView(APIView):
             return Response({"detail": "Scoring temporarily unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
         return Response(score.to_dict(), status=status.HTTP_200_OK)
+
+
+class AICoreMetricsView(APIView):
+    """Prometheus scrape endpoint for AI-core and payout counters."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from django.http import HttpResponse
+        from .metrics import render_prometheus_metrics
+
+        return HttpResponse(render_prometheus_metrics(), content_type="text/plain; version=0.0.4")
 
 
 class AICoreScoreJobView(APIView):

@@ -1,3 +1,4 @@
+from django import forms
 from django.contrib import admin
 
 from .models import (
@@ -12,6 +13,36 @@ from .models import (
     UsageDailyCounter,
     UsageEvent,
 )
+
+
+class TenantAdminForm(forms.ModelForm):
+    llm_daily_limit = forms.IntegerField(required=False, min_value=1, label="LLM daily limit")
+    llm_per_minute = forms.IntegerField(required=False, min_value=1, label="LLM per-minute limit")
+    llm_warn_at_percent = forms.IntegerField(required=False, min_value=1, max_value=100, label="LLM warn at %")
+
+    class Meta:
+        model = Tenant
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        budget = (self.instance.metadata or {}).get("ai_llm_budget", {})
+        self.fields["llm_daily_limit"].initial = budget.get("daily_limit")
+        self.fields["llm_per_minute"].initial = budget.get("per_minute")
+        self.fields["llm_warn_at_percent"].initial = budget.get("warn_at_percent")
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        metadata = dict(instance.metadata or {})
+        metadata["ai_llm_budget"] = {
+            "daily_limit": self.cleaned_data.get("llm_daily_limit") or None,
+            "per_minute": self.cleaned_data.get("llm_per_minute") or None,
+            "warn_at_percent": self.cleaned_data.get("llm_warn_at_percent") or None,
+        }
+        instance.metadata = metadata
+        if commit:
+            instance.save()
+        return instance
 
 
 @admin.register(GraphNode)
@@ -60,6 +91,7 @@ class TenantAdmin(admin.ModelAdmin):
     list_display = ("slug", "name", "plan", "is_active", "updated_at")
     list_filter = ("plan", "is_active")
     search_fields = ("slug", "name")
+    form = TenantAdminForm
 
 
 @admin.register(TenantMembership)

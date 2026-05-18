@@ -1,0 +1,31 @@
+groups:
+  - name: airdrop-works-ai-core
+    rules:
+      - alert: AICoreLLMBudgetWarning
+        expr: increase(airdrop_llm_budget_warning_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI core LLM usage is approaching quota"
+          description: "The LLM quota guard has emitted warning metrics for 10 minutes. Review budgets and usage."
+
+      - alert: AICoreLLMRateLimited
+        expr: increase(airdrop_llm_rate_limited_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI core LLM requests are being rate limited"
+          description: "Requests are being rejected by the quota guard. Consider raising budgets or reducing traffic."
+
+  - name: airdrop-works-payouts
+    rules:
+      - alert: PayoutGasEstimateFailures
+        expr: increase(airdrop_payout_gas_estimate_total{success="false"}[15m]) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Payout gas estimation is failing"
+          description: "Gas estimation failures usually indicate RPC issues, token address problems, or malformed payout plans."

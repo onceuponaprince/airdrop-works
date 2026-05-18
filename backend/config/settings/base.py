@@ -171,6 +171,8 @@ REST_FRAMEWORK = {
         "anon": "60/minute",
         "user": "300/minute",
         "judge_demo": "10/minute",
+        "judge_score": "10/hour",
+        "judge_score_account": "10/hour",
         "spore_query": "20/minute",
         "spore_ingest": "20/minute",
         "spore_ops": "60/minute",
@@ -220,6 +222,15 @@ CELERY_TASK_ALWAYS_EAGER = False  # Override to True in tests
 CRAWLER_BEAT_MINUTES = config("CRAWLER_BEAT_MINUTES", default=15, cast=int)
 SPORE_SPORULATION_BEAT_MINUTES = config("SPORE_SPORULATION_BEAT_MINUTES", default=10, cast=int)
 SPORE_AUDIT_RETENTION_DAYS = config("SPORE_AUDIT_RETENTION_DAYS", default=30, cast=int)
+
+# ── AI core quotas & payout execution ───────────────────────────────────────
+
+AI_LLM_RATE_PER_MINUTE = config("AI_LLM_RATE_PER_MINUTE", default=30, cast=int)
+AI_LLM_DAILY_LIMIT = config("AI_LLM_DAILY_LIMIT", default=10000, cast=int)
+AI_LLM_WARN_AT_PERCENT = config("AI_LLM_WARN_AT_PERCENT", default=80, cast=int)
+PAYOUT_SIGNER_MODE = config("PAYOUT_SIGNER_MODE", default="dry-run")
+PAYOUT_SIGNER_PRIVATE_KEY = config("PAYOUT_SIGNER_PRIVATE_KEY", default="")
+WEB3_RPC_URL = config("WEB3_RPC_URL", default="")
 
 CELERY_BEAT_SCHEDULE = {
     "crawl-all-active-sources": {

@@ -15,7 +15,7 @@ def hash_content(text: str) -> str:
     return AICoreScoringService.hash_content(text)
 
 
-def score_contribution(text: str, rubric=None) -> dict:
+def score_contribution(text: str, rubric=None, quota_context: dict | None = None) -> dict:
     """Return dimension scores and farming metadata; cache hit skips the LLM.
 
     On miss, persists a ``JudgeCache`` row (truncated ``content_text``);
@@ -35,7 +35,7 @@ def score_contribution(text: str, rubric=None) -> dict:
         pass
 
     # Call Anthropic
-    result = _call_anthropic(text, rubric)
+    result = _call_anthropic(text, rubric, quota_context=quota_context)
 
     # Store in cache
     try:
@@ -52,12 +52,16 @@ def score_contribution(text: str, rubric=None) -> dict:
     return result
 
 
-def _call_anthropic(text: str, rubric=None) -> dict:
+def _call_anthropic(text: str, rubric=None, quota_context: dict | None = None) -> dict:
     """Run ``AICoreScoringService.score_text``; map result to flat dict for cache."""
     custom_instructions = ""
     if rubric and rubric.custom_instructions:
         custom_instructions = f"\nAdditional campaign instructions:\n{rubric.custom_instructions}"
-    score = AICoreScoringService.score_text(text=text, custom_instructions=custom_instructions)
+    score = AICoreScoringService.score_text(
+        text=text,
+        custom_instructions=custom_instructions,
+        quota_context=quota_context,
+    )
     return score.to_dict()
 
 

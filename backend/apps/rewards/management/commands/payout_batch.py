@@ -1,69 +1,89 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
+from django.conf import settings
 from django.core.management.base import BaseCommand
+
+from ...payouts import amount_to_wei, estimate_erc20_transfer_gas, get_token_info
+from ...signer import get_configured_signer_service
 
 
 class Command(BaseCommand):
     help = "Run a payout batch (dry-run by default)."
 
     def add_arguments(self, parser):
-        parser.add_argument("--dry-run", action="store_true", dest="dry_run", default=True,
+        mode = parser.add_mutually_exclusive_group()
+        mode.add_argument("--dry-run", action="store_true", dest="dry_run", default=True,
                             help="Perform a dry run without sending transactions.")
+        mode.add_argument("--execute", action="store_false", dest="dry_run",
+                          help="Execute the payout batch instead of simulating it.")
         parser.add_argument("--approve", action="store_true", dest="approve", default=False,
                             help="Approve and execute payouts (requires --dry-run to be omitted).")
+
+    def _load_payouts(self):
+        # Skeleton: replace with DB-backed payout selection.
+        return [
+            {
+                "recipient": "0x000000000000000000000000000000000000dEaD",
+                "amount": "10.0",
+                "token_symbol": "AIRDROP",
+                "token_address": getattr(settings, "PAYOUT_TOKEN_ADDRESS", ""),
+                "chain": getattr(settings, "PAYOUT_CHAIN", "unknown"),
+            },
+        ]
 
     def handle(self, *args, **options):
         dry_run = options.get("dry_run", True)
         approve = options.get("approve", False)
 
         if dry_run and approve:
-            self.stdout.write(self.style.ERROR("Cannot --approve during --dry-run. Use --approve without --dry-run."))
+            self.stdout.write(self.style.ERROR("Cannot --approve during --dry-run. Use --execute --approve to send."))
             return
 
-        # Skeleton: gather eligible payouts
-        self.stdout.write("Gathering eligible payouts...")
-        # TODO: load campaign payouts, calculate amounts, prepare transaction payloads
-
-        payouts = [
-            {"recipient": "0xabc...", "amount": "10.0", "token": "AIRDROP"},
-        ]
-
-        # If a NODE RPC is configured, estimate gas for each payout (dry run)
-        rpc_url = getattr(__import__("django.conf").conf.settings, "WEB3_RPC_URL", "")
-        if rpc_url:
-            from ...rewards.utils import estimate_erc20_transfer_gas
-
-            for p in payouts:
-                # For demonstration we assume 18 decimals for token amount; callers
-                # should replace with actual token decimals when available.
-                try:
-                    amount_wei = int(float(p["amount"]) * (10 ** 18))
-                except Exception:
-                    amount_wei = int(float(p.get("amount", "0")) * (10 ** 18))
-
-                gas = estimate_erc20_transfer_gas(rpc_url, p.get("token_contract", p.get("token", "")), p["recipient"], amount_wei)
-                if gas:
-                    self.stdout.write(f"Estimated gas for sending {p['amount']} {p['token']} to {p['recipient']}: {gas}")
-                else:
-                    self.stdout.write(self.style.WARNING(f"Could not estimate gas for {p['recipient']} ({p['token']})"))
-
+        rpc_url = getattr(settings, "WEB3_RPC_URL", "")
+        signer = get_configured_signer_service()
+        payouts = self._load_payouts()
 
         self.stdout.write(f"Prepared {len(payouts)} payouts")
 
+        for payout in payouts:
+            token_address = payout.get("token_address") or ""
+            if rpc_url and token_address:
+                info = get_token_info(rpc_url, token_address)
+                amount_wei = amount_to_wei(Decimal(payout["amount"]), info.decimals)
+                gas_estimate = estimate_erc20_transfer_gas(
+                    rpc_url=rpc_url,
+                    token_address=token_address,
+                    to_address=payout["recipient"],
+                    amount_wei=amount_wei,
+                )
+                self.stdout.write(
+                    f"Token {info.symbol} ({info.name}), decimals={info.decimals}, estimated gas={gas_estimate or 'n/a'}"
+                )
+            else:
+                amount_wei = amount_to_wei(Decimal(payout["amount"]), 18)
+                gas_estimate = None
+                self.stdout.write(self.style.WARNING("RPC URL or token address missing; skipping gas estimate."))
+
+            if dry_run:
+                self.stdout.write(
+                    f"DRY: would send {payout['amount']} {payout['token_symbol']} to {payout['recipient']}"
+                )
+                continue
+
+            if not approve:
+                self.stdout.write(self.style.WARNING("No --approve flag provided. Aborting to prevent accidental payouts."))
+                return
+
+            if not signer or not rpc_url or not token_address:
+                self.stdout.write(self.style.ERROR("Configured signer service is unavailable or payout config is incomplete."))
+                return
+
+            tx_hash = signer.send_erc20(token_address, payout["recipient"], amount_wei)
+            self.stdout.write(self.style.SUCCESS(f"Sent payout transaction: {tx_hash}"))
+
         if dry_run:
-            self.stdout.write("Dry run mode — not sending transactions")
-            for p in payouts:
-                self.stdout.write(f"DRY: would send {p['amount']} {p['token']} to {p['recipient']}")
             self.stdout.write(self.style.SUCCESS("Dry run complete."))
-            return
-
-        if not approve:
-            self.stdout.write(self.style.WARNING("No --approve flag provided. Aborting to prevent accidental payouts."))
-            return
-
-        # Execute payout flow (placeholder)
-        for p in payouts:
-            # TODO: integrate with web3 library; estimate gas using helper
-            self.stdout.write(f"Sending {p['amount']} {p['token']} to {p['recipient']}... (not implemented)")
-
-        self.stdout.write(self.style.SUCCESS("Payout batch executed (placeholder)."))
+        else:
+            self.stdout.write(self.style.SUCCESS("Payout batch executed."))

@@ -6,6 +6,7 @@ import logging
 from django.conf import settings
 
 from .heuristics import score_text_heuristically
+from .metrics import record_llm_call
 from .ratelimit import reserve_llm_call
 from .types import ScoreResult
 
@@ -50,14 +51,20 @@ class AICoreScoringService:
         return hashlib.sha256(text.strip().encode()).hexdigest()
 
     @staticmethod
-    def score_text(text: str, custom_instructions: str = "") -> ScoreResult:
+    def score_text(text: str, custom_instructions: str = "", quota_context: dict | None = None) -> ScoreResult:
         # Check global LLM budgets/rate before attempting an Anthropic call.
-        if not reserve_llm_call():
+        user = (quota_context or {}).get("user")
+        tenant = (quota_context or {}).get("tenant")
+        scope = "user" if user is not None else "tenant" if tenant is not None else "global"
+        scope_id = str(getattr(user, "id", getattr(tenant, "id", "default")))
+        if not reserve_llm_call(user=user, tenant=tenant):
             logger.warning("[AICore] LLM budget or rate exceeded - using heuristic fallback")
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
 
         if not settings.ANTHROPIC_API_KEY:
             logger.warning("[AICore] No ANTHROPIC_API_KEY - using heuristic fallback")
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
 
         import anthropic
@@ -73,22 +80,28 @@ class AICoreScoringService:
             )
         except anthropic.AuthenticationError as exc:
             logger.error("[AICore] Anthropic auth failure: %s", exc)
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
         except anthropic.PermissionDeniedError as exc:
             api_msg = str(exc)
             if "credit balance" in api_msg.lower():
                 logger.error("[AICore] Anthropic credits exhausted")
+                record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
                 return score_text_heuristically(text, custom_instructions)
             logger.error("[AICore] Anthropic permission denied: %s", api_msg)
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
         except anthropic.RateLimitError as exc:
             logger.warning("[AICore] Anthropic rate limit hit: %s", exc)
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
         except anthropic.BadRequestError as exc:
             logger.error("[AICore] Anthropic bad request: %s", exc)
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
         except anthropic.APIStatusError as exc:
             logger.error("[AICore] Anthropic API error %s: %s", exc.status_code, exc.message)
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
 
         response_text = message.content[0].text.strip() if message.content else ""
@@ -102,6 +115,7 @@ class AICoreScoringService:
 
         try:
             data = json.loads(response_text)
+            record_llm_call(scope=scope, scope_id=scope_id, mode="anthropic")
             return ScoreResult(
                 teaching_value=int(data["teaching_value"]),
                 originality=int(data["originality"]),
@@ -113,4 +127,5 @@ class AICoreScoringService:
             )
         except (KeyError, ValueError, TypeError) as exc:
             logger.error("[AICore] Failed to parse Anthropic response: %s", exc)
+            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
