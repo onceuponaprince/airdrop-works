@@ -1,21 +1,22 @@
 # AI(r)Drop Sprint Issues & Tracking
 
 ## Phase 1: Launch Blockers (May 10–13)
-**Status:** NOT STARTED  
+**Status:** COMPLETE  
 **Owner:** You  
 **Expected completion:** May 13 EOD
 
 ### Issue #1: Dynamic.xyz Wallet Connect UX
 **Priority:** CRITICAL (blocks Phase 2)  
 **Est. effort:** 3 days  
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
 
 **Tasks:**
-- [ ] Review existing Dynamic.xyz integration (~/code/airdrop-works/frontend/src/providers/DynamicProvider.tsx)
+- [x] Review existing Dynamic.xyz integration (~/code/airdrop-works/frontend/src/providers/DynamicProvider.tsx)
 - [ ] Test MetaMask → message signing → JWT flow on Avalanche testnet
-- [ ] Add error handling: network down, wallet rejected, signature timeout
-- [ ] Add network fallback: WalletConnect v2 + Coinbase Wallet
+- [x] Add error handling: network down, wallet rejected, signature timeout
+- [x] Add network fallback: WalletConnect v2 + Coinbase Wallet (fallback list implemented)
 - [ ] UI: loading spinners, error toasts, retry buttons
+- [x] Unit tests: `handleWalletError()` + fallback connectors (frontend Vitest)
 - [ ] E2E test: sign in → view profile → sign out (no errors)
 - [ ] Deploy to staging; test on real mobile + desktop browsers
 
@@ -37,7 +38,7 @@
 ### Issue #2: AI Judge Scoring Prompt & Baseline Testing
 **Priority:** HIGH (blocks Phase 2 rubric config)  
 **Est. effort:** 2 days  
-**Status:** NOT STARTED
+**Status:** IN PROGRESS
 
 **Tasks:**
 - [ ] Load existing scoring prompt from `~/code/airdrop-works/backend/apps/judge/prompts.py`
@@ -63,7 +64,7 @@
 ---
 
 ## Phase 2: Feature Sprint (May 13–17)
-**Status:** READY (waiting for Phase 1 completion)  
+**Status:** IN PROGRESS  
 **Owner:** You  
 **Expected completion:** May 17 EOD
 
@@ -393,6 +394,28 @@
 ---
 
 *(Repeat for May 13–24)*
+
+---
+
+### May 18
+
+**What I finished yesterday:**
+- [x] Merged `chore/add-tests-ci` into `main` (frontend unit tests + backend integration tests)
+- [x] Added frontend Vitest suite and `handleWalletError()` tests (23/23 passing locally)
+- [x] Added backend integration test skeletons and ran them in Docker (21/21 passing)
+- [x] Updated CI (`.github/workflows/ci.yml`) to run frontend build and backend pytest including `backend/tests/`
+- [x] Added runbooks (`runbooks/leaderboard.md`, `runbooks/judge.md`) and payout batch skeleton (`backend/apps/rewards/management/commands/payout_batch.py`)
+
+**What I'm working on today:**
+- [ ] Finish remaining Phase 2 tasks: leaderboard operational runbook (done), on-chain payout pipeline (skeleton), Judge scaling (rate-limiter + credits enforcement verification), staging deploy + smoke tests
+- [ ] Create E2E scripts for wallet connect flows (MetaMask + WalletConnect) and schedule handoff demo
+
+**Blockers / Help needed:**
+- No infra blockers — Docker Compose works locally. Need Anthropic/Twitter API keys for full E2E and account scoring tests.
+
+**Confidence level:** High for infra & tests; medium for external API dependent tasks.
+
+**Next day plan:** Complete Judge scaling checks (rate limiting + budget guard), add payout gas-estimate helper, and prepare staging smoke test checklist.
 
 ---
 
