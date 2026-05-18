@@ -9,6 +9,7 @@ Use this checklist before onboarding your first paying design partner.
 - [ ] `SPORE_QDRANT_ENABLED` configured as intended
 - [ ] `SPORE_AUDIT_RETENTION_DAYS` set (default: 30)
 - [ ] Backend/celery logs show healthy startup (no crash loops)
+ - [ ] Sentry DSNs configured for backend and frontend (`SENTRY_DSN_BACKEND`, `SENTRY_DSN_FRONTEND`)
 
 ## 2) Tenant Provisioning
 
