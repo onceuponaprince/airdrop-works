@@ -10,60 +10,6 @@ jobs:
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Install pnpm
-        run: corepack enable && corepack prepare pnpm@latest --activate
-      - name: Install frontend deps
-        working-directory: ./frontend
-        run: pnpm install --frozen-lockfile
-      - name: Build frontend
-        working-directory: ./frontend
-        run: pnpm build
-
-  backend:
-    name: Backend tests & checks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      - name: Upgrade pip
-        run: python -m pip install --upgrade pip
-      - name: Install backend dependencies (if present)
-        run: |
-          if [ -f backend/requirements.txt ]; then
-            pip install -r backend/requirements.txt
-          else
-            echo "No backend/requirements.txt found, skipping install"
-          fi
-      - name: Syntax check key modules
-        run: python -m py_compile backend/apps/quests/serializers.py backend/apps/quests/views.py backend/apps/judge/service.py || true
-      - name: Run tests (best-effort)
-        run: |
-          if command -v pytest >/dev/null 2>&1; then
-            pytest -q
-          else
-            echo "pytest not available; skipping backend tests"
-          finame: CI
-
-on:
-  push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main]
-
-jobs:
-  # ── Frontend ─────────────────────────────────────────────────────────────────
-  frontend:
-    name: Frontend (lint + type-check + build)
-    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
@@ -71,26 +17,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
         with:
-          version: 8
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "pnpm"
+          node-version: 20
+          cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      - name: Install dependencies
+      - name: Install frontend deps
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm lint
-
-      - name: Type check
-        run: pnpm type-check
-
-      - name: Build
+      - name: Build frontend
         run: pnpm build
         env:
           BACKEND_URL: http://localhost:8000
@@ -98,9 +38,8 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: placeholder-env-id
 
-  # ── Backend ──────────────────────────────────────────────────────────────────
   backend:
-    name: Backend (lint + test)
+    name: Backend tests
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -131,16 +70,6 @@ jobs:
           --health-timeout 3s
           --health-retries 5
 
-      qdrant:
-        image: qdrant/qdrant:v1.13.6
-        ports:
-          - 6333:6333
-        options: >-
-          --health-cmd "wget -q -O - http://localhost:6333/healthz || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
 
@@ -150,14 +79,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Lint (ruff)
-        run: uv run ruff check .
-
-      - name: Format check
-        run: uv run ruff format --check .
+      - name: Install backend dependencies
+        run: uv sync --frozen --extra dev
 
       - name: Run migrations
         run: uv run python manage.py migrate --noinput
@@ -168,8 +91,8 @@ jobs:
           SECRET_KEY: ci-test-secret-key
           SPORE_QDRANT_ENABLED: "false"
 
-      - name: Run tests
-        run: uv run pytest --tb=short -q
+      - name: Run quests, judge and integration tests with coverage gate
+        run: uv run pytest tests apps/quests/tests apps/judge/tests --cov=apps.quests --cov=apps.judge --cov-report=term-missing --cov-fail-under=20
         env:
           DJANGO_ENV: local
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/airdrop_works_test

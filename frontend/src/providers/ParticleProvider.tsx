@@ -41,6 +41,10 @@ export function handleWalletError(
   const errorMessage = typeof error === "string"
     ? error
     : walletError?.message || String(error)
+  // Treat null/undefined stringified values as missing so fallback message is used
+  const normalizedErrorMessage = (error === null || error === undefined || errorMessage === "null" || errorMessage === "undefined")
+    ? ""
+    : errorMessage
   const errorCode = walletError?.code || ""
   const normalizedMessage = errorMessage.toLowerCase()
 
@@ -129,7 +133,7 @@ export function handleWalletError(
   // Generic fallback
   return {
     type: "error",
-    message: errorMessage || "An unexpected wallet error occurred. Please try again.",
+    message: normalizedErrorMessage || "An unexpected wallet error occurred. Please try again.",
     action: "Dismiss",
     retry: retryCallback,
   }
