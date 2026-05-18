@@ -20,26 +20,8 @@ class Migration(migrations.Migration):
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("approved", models.BooleanField(default=False)),
                 ("approved_at", models.DateTimeField(blank=True, null=True)),
-                ("notes", models.TextField(blank=True)),
-                (
-                    "created_by",
-                    models.ForeignKey(
-                        related_name="approvals_created",
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to=settings.AUTH_USER_MODEL,
-                        blank=True,
-                    ),
-                ),
-                (
-                    "approved_by",
-                    models.ForeignKey(
-                        related_name="approvals_approved",
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to=settings.AUTH_USER_MODEL,
-                        blank=True,
-                    ),
+                ("created_by", models.IntegerField(blank=True, null=True)),
+                ("approved_by", models.IntegerField(blank=True, null=True)),
                 ),
             ],
             options={
