@@ -107,3 +107,56 @@ class AICoreScoreJobViewTests(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 404)
+
+
+class AICoreTwitterAnalysisViewTests(APITestCase):
+    def setUp(self):
+        user_model = get_user_model()
+        self.user = user_model.objects.create(
+            username="ai-core-twitter-user",
+            wallet_address="0x5555555555555555555555555555555555555555",
+            is_active=True,
+        )
+
+    @patch("apps.ai_core.views.AICoreScoringService.analyze_twitter_sns_data")
+    def test_twitter_analysis_success(self, analysis_mock):
+        analysis_mock.return_value = {
+            "mode": "account",
+            "query": "ai_drop",
+            "top_posts": [{"id": "1", "text": "hello"}],
+            "sentiment": {"average": 0.5, "label": "positive"},
+            "why_it_worked": "verified presence",
+            "current_user": {"content_score": {}, "account_score": {}},
+            "comparison": {"user_vs_top_avg_composite": 5},
+            "account_fame_reasons": ["verified presence"],
+        }
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(
+            reverse("ai_core_twitter_analyze"),
+            {
+                "mode": "account",
+                "keyword_or_account": "ai_drop",
+                "current_user_text": "My useful content",
+                "current_user_account_text": "My account overview",
+                "top_n": 3,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["mode"], "account")
+        analysis_mock.assert_called_once()
+
+    def test_twitter_analysis_requires_authentication(self):
+        response = self.client.post(
+            reverse("ai_core_twitter_analyze"),
+            {
+                "mode": "keyword",
+                "keyword_or_account": "airdrop",
+                "current_user_text": "My useful content",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)

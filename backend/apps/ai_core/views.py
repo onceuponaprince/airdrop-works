@@ -1,5 +1,6 @@
 import logging
 
+from django.conf import settings as django_settings
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -7,7 +8,7 @@ from rest_framework.views import APIView
 
 from apps.contributions.models import Contribution
 
-from .serializers import ScoreJobRequestSerializer, ScoreRequestSerializer
+from .serializers import ScoreJobRequestSerializer, ScoreRequestSerializer, TwitterSnsAnalysisRequestSerializer
 from .service import AICoreScoringService
 from .tasks import score_contribution_task
 
@@ -48,6 +49,40 @@ class AICoreMetricsView(APIView):
         from .metrics import render_prometheus_metrics
 
         return HttpResponse(render_prometheus_metrics(), content_type="text/plain; version=0.0.4")
+
+
+class AICoreTwitterAnalysisView(APIView):
+    """Analyze Twitter/SNS posts for a keyword or account and compare against the current user's content."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = TwitterSnsAnalysisRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        bearer_token = getattr(django_settings, "TWITTER_BEARER_TOKEN", "")
+        if not bearer_token:
+            return Response(
+                {"detail": "Twitter API is not configured"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        try:
+            result = AICoreScoringService.analyze_twitter_sns_data(
+                keyword_or_account=serializer.validated_data["keyword_or_account"],
+                current_user_text=serializer.validated_data["current_user_text"],
+                current_user_account_text=serializer.validated_data.get("current_user_account_text", ""),
+                mode=serializer.validated_data["mode"],
+                bearer_token=bearer_token,
+                top_n=serializer.validated_data["top_n"],
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            logger.error("[AICoreTwitterAnalysisView] Unexpected error: %s", exc)
+            return Response({"detail": "Twitter analysis temporarily unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        return Response(result, status=status.HTTP_200_OK)
 
 
 class AICoreScoreJobView(APIView):

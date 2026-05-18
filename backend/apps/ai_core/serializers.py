@@ -18,3 +18,11 @@ class ScoreResponseSerializer(serializers.Serializer):
 
 class ScoreJobRequestSerializer(serializers.Serializer):
     contribution_id = serializers.UUIDField()
+
+
+class TwitterSnsAnalysisRequestSerializer(serializers.Serializer):
+    mode = serializers.ChoiceField(choices=["keyword", "account"], default="keyword")
+    keyword_or_account = serializers.CharField(max_length=255)
+    current_user_text = serializers.CharField(max_length=5000)
+    current_user_account_text = serializers.CharField(max_length=5000, required=False, allow_blank=True)
+    top_n = serializers.IntegerField(required=False, min_value=1, max_value=20, default=5)
