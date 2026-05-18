@@ -19,8 +19,10 @@ class PayoutApprovalCommandTests(TestCase):
     def test_executes_when_approved(self):
         out = StringIO()
 
-        # create an approval record
-        approval = PayoutApproval.objects.create(batch_id="test-batch", approved=True)
+        # create an approval record using the approvals helper to avoid model conflicts
+        from apps.rewards.approvals import create_approval
+
+        approval_id = create_approval(batch_id="test-batch", approved=True)
 
         # monkeypatch signer to avoid real RPC calls by patching the import location
         from unittest.mock import patch

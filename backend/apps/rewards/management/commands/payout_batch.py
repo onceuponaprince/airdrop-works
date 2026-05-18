@@ -89,13 +89,16 @@ class Command(BaseCommand):
             approval_batch = options.get("approval_batch")
             force = options.get("force", False)
             if not force:
-                PayoutApproval = django_apps.get_model("apps.rewards", "AirdropPayoutApproval")
-                qs = PayoutApproval.objects.filter(approved=True)
-                if approval_batch:
-                    qs = qs.filter(batch_id=approval_batch)
-                if not qs.exists():
+                # Use lightweight approvals table to avoid model import conflicts
+                try:
+                    from apps.rewards.approvals import has_approved
+                except Exception:
+                    self.stdout.write(self.style.ERROR("Approval helper unavailable; aborting."))
+                    return
+
+                if not has_approved(approval_batch):
                     self.stdout.write(self.style.ERROR(
-                        "No matching approved PayoutApproval found. Create an approval in the admin or pass --force to override."
+                        "No matching approved payout found. Create an approval via `apps.rewards.approvals.create_approval()` or pass --force to override."
                     ))
                     return
 
