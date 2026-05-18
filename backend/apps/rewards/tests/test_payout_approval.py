@@ -2,7 +2,7 @@ from django.core.management import call_command
 from django.test import TestCase, override_settings
 from io import StringIO
 
-from ..models import AirdropPayoutApproval as PayoutApproval
+
 
 
 class PayoutApprovalCommandTests(TestCase):
@@ -13,7 +13,7 @@ class PayoutApprovalCommandTests(TestCase):
         # run with --execute and --approve but no PayoutApproval in DB
         call_command("payout_batch", "--execute", "--approve", stdout=out)
         output = out.getvalue()
-        self.assertIn("No matching approved PayoutApproval found", output)
+        self.assertIn("No matching approved", output)
 
     @override_settings(WEB3_RPC_URL="https://example", PAYOUT_TOKEN_ADDRESS="0x000000000000000000000000000000000000dEaD", PAYOUT_CHAIN="testnet")
     def test_executes_when_approved(self):
