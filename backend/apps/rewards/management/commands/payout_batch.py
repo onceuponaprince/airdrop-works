@@ -51,6 +51,22 @@ class Command(BaseCommand):
         payouts = self._load_payouts()
 
         self.stdout.write(f"Prepared {len(payouts)} payouts")
+        approval_batch = options.get("approval_batch")
+        force = options.get("force", False)
+
+        # Require DB approval before attempting any RPC/signing operations
+        if not force:
+            try:
+                from apps.rewards.approvals import has_approved
+            except Exception:
+                self.stdout.write(self.style.ERROR("Approval helper unavailable; aborting."))
+                return
+
+            if not has_approved(approval_batch):
+                self.stdout.write(self.style.ERROR(
+                    "No matching approved payout found. Create an approval via `apps.rewards.approvals.create_approval()` or pass --force to override."
+                ))
+                return
 
         for payout in payouts:
             token_address = payout.get("token_address") or ""
