@@ -129,3 +129,9 @@ class AICoreScoringService:
             logger.error("[AICore] Failed to parse Anthropic response: %s", exc)
             record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
             return score_text_heuristically(text, custom_instructions)
+
+    @staticmethod
+    def analyze_twitter_sns_data(**kwargs):
+        from .twitter_analysis import analyze_twitter_sns_data
+
+        return analyze_twitter_sns_data(**kwargs)
