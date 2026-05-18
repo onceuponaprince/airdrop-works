@@ -58,6 +58,23 @@ class AdminOverviewView(APIView):
             distinct_platforms=Count("platform", distinct=True),
         )
 
+
+class DebugSentryView(APIView):
+    """Admin-only endpoint to trigger a Sentry test event."""
+
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        try:
+            import sentry_sdk
+
+            sentry_sdk.capture_message("sentry test event from debug endpoint")
+            return Response({"sent": True})
+        except ImportError:
+            return Response({"sent": False, "reason": "sentry-sdk not installed"}, status=500)
+        except Exception as exc:  # pragma: no cover - operational
+            return Response({"sent": False, "error": str(exc)}, status=500)
+
         return Response(
             {
                 "users": users,
