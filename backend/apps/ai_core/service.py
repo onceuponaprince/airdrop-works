@@ -5,10 +5,11 @@ import logging
 
 from django.conf import settings
 
+from .heuristics import score_text_heuristically
+from .ratelimit import reserve_llm_call
 from .types import ScoreResult
 
 logger = logging.getLogger(__name__)
-MOCK_SCORE_TEXT = "Mock score."
 
 BASE_SCORING_PROMPT = """You are the AI Judge for AI(r)Drop, a Web3 contribution scoring platform.
 
@@ -50,9 +51,14 @@ class AICoreScoringService:
 
     @staticmethod
     def score_text(text: str, custom_instructions: str = "") -> ScoreResult:
+        # Check global LLM budgets/rate before attempting an Anthropic call.
+        if not reserve_llm_call():
+            logger.warning("[AICore] LLM budget or rate exceeded - using heuristic fallback")
+            return score_text_heuristically(text, custom_instructions)
+
         if not settings.ANTHROPIC_API_KEY:
-            logger.warning("[AICore] No ANTHROPIC_API_KEY - returning mock scores")
-            return AICoreScoringService._mock_result()
+            logger.warning("[AICore] No ANTHROPIC_API_KEY - using heuristic fallback")
+            return score_text_heuristically(text, custom_instructions)
 
         import anthropic
 
@@ -67,23 +73,23 @@ class AICoreScoringService:
             )
         except anthropic.AuthenticationError as exc:
             logger.error("[AICore] Anthropic auth failure: %s", exc)
-            raise ValueError("AI core configuration error") from exc
+            return score_text_heuristically(text, custom_instructions)
         except anthropic.PermissionDeniedError as exc:
             api_msg = str(exc)
             if "credit balance" in api_msg.lower():
                 logger.error("[AICore] Anthropic credits exhausted")
-                raise ValueError("Scoring temporarily unavailable - service credit exhausted") from exc
+                return score_text_heuristically(text, custom_instructions)
             logger.error("[AICore] Anthropic permission denied: %s", api_msg)
-            raise ValueError("Scoring temporarily unavailable") from exc
+            return score_text_heuristically(text, custom_instructions)
         except anthropic.RateLimitError as exc:
             logger.warning("[AICore] Anthropic rate limit hit: %s", exc)
-            raise ValueError("Rate limit reached - please retry shortly") from exc
+            return score_text_heuristically(text, custom_instructions)
         except anthropic.BadRequestError as exc:
             logger.error("[AICore] Anthropic bad request: %s", exc)
-            raise ValueError("AI core request error") from exc
+            return score_text_heuristically(text, custom_instructions)
         except anthropic.APIStatusError as exc:
             logger.error("[AICore] Anthropic API error %s: %s", exc.status_code, exc.message)
-            raise ValueError("AI core unavailable") from exc
+            return score_text_heuristically(text, custom_instructions)
 
         response_text = message.content[0].text.strip() if message.content else ""
 
@@ -107,20 +113,4 @@ class AICoreScoringService:
             )
         except (KeyError, ValueError, TypeError) as exc:
             logger.error("[AICore] Failed to parse Anthropic response: %s", exc)
-            raise ValueError("AI core returned an unparseable response") from exc
-
-    @staticmethod
-    def _mock_result() -> ScoreResult:
-        return ScoreResult(
-            teaching_value=65,
-            originality=55,
-            community_impact=60,
-            composite_score=60,
-            farming_flag="genuine",
-            farming_explanation="Mock result - configure ANTHROPIC_API_KEY for real scoring.",
-            dimension_explanations={
-                "teaching_value": MOCK_SCORE_TEXT,
-                "originality": MOCK_SCORE_TEXT,
-                "community_impact": MOCK_SCORE_TEXT,
-            },
-        )
+            return score_text_heuristically(text, custom_instructions)
