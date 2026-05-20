@@ -9,6 +9,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: [],
     watch: false,
+    exclude: ['tests/e2e/**'],
   },
   resolve: {
     alias: {
