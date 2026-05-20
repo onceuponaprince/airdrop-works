@@ -13,6 +13,7 @@ import { evmWalletConnectors } from "@particle-network/connectkit/evm"
 import { avalanche, base } from "wagmi/chains"
 import { ParticleWalletContext } from "@/hooks/useParticleWallet"
 import { useState, useCallback } from "react"
+import { handleWalletError, getFallbackWalletConnectors } from './walletUtils'
 
 const projectId = (process.env.NEXT_PUBLIC_PROJECT_ID ?? "").trim()
 const clientKey = (process.env.NEXT_PUBLIC_CLIENT_KEY ?? "").trim()
@@ -27,153 +28,8 @@ const appId = (process.env.NEXT_PUBLIC_APP_ID ?? "").trim()
  * @param retryCallback - Optional callback to retry the operation
  * @returns { type: 'error'|'warning', message: string, action?: string }
  */
-export function handleWalletError(
-  error: unknown,
-  retryCallback?: () => void
-): {
-  type: "error" | "warning"
-  message: string
-  action?: string
-  retry?: () => void
-} {
-  const walletError = typeof error === "object" && error !== null
-    ? error as { message?: string; code?: string | number }
-    : null
-  const errorMessage = typeof error === "string"
-    ? error
-    : walletError?.message || String(error)
-  // Treat null/undefined stringified values as missing so fallback message is used
-  const normalizedErrorMessage = (error === null || error === undefined || errorMessage === "null" || errorMessage === "undefined")
-    ? ""
-    : errorMessage
-  const errorCode = walletError?.code || ""
-  const normalizedMessage = errorMessage.toLowerCase()
-
-  // User rejected transaction/connection
-  if (
-    errorCode === "ACTION_REJECTED" ||
-    normalizedMessage.includes("user rejected") ||
-    normalizedMessage.includes("user denied") ||
-    normalizedMessage.includes("rejected")
-  ) {
-    return {
-      type: "warning",
-      message: "You rejected the wallet action. Try again when ready.",
-      action: "Try again",
-      retry: retryCallback,
-    }
-  }
-
-  // Insufficient gas/funds
-  if (
-    normalizedMessage.includes("insufficient funds") ||
-    normalizedMessage.includes("insufficient balance") ||
-    normalizedMessage.includes("insufficient gas")
-  ) {
-    return {
-      type: "error",
-      message: "Insufficient funds or gas. Please check your wallet balance.",
-      action: "Dismiss",
-    }
-  }
-
-  // Network/RPC errors
-  if (
-    errorCode === "SERVER_ERROR" ||
-    normalizedMessage.includes("network error") ||
-    normalizedMessage.includes("rpc error") ||
-    normalizedMessage.includes("eth_call") ||
-    normalizedMessage.includes("timeout")
-  ) {
-    return {
-      type: "error",
-      message: "Network issue. Please check your connection and try again.",
-      action: "Retry",
-      retry: retryCallback,
-    }
-  }
-
-  // Wrong network
-  if (
-    errorCode === "NETWORK_MISMATCH" ||
-    normalizedMessage.includes("wrong chain") ||
-    normalizedMessage.includes("chainid")
-  ) {
-    return {
-      type: "error",
-      message: "Please switch to Avalanche or Base network in your wallet.",
-      action: "Dismiss",
-    }
-  }
-
-  // Contract interaction failed
-  if (
-    normalizedMessage.includes("contract") ||
-    normalizedMessage.includes("execution reverted")
-  ) {
-    return {
-      type: "error",
-      message: "Contract interaction failed. Please try again or contact support.",
-      action: "Dismiss",
-    }
-  }
-
-  // Wallet not connected
-  if (
-    normalizedMessage.includes("not connected") ||
-    normalizedMessage.includes("no account") ||
-    normalizedMessage.includes("wallet disconnected")
-  ) {
-    return {
-      type: "warning",
-      message: "Wallet not connected. Please connect your wallet.",
-      action: "Connect",
-    }
-  }
-
-  // Generic fallback
-  return {
-    type: "error",
-    message: normalizedErrorMessage || "An unexpected wallet error occurred. Please try again.",
-    action: "Dismiss",
-    retry: retryCallback,
-  }
-}
-
-/**
- * Returns fallback wallet connectors in priority order.
- * Used when Particle auth fails to provide alternative connection methods.
- * 
- * @returns Array of fallback connector configs
- */
-export function getFallbackWalletConnectors() {
-  return [
-    {
-      id: "walletconnect",
-      name: "WalletConnect",
-      description: "Connect via WalletConnect (supports 300+ wallets)",
-      logo: "🔗",
-      priority: 1,
-      chains: ["avalanche", "base"],
-    },
-    {
-      id: "coinbasewallet",
-      name: "Coinbase Wallet",
-      description: "Connect with Coinbase Wallet",
-      logo: "₿",
-      priority: 2,
-      chains: ["avalanche", "base"],
-    },
-    {
-      id: "metamask",
-      name: "MetaMask",
-      description: "Connect with MetaMask browser extension",
-      logo: "🦊",
-      priority: 3,
-      chains: ["avalanche", "base"],
-    },
-  ]
-}
+// wallet helper functions moved to walletUtils.ts to keep ParticleProvider imports
+// light-weight for unit tests.
 
 const particleConfig = createConfig({
   projectId,
