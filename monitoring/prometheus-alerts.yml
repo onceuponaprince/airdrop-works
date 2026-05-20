@@ -29,3 +29,12 @@ groups:
         annotations:
           summary: "Payout gas estimation is failing"
           description: "Gas estimation failures usually indicate RPC issues, token address problems, or malformed payout plans."
+
+      - alert: PayoutSendFailures
+        expr: increase(airdrop_payout_send_total{success="false"}[15m]) > 0
+        for: 15m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Payout sends are failing"
+          description: "Signed payout transactions are failing to broadcast. Review signer configuration, RPC health, and token contract state."

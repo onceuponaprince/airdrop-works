@@ -72,6 +72,7 @@ LOCAL_APPS = [
     "apps.profiles",
     "apps.leaderboard",
     "apps.rewards",
+    "apps.approvals",
     "apps.payments",
     "apps.spore",
 ]

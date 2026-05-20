@@ -2,6 +2,14 @@
 
 Purpose: Guidance for operating the AI Judge scoring system, handling failures, and enforcing cost controls.
 
+## Phase 2 Launch Checklist
+
+- [ ] Confirm heuristic fallback returns the expected score contract in staging.
+- [ ] Confirm `ANTHROPIC_API_KEY` is configured and valid in the launch environment.
+- [ ] Confirm per-user credit enforcement is active for authenticated scoring.
+- [ ] Confirm throttles are enabled for both single-text scoring and account-scoring paths.
+- [ ] Confirm alerting exists for LLM timeouts, auth failures, and quota exhaustion.
+
 Quick Checks
 - Ensure Anthropic API key and rate limits are configured (`ANTHROPIC_API_KEY`).
 - Validate LLM quota usage and cost monitors in billing dashboard.
@@ -22,3 +30,4 @@ Debugging LLM Failures
 Runbook for Incidents
 - Set `ANTHROPIC_API_KEY` to empty temporarily to force heuristic fallback and buy time to investigate.
 - Notify stakeholders and open incident ticket with example inputs and timestamps.
+- If fallback starts dominating, pause release rollout until the failure mode is identified.

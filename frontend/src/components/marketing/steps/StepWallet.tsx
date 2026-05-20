@@ -10,7 +10,7 @@ interface StepWalletProps {
 }
 
 export function StepWallet({ onComplete }: StepWalletProps) {
-  const { available, address, isConnected, openConnectModal } = useParticleWallet()
+  const { available, address, isConnected, openConnectModal, lastError, retryConnect } = useParticleWallet()
 
   if (isConnected && address) {
     return (
@@ -41,14 +41,24 @@ export function StepWallet({ onComplete }: StepWalletProps) {
         Your wallet is your identity on AI(r)Drop. One wallet, one rank — no alts, no bots.
       </p>
       {available ? (
-        <ArcadeButton
-          size="lg"
-          className="w-full"
-          onClick={openConnectModal}
-        >
-          <Wallet size={16} className="mr-2" />
-          Connect Wallet
-        </ArcadeButton>
+        lastError && lastError.message ? (
+          <div className="space-y-2">
+            <ArcadeButton size="lg" className="w-full" onClick={retryConnect ?? openConnectModal}>
+              <Wallet size={16} className="mr-2" />
+              {lastError.action ?? 'Retry'}
+            </ArcadeButton>
+            <p className="text-xs text-muted-foreground">{lastError.message}</p>
+          </div>
+        ) : (
+          <ArcadeButton
+            size="lg"
+            className="w-full"
+            onClick={openConnectModal}
+          >
+            <Wallet size={16} className="mr-2" />
+            Connect Wallet
+          </ArcadeButton>
+        )
       ) : (
         <div className="space-y-2">
           <ArcadeButton size="lg" className="w-full" disabled>
