@@ -12,6 +12,7 @@ import { useAccount, useDisconnect, useModal } from "@particle-network/connectki
 import { evmWalletConnectors } from "@particle-network/connectkit/evm"
 import { avalanche, base } from "wagmi/chains"
 import { ParticleWalletContext } from "@/hooks/useParticleWallet"
+import { useState, useCallback } from "react"
 
 const projectId = (process.env.NEXT_PUBLIC_PROJECT_ID ?? "").trim()
 const clientKey = (process.env.NEXT_PUBLIC_CLIENT_KEY ?? "").trim()
@@ -199,6 +200,23 @@ function ParticleWalletBridge({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount()
   const { setOpen } = useModal()
   const { disconnect } = useDisconnect()
+  const [lastError, setLastError] = useState<{
+    type: 'error' | 'warning'
+    message: string
+    action?: string
+  } | undefined>(undefined)
+
+  const openConnect = useCallback(() => {
+    // clear previous error when reopening
+    setLastError(undefined)
+    setOpen(true)
+  }, [setOpen])
+
+  const retryConnect = useCallback(() => {
+    // allow UI to trigger a fresh connect attempt
+    setLastError(undefined)
+    setOpen(true)
+  }, [setOpen])
 
   return (
     <ParticleWalletContext.Provider
@@ -206,8 +224,10 @@ function ParticleWalletBridge({ children }: { children: React.ReactNode }) {
         available: true,
         address,
         isConnected: isConnected && !!address,
-        openConnectModal: () => setOpen(true),
+        openConnectModal: openConnect,
         disconnect,
+        lastError,
+        retryConnect,
       }}
     >
       {children}

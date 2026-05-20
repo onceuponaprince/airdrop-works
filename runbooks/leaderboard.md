@@ -2,6 +2,14 @@
 
 Purpose: Operational steps to monitor, rebuild, and recover the leaderboard subsystem.
 
+## Phase 2 Launch Checklist
+
+- [ ] Confirm `leaderboard.rebuild_all` runs successfully at least once in staging.
+- [ ] Verify the scheduled rebuild job is enabled and timestamped.
+- [ ] Confirm Redis and Postgres connectivity from the backend container.
+- [ ] Confirm Celery worker and beat are healthy before launch.
+- [ ] Confirm alerting exists for `leaderboard.rebuild_all` failures and stale rebuilds.
+
 Checks
 - Verify `leaderboard.rebuild_all` Celery task runs successfully (cron or manual).
 - Check Redis and Postgres connectivity on backend nodes.
@@ -27,6 +35,7 @@ Troubleshooting
 Alerts and Monitoring
 - Create an alert for Celery task failures on `leaderboard.rebuild_all` (Sentry + PagerDuty integration).
 - Add a metric for time since last successful `rebuild_all` and alert if > 1 hour for production.
+- Record the last successful rebuild time in the incident log after each deployment.
 
 Postmortem Steps
 - Run a targeted rebuild for affected campaigns only before full rebuild to contain blast radius.

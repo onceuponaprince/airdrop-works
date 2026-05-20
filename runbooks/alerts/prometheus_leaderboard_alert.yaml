@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: airdrop-works-leaderboard
+  labels:
+    role: monitoring
+spec:
+  groups:
+  - name: leaderboard.rules
+    rules:
+    - alert: LeaderboardRebuildStale
+      expr: |
+        (time() - max_over_time(airdrop_leaderboard_rebuild_timestamp[6h])) > 3600
+      for: 5m
+      labels:
+        severity: page
+      annotations:
+        summary: "Leaderboard rebuild stale (>1h)"
+        description: "No successful leaderboard.rebuild_all recorded in the last hour.\nInvestigate Celery, DB, and Redis connectivity."
+
+    - alert: LeaderboardRebuildFailed
+      expr: increase(airdrop_leaderboard_rebuild_failures_total[15m]) > 0
+      for: 0m
+      labels:
+        severity: page
+      annotations:
+        summary: "Leaderboard rebuild failures detected"
+        description: "`leaderboard.rebuild_all` task has reported failures in the last 15 minutes. Check Celery and application logs."

@@ -14,6 +14,14 @@ export interface WalletContext {
   isConnected: boolean;
   openConnectModal: () => void;
   disconnect: () => void;
+  // last wallet-related error (user-facing)
+  lastError?: {
+    type: 'error' | 'warning'
+    message: string
+    action?: string
+  }
+  // retry / reconnect helper exposed to UI
+  retryConnect?: () => void;
 }
 
 const defaultWalletContext: WalletContext = {
@@ -22,6 +30,8 @@ const defaultWalletContext: WalletContext = {
   isConnected: false,
   openConnectModal: () => {},
   disconnect: () => {},
+  lastError: undefined,
+  retryConnect: undefined,
 };
 
 export const ParticleWalletContext =

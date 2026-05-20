@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
 
 export function WalletButton() {
-  const { available, address, isConnected, openConnectModal } = useParticleWallet();
+  const { available, address, isConnected, openConnectModal, lastError, retryConnect } = useParticleWallet();
 
   const truncated = address
     ? `${address.slice(0, 6)}...${address.slice(-4)}`
@@ -25,6 +25,22 @@ export function WalletButton() {
   }
 
   if (!isConnected || !truncated) {
+    // Show actionable error if present, otherwise show Connect button
+    if (lastError && lastError.message) {
+      return (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={retryConnect ?? openConnectModal}
+            className="px-3 py-1 rounded border border-[--primary] text-[--primary] text-sm font-medium hover:bg-[--primary] hover:text-[--primary-foreground] transition-colors flex items-center gap-2"
+          >
+            <Wallet size={14} />
+            {lastError.action ?? 'Retry'}
+          </button>
+          <span className="text-xs text-[--muted-foreground]">{lastError.message}</span>
+        </div>
+      );
+    }
+
     return (
       <button
         onClick={openConnectModal}
