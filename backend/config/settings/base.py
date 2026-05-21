@@ -56,6 +56,7 @@ DJANGO_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    "channels",
     "rest_framework",
     "rest_framework_simplejwt",
     "corsheaders",
@@ -215,6 +216,13 @@ CACHES = {
     }
 }
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [REDIS_URL]},
+    }
+}
+
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_ACCEPT_CONTENT = ["json"]
@@ -225,6 +233,7 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 CELERY_TASK_ALWAYS_EAGER = False  # Override to True in tests
 
 CRAWLER_BEAT_MINUTES = config("CRAWLER_BEAT_MINUTES", default=15, cast=int)
+TWITTER_WATCH_BEAT_MINUTES = config("TWITTER_WATCH_BEAT_MINUTES", default=5, cast=int)
 SPORE_SPORULATION_BEAT_MINUTES = config("SPORE_SPORULATION_BEAT_MINUTES", default=10, cast=int)
 SPORE_AUDIT_RETENTION_DAYS = config("SPORE_AUDIT_RETENTION_DAYS", default=30, cast=int)
 
@@ -251,6 +260,10 @@ CELERY_BEAT_SCHEDULE = {
     "crawl-all-active-sources": {
         "task": "contributions.crawl_all_active_sources",
         "schedule": CRAWLER_BEAT_MINUTES * 60,
+    },
+    "sync-all-twitter-watches": {
+        "task": "contributions.sync_all_twitter_watches",
+        "schedule": TWITTER_WATCH_BEAT_MINUTES * 60,
     },
     "leaderboard-rebuild-all": {
         "task": "leaderboard.rebuild_all",
@@ -285,6 +298,11 @@ TWITTER_CLIENT_ID = config("TWITTER_CLIENT_ID", default="")
 TWITTER_CLIENT_SECRET = config("TWITTER_CLIENT_SECRET", default="")
 TWITTER_BEARER_TOKEN = config("TWITTER_BEARER_TOKEN", default="")
 TWITTER_MAX_RESULTS = config("TWITTER_MAX_RESULTS", default=20, cast=int)
+TWITTER_OAUTH_CALLBACK_URL = config("TWITTER_OAUTH_CALLBACK_URL", default="")
+TWITTER_SELENIUM_WATCH_ENABLED = config("TWITTER_SELENIUM_WATCH_ENABLED", default=False, cast=bool)
+
+SITE_URL = config("SITE_URL", default="http://localhost:8001")
+FRONTEND_URL = config("FRONTEND_URL", default="http://localhost:3000")
 
 REDDIT_CLIENT_ID = config("REDDIT_CLIENT_ID", default="")
 REDDIT_CLIENT_SECRET = config("REDDIT_CLIENT_SECRET", default="")

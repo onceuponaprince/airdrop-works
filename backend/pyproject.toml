@@ -26,9 +26,15 @@ dependencies = [
     "neo4j>=6.1.0",
     "django-extensions>=3.2",
     "httpx>=0.28.1",
+    "channels>=4.2",
+    "channels-redis>=4.2",
+    "daphne>=4.1",
 ]
 
 [project.optional-dependencies]
+selenium = [
+    "selenium>=4.21",
+]
 dev = [
     "pytest>=8.0",
     "pytest-django>=4.7",
