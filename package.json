@@ -1,6 +1,6 @@
 {
   "name": "airdrop-works",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Monorepo for airdrop-works — repo-level package to track versioning.",
   "license": "UNLICENSED"
