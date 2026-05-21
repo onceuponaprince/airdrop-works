@@ -7,8 +7,20 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { checkWaitlistCheckIpRateLimit } from "@/lib/waitlist-ip-rate-limit"
 
 export async function POST(req: NextRequest) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown"
+
+  const ipOk = await checkWaitlistCheckIpRateLimit(ip)
+  if (!ipOk) {
+    // Avoid turning this endpoint into an email enumeration oracle.
+    return NextResponse.json({ exists: false })
+  }
+
   let body: { email?: string }
   try {
     body = await req.json()
