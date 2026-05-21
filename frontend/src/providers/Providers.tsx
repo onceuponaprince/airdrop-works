@@ -17,6 +17,7 @@ import { avalanche, base } from "wagmi/chains"
 import { useState } from "react"
 import { Toaster } from "@/components/ui/toaster"
 import { ParticleProviderWrapper } from "@/providers/ParticleProvider"
+import { WalletSessionSync } from "@/components/shared/WalletSessionSync"
 
 // Wagmi config — used for on-chain reads independently of Particle
 const wagmiConfig = createWagmiConfig({
@@ -49,6 +50,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const inner = (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
+        <WalletSessionSync />
         {children}
         <Toaster />
       </QueryClientProvider>
