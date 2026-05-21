@@ -5,10 +5,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/animations';
 import { LootChest } from '@/components/app/LootChest';
+import { GasConfirmDialog } from '@/components/app/GasConfirmDialog';
 import { api } from '@/lib/api';
+import { events } from '@/lib/analytics';
+import {
+  estimateClaimGasUsd,
+  getGasConfirmThresholdUsd,
+  requiresGasConfirmation,
+  type LootType as GasLootType,
+} from '@/lib/gasConfirm';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 
-type LootType = 'xp' | 'token' | 'nft';
+type ChestLootType = 'xp' | 'token' | 'nft';
 
 interface LootChestResponse {
   id: string;
@@ -23,7 +31,7 @@ function mapRarity(rarity: LootChestResponse['rarity']): 'common' | 'rare' | 'ep
   return rarity === 'uncommon' ? 'rare' : rarity;
 }
 
-function mapLootType(type: LootChestResponse['loot_type']): LootType {
+function mapLootType(type: LootChestResponse['loot_type']): ChestLootType {
   if (type === 'innovator_token') return 'token';
   if (type === 'badge') return 'nft';
   return 'xp';
@@ -33,6 +41,8 @@ export default function LootPage() {
   const notify = useNotificationStore((s) => s.push);
   const queryClient = useQueryClient();
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [pendingClaim, setPendingClaim] = useState<{ id: string; lootType: ChestLootType } | null>(null);
+  const gasThresholdUsd = getGasConfirmThresholdUsd();
 
   const loot = useQuery({
     queryKey: ['loot'],
@@ -72,6 +82,17 @@ export default function LootPage() {
       setOpeningId(null);
     },
   });
+
+  const requestOpen = (chest: LootChestResponse) => {
+    if (chest.opened || openingId === chest.id) return;
+    const lootType = mapLootType(chest.loot_type) as GasLootType;
+    events.lootClaimStarted(chest.id, lootType);
+    if (requiresGasConfirmation(lootType)) {
+      setPendingClaim({ id: chest.id, lootType: lootType as ChestLootType });
+      return;
+    }
+    openLoot.mutate(chest.id);
+  };
 
   const stats = useMemo(() => {
     const rows = loot.data ?? [];
@@ -125,16 +146,25 @@ export default function LootPage() {
                       }
                     : undefined
                 }
-                onOpen={() => {
-                  // Anti-replay UX guard: do nothing if already opening/opened.
-                  if (chest.opened || openingId === chest.id) return;
-                  openLoot.mutate(chest.id);
-                }}
+                onOpen={() => requestOpen(chest)}
               />
             ))}
           </div>
         )}
       </motion.div>
+
+      <GasConfirmDialog
+        open={pendingClaim !== null}
+        estimatedUsd={pendingClaim ? estimateClaimGasUsd(pendingClaim.lootType) : 0}
+        thresholdUsd={gasThresholdUsd}
+        onCancel={() => setPendingClaim(null)}
+        onConfirm={() => {
+          if (!pendingClaim) return;
+          const id = pendingClaim.id;
+          setPendingClaim(null);
+          openLoot.mutate(id);
+        }}
+      />
     </motion.main>
   );
 }

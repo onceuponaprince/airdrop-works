@@ -64,10 +64,17 @@ export function LootChest({
               <RarityBadge tier={rarity} />
             </div>
 
-            {/* Click prompt */}
-            <p className="text-xs text-[--muted-foreground] group-hover:text-[--primary] transition-colors">
-              Click to open
-            </p>
+            <button
+              type="button"
+              className="mt-2 px-4 py-2 rounded bg-[--primary] text-[--primary-foreground] text-sm font-semibold hover:opacity-90"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleOpen();
+              }}
+              disabled={isOpening}
+            >
+              {isOpening ? 'Opening…' : 'Claim loot'}
+            </button>
           </motion.div>
         ) : (
           <motion.div
