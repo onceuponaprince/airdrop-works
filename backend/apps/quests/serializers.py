@@ -104,4 +104,12 @@ class AdminCampaignSerializer(serializers.ModelSerializer):
         if reward_pool is not None and reward_pool < 0:
             raise serializers.ValidationError("reward_pool must be >= 0")
 
+        title = data.get("title")
+        if title:
+            qs = Quest.objects.filter(title=title)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError({"title": "A campaign with this title already exists."})
+
         return data

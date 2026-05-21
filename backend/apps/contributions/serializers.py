@@ -17,33 +17,51 @@ class ContributionSerializer(serializers.ModelSerializer):
 
 
 class AdminContributionSerializer(serializers.ModelSerializer):
-    userWalletAddress = serializers.CharField(source="user.wallet_address", read_only=True)
-    userDisplayName = serializers.CharField(source="user.display_name", read_only=True)
-    userDynamicId = serializers.CharField(source="user.dynamic_user_id", read_only=True)
+    walletAddress = serializers.CharField(source="user.wallet_address", read_only=True)
+    campaignId = serializers.SerializerMethodField()
+    scores = serializers.SerializerMethodField()
+    scoringMetadata = serializers.SerializerMethodField()
+    isFarming = serializers.SerializerMethodField()
 
     class Meta:
         model = Contribution
         fields = [
             "id",
-            "userWalletAddress",
-            "userDisplayName",
-            "userDynamicId",
+            "campaignId",
+            "walletAddress",
             "platform",
             "content_text",
             "content_url",
-            "platform_content_id",
-            "teaching_value",
-            "originality",
-            "community_impact",
+            "scores",
             "total_score",
+            "isFarming",
             "farming_flag",
-            "farming_explanation",
             "xp_awarded",
+            "scoringMetadata",
             "scored_at",
             "created_at",
-            "updated_at",
         ]
         read_only_fields = fields
+
+    def get_campaignId(self, obj):
+        return None
+
+    def get_scores(self, obj):
+        return {
+            "teaching_value": obj.teaching_value,
+            "originality": obj.originality,
+            "community_impact": obj.community_impact,
+        }
+
+    def get_scoringMetadata(self, obj):
+        return {
+            "dimension_explanations": obj.dimension_explanations or {},
+            "farming_explanation": obj.farming_explanation or "",
+            "platform_content_id": obj.platform_content_id or "",
+        }
+
+    def get_isFarming(self, obj):
+        return obj.farming_flag == "farming"
 
 
 class CrawlSourceConfigSerializer(serializers.ModelSerializer):

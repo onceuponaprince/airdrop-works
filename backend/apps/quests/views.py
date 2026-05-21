@@ -88,9 +88,10 @@ class AdminCampaignListCreateView(generics.ListCreateAPIView):
         # Filter by status (param: active, completed, upcoming)
         status_param = self.request.query_params.get('status')
         status_map = {
-            'active': 'active',
-            'completed': 'completed',
-            'upcoming': 'upcoming',
+            "active": "active",
+            "completed": "completed",
+            "ended": "completed",
+            "upcoming": "upcoming",
         }
         if status_param in status_map:
             qs = qs.filter(status=status_map[status_param])

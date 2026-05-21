@@ -13,7 +13,9 @@ import { evmWalletConnectors } from "@particle-network/connectkit/evm"
 import { avalanche, base } from "wagmi/chains"
 import { ParticleWalletContext } from "@/hooks/useParticleWallet"
 import { useState, useCallback } from "react"
-import { handleWalletError, getFallbackWalletConnectors } from './walletUtils'
+import { handleWalletError, getFallbackWalletConnectors } from "./walletUtils"
+
+export { handleWalletError, getFallbackWalletConnectors } from "./walletUtils"
 
 const projectId = (process.env.NEXT_PUBLIC_PROJECT_ID ?? "").trim()
 const clientKey = (process.env.NEXT_PUBLIC_CLIENT_KEY ?? "").trim()
@@ -30,6 +32,8 @@ const appId = (process.env.NEXT_PUBLIC_APP_ID ?? "").trim()
  */
 // wallet helper functions moved to walletUtils.ts to keep ParticleProvider imports
 // light-weight for unit tests.
+
+const fallbackConnectors = getFallbackWalletConnectors()
 
 const particleConfig = createConfig({
   projectId,
@@ -48,6 +52,10 @@ const particleConfig = createConfig({
     mode: "dark",
     recommendedWallets: [
       { walletId: "metaMask", label: "Recommended" },
+      ...fallbackConnectors.map((connector) => ({
+        walletId: connector.id,
+        label: connector.name,
+      })),
     ],
   },
 })
@@ -63,16 +71,26 @@ function ParticleWalletBridge({ children }: { children: React.ReactNode }) {
   } | undefined>(undefined)
 
   const openConnect = useCallback(() => {
-    // clear previous error when reopening
     setLastError(undefined)
-    setOpen(true)
+    try {
+      setOpen(true)
+    } catch (error) {
+      setLastError(handleWalletError(error, () => setOpen(true)))
+    }
   }, [setOpen])
 
   const retryConnect = useCallback(() => {
-    // allow UI to trigger a fresh connect attempt
     setLastError(undefined)
-    setOpen(true)
+    try {
+      setOpen(true)
+    } catch (error) {
+      setLastError(handleWalletError(error, () => setOpen(true)))
+    }
   }, [setOpen])
+
+  const reportWalletError = useCallback((error: unknown) => {
+    setLastError(handleWalletError(error, retryConnect))
+  }, [retryConnect])
 
   return (
     <ParticleWalletContext.Provider
@@ -84,6 +102,7 @@ function ParticleWalletBridge({ children }: { children: React.ReactNode }) {
         disconnect,
         lastError,
         retryConnect,
+        reportWalletError,
       }}
     >
       {children}

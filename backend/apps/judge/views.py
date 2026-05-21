@@ -345,7 +345,7 @@ class RubricListCreateView(generics.ListCreateAPIView):
     
     def get_queryset(self):
         """Order by isDefault first, then by name."""
-        return ScoringRubric.objects.all().order_by('-is_default', 'name')
+        return ScoringRubric.objects.select_related("quest").order_by("-is_default", "name")
 
 
 class RubricDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -354,11 +354,11 @@ class RubricDetailView(generics.RetrieveUpdateDestroyAPIView):
     Admin DELETE: Delete rubric (cannot delete if is_default).
     """
     serializer_class = RubricSerializer
-    queryset = ScoringRubric.objects.all()
-    
+    queryset = ScoringRubric.objects.select_related("quest").all()
+
     def get_permissions(self):
         """GET is public; PUT/PATCH/DELETE require admin."""
-        if self.request.method == 'GET':
+        if self.request.method == "GET":
             return [AllowAny()]
         return [IsAdminUser()]
     

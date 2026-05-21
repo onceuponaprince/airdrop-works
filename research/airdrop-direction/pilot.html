@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Where should airdrop-works go? — Episode 1</title>
+  <meta name="description" content="Living research: reputation anti-farmer vs marketing judge — verdict, evidence, and interactive decision tools." />
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --surface: #ffffff;
+      --ink: #14131a;
+      --ink-muted: #55525c;
+      --rule: #d9d5cb;
+      --accent: #10b981;
+      --accent-dim: #10b98133;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --mark: #fff2b3;
+    }
+    html[data-theme="dark"] {
+      --bg: #0a0b10;
+      --surface: #13141d;
+      --ink: #e8ecf4;
+      --ink-muted: #9ca3af;
+      --rule: #1f2937;
+      --accent: #10b981;
+      --accent-dim: #10b98144;
+      --mark: #564a1a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Iowan Old Style', 'Charter', 'Cambria', 'Georgia', ui-serif, serif;
+      font-size: 18px;
+      line-height: 1.65;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .wrap { max-width: 72ch; margin: 0 auto; padding: 48px 24px 96px; }
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 2rem;
+    }
+    #theme-toggle {
+      font: inherit;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      color: var(--ink);
+      padding: 6px 12px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 0.5rem; }
+    .subtitle { font-style: italic; color: var(--ink-muted); margin: 0 0 1.5rem; }
+    .figure {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: 6px;
+      padding: 1.25rem 1.5rem;
+      margin: 2rem 0;
+    }
+    .figure .label {
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+      margin-bottom: 0.5rem;
+    }
+    .figure .title { font-weight: 600; margin-bottom: 1rem; }
+    .verdict-box {
+      border-left: 3px solid var(--accent);
+      padding: 0.75rem 1rem;
+      background: var(--accent-dim);
+      margin: 1.5rem 0;
+      font-size: 0.95rem;
+    }
+    input[type="range"] { width: 100%; margin: 0.5rem 0; accent-color: var(--accent); }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin: 0.75rem 0; }
+    .row label { font-size: 0.9rem; }
+    .pct { font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; min-width: 3ch; text-align: right; }
+    table.matrix { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.matrix th, table.matrix td {
+      border: 1px solid var(--rule);
+      padding: 8px 10px;
+      text-align: left;
+    }
+    table.matrix th {
+      font-family: ui-monospace, Menlo, monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-muted);
+    }
+    table.matrix input { width: 48px; }
+    .result {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--bg);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      font-size: 0.95rem;
+    }
+    .timeline { list-style: none; padding: 0; margin: 0; }
+    .timeline li {
+      padding: 0.6rem 0 0.6rem 1.25rem;
+      border-left: 2px solid var(--rule);
+      margin-left: 0.5rem;
+      position: relative;
+    }
+    .timeline li::before {
+      content: '';
+      position: absolute;
+      left: -5px;
+      top: 1rem;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .timeline li.muted { opacity: 0.45; }
+    .toggle-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+    .toggle-row button {
+      font: inherit;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border: 1px solid var(--rule);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    .toggle-row button.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    footer {
+      margin-top: 3rem;
+      font-size: 0.8rem;
+      color: var(--ink-muted);
+      font-family: ui-monospace, Menlo, monospace;
+    }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main class="wrap" id="top">
+  <div class="meta">
+    <span>airdrop-works · Living research · Episode 1</span>
+    <button id="theme-toggle" type="button" aria-label="Toggle theme">Dark</button>
+  </div>
+
+  <h1>Contributor reputation first; marketing judge as a timed wedge</h1>
+  <p class="subtitle">Nine sources, one codebase read, six sub-questions — where to place the next twelve months.</p>
+
+  <p>You built an AI Judge that scores contributions and stamps <mark>genuine / farming / ambiguous</mark> in the same pass. Two forks tempt you: sell that trust layer to protocols (A), or sell creative scoring to marketers (B). The evidence says A is a repositioning; B is a company fork unless PLG proves otherwise in thirty days.</p>
+
+  <div class="verdict-box" id="verdict-static">
+    <strong>Verdict:</strong> Primary bet on reputation anti-farmer (~70% effort). Marketing judge on a subdomain with hard day-30 kill gates (~30% until gate). Platform core = rubric engine + cache + account rollups — not new game mechanics.
+  </div>
+
+  <p>Passport answers <em>who</em>. Advize and Segwise answer <em>which ad might perform</em>. Your whitespace is <em>what they said and whether it deserves reward</em> — already in production as account batch scoring and farming percentages.</p>
+
+  <!-- Interactive 1 -->
+  <div class="figure" id="interactive-1">
+    <div class="label">Interactive 1 of 3 · Effort mixer</div>
+    <div class="title">Allocate the next ninety days</div>
+    <p style="font-size:0.9rem;color:var(--ink-muted);margin-top:0">Must sum to 100%. Research default: 70% A, 30% B, 0% net-new core-only.</p>
+    <div class="row">
+      <label for="effort-a">A — Reputation / anti-farmer</label>
+      <span class="pct" id="pct-a">70</span>
+    </div>
+    <input type="range" id="effort-a" min="0" max="100" value="70" />
+    <div class="row">
+      <label for="effort-b">B — Marketing judge (experiment)</label>
+      <span class="pct" id="pct-b">30</span>
+    </div>
+    <input type="range" id="effort-b" min="0" max="100" value="30" />
+    <div class="row">
+      <label for="effort-core">Core platform only (no wedge sales)</label>
+      <span class="pct" id="pct-core">0</span>
+    </div>
+    <input type="range" id="effort-core" min="0" max="100" value="0" />
+    <div class="result" id="effort-verdict"></div>
+  </div>
+
+  <!-- Interactive 2 -->
+  <div class="figure" id="interactive-2">
+    <div class="label">Interactive 2 of 3 · Decision matrix</div>
+    <div class="title">Score each criterion (1–5) for A vs B</div>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Criterion</th>
+          <th>Weight</th>
+          <th>A score</th>
+          <th>B score</th>
+        </tr>
+      </thead>
+      <tbody id="matrix-body"></tbody>
+    </table>
+    <div class="result" id="matrix-verdict"></div>
+  </div>
+
+  <!-- Interactive 3 -->
+  <div class="figure" id="interactive-3">
+    <div class="label">Interactive 3 of 3 · Ninety-day timeline</div>
+    <div class="title">Milestone track</div>
+    <div class="toggle-row">
+      <button type="button" class="active" data-track="a">A-primary (recommended)</button>
+      <button type="button" data-track="b">B-primary (falsify claim)</button>
+    </div>
+    <ul class="timeline" id="timeline"></ul>
+  </div>
+
+  <p>Full synthesis with source attribution: <a href="episodes/01-spinoff-vs-core.md">episodes/01-spinoff-vs-core.md</a>. Raw dumps: <a href="sources/">sources/</a>.</p>
+
+  <footer>
+    Episode 1 · 2026-05-21 · Stubs: Grok, Copilot (re-run locally). Gemini quota exhausted — fallback dump.
+  </footer>
+</main>
+<script>
+  const CRITERIA = [
+    { id: 'reuse', name: 'Codebase reuse', weight: 20, a: 5, b: 2 },
+    { id: 'moat', name: 'Defensibility', weight: 20, a: 4, b: 2 },
+    { id: 'brand', name: 'airdrop.works fit', weight: 15, a: 5, b: 1 },
+    { id: 'pull', name: 'Market pull (your network)', weight: 15, a: 4, b: 3 },
+    { id: 'gtm', name: 'Solo-team GTM fit', weight: 15, a: 4, b: 3 },
+    { id: 'speed', name: 'Revenue speed (90d)', weight: 15, a: 3, b: 4 },
+  ];
+
+  const TIMELINES = {
+    a: [
+      { w: '1–2', t: 'Package Campaign Integrity Pilot; historical batch + farming report' },
+      { w: '3–4', t: 'Outbound 30 protocols; target 3 discovery calls' },
+      { w: 'Day 30', t: 'B gate: kill marketing wedge if PLG metrics fail' },
+      { w: '5–8', t: 'Deliver paid pilot; export allocation CSV; document appeals' },
+      { w: '9–12', t: 'Second pilot or renewal; case study; rubric v2' },
+    ],
+    b: [
+      { w: '1–2', t: 'Subdomain + marketing rubric; paste-copy demo; GA4 events' },
+      { w: '3–4', t: 'Distribution test: one thread, 500 visitor target' },
+      { w: 'Day 30', t: 'Continue only if completion ≥15% and signups ≥10' },
+      { w: '5–8', t: 'Stripe credits; agency outreach (crypto-native only)' },
+      { w: '9–12', t: 'Pivot to MarTech brand OR kill and return effort to A' },
+    ],
+  };
+
+  function themeInit() {
+    const btn = document.getElementById('theme-toggle');
+    const stored = localStorage.getItem('airdrop-pilot-theme');
+    if (stored === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      btn.textContent = 'Light';
+    }
+    btn.addEventListener('click', () => {
+      const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (dark) {
+        document.documentElement.removeAttribute('data-theme');
+        btn.textContent = 'Dark';
+        localStorage.setItem('airdrop-pilot-theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        btn.textContent = 'Light';
+        localStorage.setItem('airdrop-pilot-theme', 'dark');
+      }
+    });
+  }
+
+  function effortInit() {
+    const a = document.getElementById('effort-a');
+    const b = document.getElementById('effort-b');
+    const c = document.getElementById('effort-core');
+    const out = document.getElementById('effort-verdict');
+
+    function sync(changed) {
+      let va = +a.value, vb = +b.value, vc = +c.value;
+      const sum = va + vb + vc;
+      if (sum !== 100 && changed) {
+        const others = changed === 'a' ? [b, c] : changed === 'b' ? [a, c] : [a, b];
+        const rem = 100 - (changed === 'a' ? va : changed === 'b' ? vb : vc);
+        const o1 = +others[0].value, o2 = +others[1].value;
+        const ratio = o1 + o2 || 1;
+        others[0].value = Math.round((o1 / ratio) * rem);
+        others[1].value = rem - +others[0].value;
+        va = +a.value; vb = +b.value; vc = +c.value;
+      }
+      document.getElementById('pct-a').textContent = va;
+      document.getElementById('pct-b').textContent = vb;
+      document.getElementById('pct-core').textContent = vc;
+      let msg = '';
+      if (va >= 60) msg = 'Aligned with research verdict: A-primary. Use B only as a gated experiment.';
+      else if (vb >= 50) msg = 'You are falsifying the claim — viable only with strong marketing distribution and a separate brand.';
+      else msg = 'Heavy core-only risks shipping no wedge narrative for sales.';
+      if (vb > 35 && va < 50) msg += ' Warning: B &gt;35% without A leadership matches resource-trap pattern from Claude (cold).';
+      out.textContent = msg;
+    }
+    [a, b, c].forEach((el) => el.addEventListener('input', () => sync(el.id === 'effort-a' ? 'a' : el.id === 'effort-b' ? 'b' : 'c')));
+    sync(null);
+  }
+
+  function matrixInit() {
+    const tbody = document.getElementById('matrix-body');
+    const out = document.getElementById('matrix-verdict');
+    CRITERIA.forEach((row, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${row.name}</td>
+        <td><input type="number" min="0" max="30" value="${row.weight}" data-i="${i}" data-f="weight" /></td>
+        <td><input type="number" min="1" max="5" value="${row.a}" data-i="${i}" data-f="a" /></td>
+        <td><input type="number" min="1" max="5" value="${row.b}" data-i="${i}" data-f="b" /></td>`;
+      tbody.appendChild(tr);
+    });
+    function recalc() {
+      let scoreA = 0, scoreB = 0, wSum = 0;
+      tbody.querySelectorAll('input').forEach((inp) => {
+        const i = +inp.dataset.i;
+        const f = inp.dataset.f;
+        CRITERIA[i][f] = +inp.value;
+      });
+      CRITERIA.forEach((r) => {
+        scoreA += r.weight * r.a;
+        scoreB += r.weight * r.b;
+        wSum += r.weight;
+      });
+      const normA = (scoreA / wSum).toFixed(2);
+      const normB = (scoreB / wSum).toFixed(2);
+      const win = scoreA >= scoreB ? 'A (reputation)' : 'B (marketing)';
+      out.innerHTML = `Weighted score — A: <strong>${normA}</strong> · B: <strong>${normB}</strong> → Favours <strong>${win}</strong>. Adjust weights if your founder edge is agency-side (raise B pull/speed).`;
+    }
+    tbody.addEventListener('input', recalc);
+    recalc();
+  }
+
+  function timelineInit() {
+    const ul = document.getElementById('timeline');
+    const buttons = document.querySelectorAll('[data-track]');
+    function render(track) {
+      ul.innerHTML = '';
+      TIMELINES[track].forEach((item) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<strong>Week ${item.w}</strong> — ${item.t}`;
+        if (item.w === 'Day 30' && track === 'a') li.style.borderLeftColor = 'var(--warn)';
+        ul.appendChild(li);
+      });
+    }
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        render(btn.dataset.track);
+      });
+    });
+    render('a');
+  }
+
+  themeInit();
+  effortInit();
+  matrixInit();
+  timelineInit();
+</script>
+</body>
+</html>

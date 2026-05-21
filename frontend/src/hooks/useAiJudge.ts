@@ -23,8 +23,27 @@ interface AiJudgeState {
   error: string | null
 }
 
+export type AiJudgeScores = {
+  teaching_value: number
+  originality: number
+  community_impact: number
+}
+
+function clampScore(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.min(100, Math.max(0, Math.round(value)))
+}
+
+function liveScoreToCanonical(live: LiveScore | null): AiJudgeScores {
+  return {
+    teaching_value: clampScore(live?.teachingValue ?? 0),
+    originality: clampScore(live?.originality ?? 0),
+    community_impact: clampScore(live?.communityImpact ?? 0),
+  }
+}
+
 /** Returns judge state, `score(text)` (streaming), and `reset`; fires analytics and toast notifications on completion/error. */
-export function useAiJudge() {
+export function useAiJudge(onScoreUpdate?: (scoreType: string, value: number) => void) {
   const notify = useNotificationStore((s) => s.push)
   const abortControllerRef = useRef<AbortController | null>(null)
   const [state, setState] = useState<AiJudgeState>({
@@ -57,6 +76,11 @@ export function useAiJudge() {
 
     const applyLiveScore = (score: LiveScore) => {
       setState((prev) => ({ ...prev, liveScore: score }))
+      if (onScoreUpdate) {
+        onScoreUpdate("teaching_value", clampScore(score.teachingValue))
+        onScoreUpdate("originality", clampScore(score.originality))
+        onScoreUpdate("community_impact", clampScore(score.communityImpact))
+      }
     }
 
     const normalizeFinalResult = (value: unknown): JudgeResult | null => {
@@ -157,7 +181,7 @@ export function useAiJudge() {
 
     if (!finalResult) throw new Error("Scoring finished without a final result")
     return finalResult
-  }, [])
+  }, [onScoreUpdate])
 
   const score = async (text: string) => {
     abortControllerRef.current?.abort()
@@ -204,5 +228,28 @@ export function useAiJudge() {
     setState({ status: "idle", phase: null, result: null, liveScore: null, error: null })
   }
 
-  return { ...state, score, reset }
+  const scores = state.result
+    ? {
+        teaching_value: clampScore(state.result.teachingValue),
+        originality: clampScore(state.result.originality),
+        community_impact: clampScore(state.result.communityImpact),
+      }
+    : liveScoreToCanonical(state.liveScore)
+
+  const totalScore = state.result?.compositeScore ?? Math.round(
+    (scores.teaching_value + scores.originality + scores.community_impact) / 3
+  )
+
+  const isFarming = state.result?.farmingFlag === "farming"
+  const isLoading = state.status === "scoring"
+
+  return {
+    ...state,
+    isLoading,
+    scores,
+    totalScore,
+    isFarming,
+    score,
+    reset,
+  }
 }
