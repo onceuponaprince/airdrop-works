@@ -1,0 +1,220 @@
+---
+description: Figma → code rules for AI(r)Drop (Arcade RPG aesthetic). Covers design tokens, component map, marketing↔app continuity, MCP workflow, and landing/dashboard refresh conventions.
+globs:
+  - frontend/src/**/*.tsx
+  - frontend/src/**/*.css
+  - frontend/tailwind.config.ts
+alwaysApply: false
+---
+
+# AI(r)Drop — Figma Design System Rules
+
+**Product:** Gamified airdrop scoring platform (`airdrop.works`).  
+**Aesthetic:** Neon Arcade RPG on dark — CRT scanlines, glow, quest/skill-tree metaphors. **Not** a generic SaaS dashboard.  
+**Current initiative:** Refresh `(marketing)` landing page and tighten visual/UX continuity with `(app)` dashboard and platform surfaces.
+
+---
+
+## Figma MCP — Required Workflow
+
+Do not implement from screenshots alone. Follow this order:
+
+1. **`get_design_context`** — Fetch structured data for the exact Figma node(s).
+2. If truncated → **`get_metadata`** for the node map, then re-fetch only required nodes with `get_design_context`.
+3. **`get_screenshot`** — Visual reference for the variant being built.
+4. Download assets from the MCP assets endpoint when provided.
+5. Translate MCP output (often React + Tailwind) into **this project's** components, tokens, and routes — not copy-paste.
+6. Validate **1:1** look and behavior against the screenshot before marking complete.
+
+Treat Figma MCP code as a **behavior + layout spec**, not final style.
+
+---
+
+## Two Surfaces — Marketing vs App
+
+| Surface | Route group | Layout | Primary components |
+|---------|-------------|--------|-------------------|
+| **Marketing** | `frontend/src/app/(marketing)/` | `Navigation` + `main.pt-16` + `Footer` | `frontend/src/components/marketing/*` |
+| **Platform** | `frontend/src/app/(app)/` | `AuthGuard` → `AppSidebar` + `AppTopbar` | `frontend/src/components/app/*` |
+
+**Landing refresh:** Edit section components under `marketing/`, composed in `app/(marketing)/page.tsx`. Section order today: Hero → AiJudgeDemo → SocialProof → CTA → TwitterAnalyzer → Problem → Solution → Features → Comparison → FAQ → Donate.
+
+**Platform connection:** When a Figma frame is “marketing” but leads into product (e.g. score reveal, quest card, wallet CTA), reuse the **same** app primitives (`ScoreCard`, `QuestCard`, `ArcadeCard`) so demo and dashboard feel like one game, not two products.
+
+---
+
+## Component Hierarchy (use in this order)
+
+1. **`@/components/themed/`** — Brand UI: `ArcadeButton`, `ArcadeCard`, `CrtOverlay`, `RarityBadge`, `DifficultyBadge`, `BranchIcon`. Prefer for CTAs, cards, and arcade chrome.
+2. **`@/components/app/`** — Platform: `ScoreCard`, `QuestCard`, `SkillTree`, `XpBar`, `LootChest`, `LeaderboardRow`, `AppSidebar`, `AppTopbar`.
+3. **`@/components/marketing/`** — Landing sections only; compose themed + app pieces inside sections.
+4. **`@/components/shared/`** — Cross-surface: `Navigation`, `Footer`, `Logo`, `WalletButton`, `AnimatedSection`, `AuthGuard`.
+5. **`@/components/ui/`** — shadcn/ui primitives. **Do not edit** generated files; extend via composition or themed wrappers.
+
+### Placement rules for new UI
+
+| If the design is… | Put it in… |
+|-------------------|------------|
+| Landing section / hero / FAQ block | `components/marketing/` |
+| Logged-in feature (quests, loot, profile) | `components/app/` |
+| Reusable arcade chrome (button, card, badge) | `components/themed/` |
+| Generic primitive (dialog, input, accordion) | Use `components/ui/` unchanged |
+
+- **Naming:** PascalCase files (`ScoreCard.tsx`). Hooks: `use` prefix in `hooks/`.
+- **Exports:** Named exports for components; barrel `index.ts` only where folders already use them (`marketing/`, `app/`, `themed/`, `shared/`).
+- **Client boundary:** Add `"use client"` when using Framer Motion, wallet hooks, or browser APIs.
+
+---
+
+## Design Tokens — Single Source of Truth
+
+**Never invent one-off hex colors in new code.** Map Figma fills/strokes to existing tokens.
+
+### Color & theme (priority order)
+
+1. **CSS variables** — `frontend/src/app/globals.css` (`--background`, `--primary`, `--accent`, `--border`, gradients).
+2. **Tailwind semantic classes** — `bg-background`, `text-primary`, `border-border`, `bg-card`, etc. (`tailwind.config.ts` maps to CSS vars).
+3. **TS constants** — `frontend/src/styles/theme.ts` (`colors`, `shadows`, `layout`) for JS/inline styles and Framer.
+4. **Domain palettes** — `frontend/src/lib/constants.ts`: `RARITY_TIERS`, `BRANCHES`, `DIFFICULTY_RATINGS`, `FARMING_FLAGS`, `SCORE_DIMENSIONS`.
+
+### Figma → code color map
+
+| Figma role | Token / class |
+|------------|----------------|
+| Page background | `bg-background` / `#0A0B10` |
+| Card / panel | `bg-card` / `panelDark` |
+| Primary CTA / XP / success | `primary` / `arcadeGreen` / `#10B981` |
+| Accent / epic | `accent` / `neonPurple` |
+| Destructive / farming | `destructive` |
+| Muted text | `text-muted-foreground` |
+| Legendary / gold | `legendary-gold`, `gradient-legendary`, `rarity-legendary` |
+| Branch accents | `branch-{educator,builder,creator,scout,diplomat}` or `BRANCHES` |
+
+### Typography
+
+Loaded in `frontend/src/lib/fonts.ts`, applied on root layout via `fontVariables`:
+
+| Role | Font | Tailwind / utility | Use for |
+|------|------|-------------------|---------|
+| Display | Press Start 2P | `font-display` | Logo, hero numbers, **score totals only** — never body copy |
+| Heading | Space Grotesk | `font-heading` | Section titles, card headings |
+| Body | DM Sans | `font-body` | Prose, buttons, forms |
+| Mono | JetBrains Mono | `font-mono` | Scores, labels, addresses, overlines (`tracking-widest`, `uppercase`) |
+
+Scores and counters: add class `tabular` for aligned digits.
+
+### Spacing & layout
+
+- Max content width: `1200px` / `max-w-[960px]` hero, `layout.maxWidth` in `theme.ts`.
+- Section vertical rhythm: `~6rem` (`layout.sectionGap`) between landing sections.
+- Page padding: `px-4 sm:px-6` mobile, `2rem` desktop.
+- Radius: `rounded-[var(--radius)]` (0.375rem) — do not introduce new radii without updating `--radius`.
+
+### Effects (Arcade RPG)
+
+- **CRT:** `CrtOverlay` or `.crt-scanlines` — marketing heroes and `ScoreCard`.
+- **Glow:** `.glow-green`, `.glow-purple`, `shadow-[0_0_20px_hsl(160_80%_40%/0.3)]` on primary actions (match `ArcadeButton` / shadcn `Button` default).
+- **Screen glow:** `.screen-glow` or `ArcadeCard glow`.
+- **Grid texture:** radial dot grid at low opacity (see `HeroSection`) — optional, do not overpower content.
+
+**Dark mode only.** Do not design or implement light theme variants.
+
+---
+
+## Motion & Animation
+
+- **Canonical presets (new code):** `frontend/src/lib/animations.ts` — `pageEnter`, `staggerContainer`, `staggerItem`, `scoreReveal`, `buttonPress`, `cardHover`, `xpBarFill`, `chestOpen`, `lootReveal`, `screenShake`, `nodeUnlock`, etc.
+- **Existing imports:** Many files import from `@/styles/theme` (duplicate presets). When editing those files, stay consistent with their import path; when creating new files, prefer `@/lib/animations`.
+- **Scroll sections:** Wrap in `AnimatedSection` or use `whileInView` + `viewport={{ once: true, margin: "-80px" }}`.
+- **Score UX:** Progressive reveal (bars fill, counters animate via `useAnimatedCounter`) — critical for `AiJudgeDemo` and `ScoreCard`; avoid spinner-only waits.
+- **Reduced motion:** Respect `prefers-reduced-motion` in `globals.css`; do not rely on infinite motion for essential information.
+
+---
+
+## Styling Rules
+
+- **Tailwind first** for layout and color; use `cn()` from `@/lib/utils` for conditional classes.
+- IMPORTANT: Do not hardcode colors that already exist as CSS variables or `constants.ts` entries.
+- Prefer semantic tokens (`text-primary`, `bg-card`) over raw hex, except branch/rarity accents already defined in `tailwind.config.ts` (`branch-educator`, `rarity-legendary`, etc.).
+- **Buttons:** Marketing/platform CTAs → `ArcadeButton` (`primary` | `secondary` | `ghost` | `destructive` | `legendary`). Forms/admin may use shadcn `Button` from `ui/button.tsx`.
+- **Cards:** Interactive quest/feature tiles → `ArcadeCard` with `interactive`, optional `branch`, `glow`.
+- **Icons:** `lucide-react` only. IMPORTANT: Do not add new icon npm packages. Map Figma icons to closest Lucide glyph.
+
+---
+
+## Shared Patterns (Marketing ↔ App)
+
+These must stay visually aligned during the refresh:
+
+| Pattern | Marketing | App | Shared implementation |
+|---------|-----------|-----|-------------------------|
+| AI Judge score | `AiJudgeDemo`, `ScoreReveal` | `ScoreCard`, `(app)/judge` | Same dimensions, farming badge, CRT, bar colors from `SCORE_DIMENSIONS` |
+| Wallet CTA | `Navigation`, `WaitlistForm` steps | `WalletButton`, `AuthGuard` | Dynamic.xyz via `useWeb3Auth` / `WalletButton` |
+| Quest metaphor | `QuestChain`, copy sections | `QuestCard`, `(app)/quests` | `DifficultyBadge`, branch borders |
+| XP / progress | Social proof counters | `XpBar`, profile | `xp-bar-track` / `xp-bar-fill` classes or `XpBar` |
+
+When Figma shows a “score card” or “quest card” on the landing page, **extend or reuse** the app component with props — do not fork a second visual system.
+
+---
+
+## Assets
+
+- IMPORTANT: If Figma MCP returns a **localhost** asset URL, use it directly in implementation — no placeholders.
+- Static files: `frontend/public/` (e.g. `public/og/`, brand images).
+- IMPORTANT: Do not import third-party icon sets from Figma; use Lucide or SVGs from the MCP payload.
+- OG/marketing images: `app/api/og/` routes where applicable.
+
+---
+
+## Architecture (Figma implementations must respect)
+
+- **Path alias:** `@/*` → `frontend/src/*`
+- **Data:** Server state via React Query patterns in hooks; types in `types/api.ts`
+- **Auth:** Web3-first — wallet → Django JWT (`useWeb3Auth`, `AuthGuard` on `(app)` routes)
+- **AI Judge:** Landing demo → `/api/judge` (streaming); app → backend judge API — UI must support streaming/progressive scores
+- **Imports:** React → third-party → `@/components` → `@/lib` / `@/hooks` → types
+
+---
+
+## Landing Page Section → Figma Frame Map
+
+When refreshing marketing, map Figma pages/frames to existing components (extend, don't replace blindly):
+
+| Section | Component file |
+|---------|----------------|
+| Hero | `marketing/HeroSection.tsx` |
+| AI Judge Demo | `marketing/AiJudgeDemo.tsx` |
+| Problem | `marketing/ProblemSection.tsx` |
+| Solution | `marketing/SolutionSection.tsx` |
+| Features | `marketing/FeaturesSection.tsx` |
+| Comparison | `marketing/ComparisonSection.tsx` |
+| Social Proof | `marketing/SocialProofSection.tsx` |
+| FAQ | `marketing/FAQSection.tsx` |
+| Final CTA | `marketing/CTASection.tsx` |
+| Waitlist | `marketing/WaitlistForm.tsx` |
+| Footer | `shared/Footer.tsx` |
+| Nav | `shared/Navigation.tsx` |
+
+---
+
+## Anti-Patterns (do not)
+
+- Light theme or white gray SaaS cards without arcade border/glow
+- Inter/Roboto/system fonts for marketing or app UI
+- Press Start 2P for paragraphs or form labels
+- New duplicate `ScoreCard` styling on landing only
+- Editing `components/ui/*` shadcn sources
+- One-off animation timings outside `animations.ts` / `theme.ts` scales
+- Generic blue/purple gradient hero unrelated to `--gradient-hero`
+
+---
+
+## Verification Checklist (before done)
+
+- [ ] Colors map to CSS vars / Tailwind / `constants.ts` — no stray hex
+- [ ] Typography uses correct font role (display only where allowed)
+- [ ] Reused `ArcadeButton` / `ArcadeCard` / `ScoreCard` where applicable
+- [ ] Motion uses shared presets; score flows animate progressively
+- [ ] Marketing and app variants of the same widget look like one design system
+- [ ] Compared implementation to Figma `get_screenshot` output
+- [ ] `pnpm lint` and `pnpm type-check` pass in `frontend/`
