@@ -12,6 +12,21 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.2.4 - 2026-05-21
+
+### Added
+- Phase 1 admin surface: cached `GET /api/v1/admin/stats/`, contribution admin list/detail, and spec URL aliases.
+- Quest-linked scoring rubrics (`ScoringRubric.quest` FK) with expanded rubric API and tests.
+- Frontend `CampaignRubricForm`, percent-weight rubric UI, wallet error reporting, and `useAiJudge` spec-shaped streaming state.
+- Phase 1 verification checklist, execution plan, and `scripts/verify_phase1_endpoints.sh`.
+
+### Changed
+- Admin campaign filters accept `ended` status alias; campaign titles must be unique.
+- Contribution admin serializer exposes wallet address and score breakdown only.
+
+### Chore
+- Bumped monorepo package versions to `0.2.4`.
+
 ## 0.2.3 - 2026-05-21
 
 ### Added
