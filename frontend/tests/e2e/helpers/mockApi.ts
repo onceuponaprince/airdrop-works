@@ -104,8 +104,32 @@ export async function installApiV1Mocks(page: Page, opts: ApiMockOptions = {}) {
       return jsonResponse(route, 200, { url: 'https://example.test/portal' })
     }
 
+    if (path.endsWith('/api/v1/auth/twitter/me/')) {
+      return jsonResponse(route, 200, { connected: false })
+    }
+
+    if (path.includes('/api/v1/auth/twitter/start/')) {
+      return jsonResponse(route, 200, {
+        authorizeUrl: 'https://twitter.com/i/oauth2/authorize?mock=1',
+        state: 'e2e-state',
+        mode: 'link',
+      })
+    }
+
+    if (path.endsWith('/api/v1/contributions/sources/') && req.method() === 'GET') {
+      return jsonResponse(route, 200, [])
+    }
+
+    if (path.match(/\/api\/v1\/contributions\/sources\/[^/]+\/crawl\/$/)) {
+      return jsonResponse(route, 202, { task_id: 'task_e2e_crawl' })
+    }
+
+    if (path.match(/\/api\/v1\/contributions\/crawl\/[^/]+\/$/) && req.method() === 'POST') {
+      return jsonResponse(route, 202, { task_id: 'task_e2e_connect' })
+    }
+
     // Default: surface unexpected calls to make tests actionable.
-    return jsonResponse(route, 501, { detail: `No mock for ${path}` })
+    return jsonResponse(route, 501, { detail: `No mock for ${path} (${req.method()})` })
   })
 }
 

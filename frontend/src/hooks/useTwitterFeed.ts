@@ -50,9 +50,14 @@ export function useTwitterFeed(token: string | null, enabled = true) {
   }, [token, enabled]);
 
   useEffect(() => {
+    if (!enabled || !token) {
+      socketRef.current?.close();
+      setStatus('idle');
+      return;
+    }
     connect();
     return () => socketRef.current?.close();
-  }, [connect]);
+  }, [connect, enabled, token]);
 
   return { events, status, reconnect: connect };
 }

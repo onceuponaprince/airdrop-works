@@ -2,7 +2,9 @@ import type { PaginatedResponse } from "@/types/api"
 import type { JudgeResult } from "@/types/api"
 
 /** DRF list endpoints return either a paginated object or a bare array. */
-export function unwrapList<T>(payload: PaginatedResponse<T> | T[] | null | undefined): T[] {
+export function unwrapList<T>(
+  payload: PaginatedResponse<T> | T[] | { results: T[] } | null | undefined
+): T[] {
   if (!payload) return []
   if (Array.isArray(payload)) return payload
   if (typeof payload === "object" && "results" in payload && Array.isArray(payload.results)) {
