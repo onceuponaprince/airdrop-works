@@ -24,7 +24,16 @@ from .models import ScoringRubric
 from .serializers import RubricSerializer
 from .persistence import persist_scored_contribution
 from .marketing import score_marketing_copy
+from .rubric_spec import (
+    SPEC_VERSION,
+    SCHEMA_REL_PATH,
+    CHANGELOG_REL_PATH,
+    load_schema_json,
+    list_catalog_rubrics,
+    rubric_to_open_spec,
+)
 from .service import score_contribution
+from django.shortcuts import get_object_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -355,6 +364,54 @@ class JudgeScoreAccountView(APIView):
             content_type="application/x-ndjson; charset=utf-8",
             headers={"Cache-Control": "no-cache, no-transform"},
         )
+
+
+# Open Rubric catalog (Phase 4)
+
+
+class RubricSchemaView(APIView):
+    """GET Open Rubric JSON Schema metadata."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        site = getattr(django_settings, "SITE_URL", "https://airdrop.works").rstrip("/")
+        return Response(
+            {
+                "specVersion": SPEC_VERSION,
+                "schemaUrl": f"{site}/{SCHEMA_REL_PATH}",
+                "repositoryPath": SCHEMA_REL_PATH,
+                "changelogPath": CHANGELOG_REL_PATH,
+                "license": "CC-BY-4.0",
+                "schema": load_schema_json() or None,
+            }
+        )
+
+
+class RubricCatalogView(APIView):
+    """GET list of keyed rubrics in OpenRubric format."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        rubrics = list_catalog_rubrics()
+        items = []
+        for rubric in rubrics:
+            try:
+                items.append(rubric_to_open_spec(rubric))
+            except ValueError:
+                continue
+        return Response({"specVersion": SPEC_VERSION, "rubrics": items, "count": len(items)})
+
+
+class RubricByKeyView(APIView):
+    """GET single rubric by stable key."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request, key: str):
+        rubric = get_object_or_404(ScoringRubric, key=key)
+        return Response(rubric_to_open_spec(rubric))
 
 
 # Rubric API Views (Function 5)
