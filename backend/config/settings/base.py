@@ -182,6 +182,7 @@ REST_FRAMEWORK = {
         "spore_relationship": "30/minute",
         "spore_brief_generate": "20/minute",
         "integrity_wallet": "30/minute",
+        "judge_marketing_demo": "10/minute",
     },
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
