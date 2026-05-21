@@ -12,6 +12,22 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.3.2 - 2026-05-21
+
+### Added
+- `scripts/verify_phase2_gate.sh` and `scripts/phase2_pilot_smoke.sh` for Phase 2 close-out.
+- `docs/PHASE_2_COMPLETE.md` summary.
+
+### Changed
+- CI backend job runs integrity, contributions, rewards, and ai_core test slice.
+- Default smoke scripts use `http://localhost:8001` (Docker compose port).
+
+### Fixed
+- `payout_batch` management command tests use `django_db` and approval fixtures.
+
+### Chore
+- Phase 2 verification checklist signed off; bumped monorepo to `0.3.2`.
+
 ## 0.3.1 - 2026-05-21
 
 ### Added
