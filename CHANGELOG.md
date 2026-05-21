@@ -12,6 +12,24 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.2.5 - 2026-05-21
+
+### Added
+- SIWE wallet login (`useWalletLogin`, `siwe.ts`) and JWT session validation via `AuthGuard` + `WalletSessionSync`.
+- Platform judge persistence: authenticated `POST /judge/score/` upserts `Contribution` rows and awards XP for dashboard history.
+- `docs/PLATFORM_READY.md` and `scripts/bootstrap_platform.sh` for Docker-based app bootstrap.
+
+### Changed
+- App judge, dashboard, quests, and leaderboard call Django APIs with `unwrapList` / camelCase contribution fields.
+- `useAiJudge({ platform: true })` uses `/api/v1/judge/score/` instead of the marketing NDJSON stream.
+
+### Fixed
+- `AdminOverviewView` stats aggregation (camelCase admin metrics).
+- Login page dev-bypass loading state; contribution list pagination on dashboard.
+
+### Chore
+- Bumped monorepo package versions to `0.2.5`.
+
 ## 0.2.4 - 2026-05-21
 
 ### Added
