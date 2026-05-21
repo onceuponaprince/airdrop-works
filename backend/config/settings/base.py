@@ -236,6 +236,12 @@ PAYOUT_SIGNER_MODE = config("PAYOUT_SIGNER_MODE", default="dry-run")
 PAYOUT_SIGNER_PRIVATE_KEY = config("PAYOUT_SIGNER_PRIVATE_KEY", default="")
 WEB3_RPC_URL = config("WEB3_RPC_URL", default="")
 
+CELERY_TASK_ROUTES = {
+    "ai_core.score_contribution": {"queue": "judge"},
+    "rewards.execute_payout_approval": {"queue": "onchain-executor"},
+}
+CELERY_TASK_DEFAULT_QUEUE = "celery"
+
 CELERY_BEAT_SCHEDULE = {
     "crawl-all-active-sources": {
         "task": "contributions.crawl_all_active_sources",

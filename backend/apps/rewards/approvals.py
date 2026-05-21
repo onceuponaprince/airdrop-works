@@ -44,6 +44,26 @@ def ensure_table_exists():
         )
 
 
+def get_latest_approved(batch_id: str | None = None) -> dict | None:
+    """Return latest approved row metadata for dry-run / executor logging."""
+    Approval = _orm_model_available()
+    if Approval:
+        qs = Approval.objects.filter(approved=True).order_by("-approved_at", "-id")
+        if batch_id:
+            qs = qs.filter(batch_id=batch_id)
+        obj = qs.first()
+        if not obj:
+            return None
+        return {
+            "id": obj.id,
+            "batch_id": obj.batch_id,
+            "tx_idempotency_key": obj.tx_idempotency_key,
+            "tx_hash": obj.tx_hash,
+            "executed_at": obj.executed_at.isoformat() if obj.executed_at else None,
+        }
+    return None
+
+
 def has_approved(batch_id: str | None = None) -> bool:
     Approval = _orm_model_available()
     if Approval:
@@ -75,6 +95,8 @@ def create_approval(
     approved_by_id = created_by_id if (approved and created_by_id) else None
 
     if Approval:
+        from apps.rewards.idempotency import payout_idempotency_key
+
         obj = Approval.objects.create(
             batch_id=batch_id,
             approved=approved,
@@ -83,6 +105,9 @@ def create_approval(
             created_by=created_by_id,
             approved_by=approved_by_id,
         )
+        if not obj.tx_idempotency_key:
+            obj.tx_idempotency_key = payout_idempotency_key(obj.id)
+            obj.save(update_fields=["tx_idempotency_key"])
         return obj.id
 
     ensure_table_exists()

@@ -10,9 +10,25 @@ class AirdropPayoutApproval(models.Model):
     approved_by = models.IntegerField(null=True, blank=True)
     approved_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    tx_idempotency_key = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Logical payout key to prevent double-send (payout:{id}:v1).",
+    )
+    tx_hash = models.CharField(max_length=66, blank=True, default="")
+    executed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "rewards_airdrop_payout_approval"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tx_idempotency_key"],
+                condition=~models.Q(tx_idempotency_key=""),
+                name="uniq_payout_idempotency_key",
+            ),
+        ]
 
     def __str__(self) -> str:  # pragma: no cover - trivial
         return f"Approval(id={self.id}, batch_id={self.batch_id}, approved={self.approved})"
