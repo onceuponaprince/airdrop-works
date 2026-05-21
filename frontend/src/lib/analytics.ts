@@ -25,6 +25,15 @@ export const events = {
   aiJudgeDemo: (demoType: "preset" | "custom") =>
     trackEvent("ai_judge_demo", { demo_type: demoType }),
 
+  marketingDemoScore: (source: "preset" | "custom") =>
+    trackEvent("marketing_demo_score", { source }),
+
+  marketingDemoComplete: (compositeScore: number, fatigueRisk: string) =>
+    trackEvent("marketing_demo_complete", { composite_score: compositeScore, fatigue_risk: fatigueRisk }),
+
+  marketingDemoFail: (reason: string) =>
+    trackEvent("marketing_demo_fail", { reason }),
+
   aiJudgeResult: (farmingFlag: string, compositeScore: number) =>
     trackEvent("ai_judge_result", { farming_flag: farmingFlag, composite_score: compositeScore }),
 
