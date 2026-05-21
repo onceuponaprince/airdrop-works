@@ -41,7 +41,7 @@ def register_reward_admins():
 
     for model_name, admin_cls in mapping:
         try:
-            model = django_apps.get_model("apps.rewards", model_name)
+            model = django_apps.get_model("rewards", model_name)
         except LookupError:
             continue
         try:
