@@ -23,6 +23,7 @@ from apps.payments.services import deduct_credit, get_or_create_user_sub
 from .models import ScoringRubric
 from .serializers import RubricSerializer
 from .persistence import persist_scored_contribution
+from .marketing import score_marketing_copy
 from .service import score_contribution
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,10 @@ class JudgeScoreThrottle(ScopedRateThrottle):
     """DRF throttle scope ``judge_score`` for authenticated single-text scoring."""
 
     scope = "judge_score"
+
+
+class JudgeMarketingDemoThrottle(ScopedRateThrottle):
+    scope = "judge_marketing_demo"
 
 
 class JudgeDemoView(APIView):
@@ -70,6 +75,28 @@ class JudgeDemoView(APIView):
             return Response({"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as e:
             logger.error("[JudgeDemo] Unexpected error: %s", e)
+            return Response({"detail": "Scoring temporarily unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+
+class JudgeMarketingDemoView(APIView):
+    """POST marketing copy demo — performance_marketing_v1 rubric."""
+
+    permission_classes = [AllowAny]
+    throttle_classes = [JudgeMarketingDemoThrottle]
+
+    def post(self, request):
+        text = request.data.get("text", "").strip()
+        if not text:
+            return Response({"detail": "text is required"}, status=status.HTTP_400_BAD_REQUEST)
+        if len(text) > 5000:
+            return Response({"detail": "text too long (max 5000 chars)"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            result = score_marketing_copy(text, quota_context={"user": getattr(request, "user", None)})
+            return Response(result)
+        except ValueError as e:
+            return Response({"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        except Exception as e:
+            logger.error("[JudgeMarketingDemo] Unexpected error: %s", e)
             return Response({"detail": "Scoring temporarily unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
