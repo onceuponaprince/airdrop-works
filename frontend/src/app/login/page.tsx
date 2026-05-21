@@ -81,10 +81,31 @@ export default function LoginPage() {
         )}
 
         {(loginError || walletLoginError || authError) && (
-          <div className="rounded border border-[--destructive] bg-[--destructive]/10 p-3">
+          <div className="rounded border border-[--destructive] bg-[--destructive]/10 p-3 space-y-3">
             <p className="text-sm text-[--destructive]">
               {loginError || walletLoginError || authError?.message || 'Authentication failed'}
             </p>
+            <div className="flex flex-wrap gap-2">
+              {canSignIn && (
+                <button
+                  type="button"
+                  onClick={attemptLogin}
+                  disabled={isLoggingIn}
+                  className="px-3 py-1.5 rounded border border-[--primary] text-[--primary] text-xs font-semibold hover:bg-[--primary]/10 disabled:opacity-60"
+                >
+                  Try sign-in again
+                </button>
+              )}
+              {wallet.available && (
+                <button
+                  type="button"
+                  onClick={() => wallet.retryConnect?.() ?? wallet.openConnectModal()}
+                  className="px-3 py-1.5 rounded border border-[--border] text-xs font-semibold hover:bg-[--secondary]"
+                >
+                  Reconnect wallet
+                </button>
+              )}
+            </div>
           </div>
         )}
 

@@ -17,6 +17,11 @@ from decouple import config
 
 DEBUG = False
 
+# Production: heuristic fallback only via explicit env override (emergency/demo).
+JUDGE_HEURISTIC_FALLBACK_ENABLED = config(
+    "JUDGE_HEURISTIC_FALLBACK_ENABLED", default=False, cast=bool
+)
+
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
     default="api.airdrop.works",

@@ -232,6 +232,10 @@ SPORE_AUDIT_RETENTION_DAYS = config("SPORE_AUDIT_RETENTION_DAYS", default=30, ca
 AI_LLM_RATE_PER_MINUTE = config("AI_LLM_RATE_PER_MINUTE", default=30, cast=int)
 AI_LLM_DAILY_LIMIT = config("AI_LLM_DAILY_LIMIT", default=10000, cast=int)
 AI_LLM_WARN_AT_PERCENT = config("AI_LLM_WARN_AT_PERCENT", default=80, cast=int)
+JUDGE_HEURISTIC_FALLBACK_ENABLED = config(
+    "JUDGE_HEURISTIC_FALLBACK_ENABLED", default=False, cast=bool
+)
+
 PAYOUT_SIGNER_MODE = config("PAYOUT_SIGNER_MODE", default="dry-run")
 PAYOUT_SIGNER_PRIVATE_KEY = config("PAYOUT_SIGNER_PRIVATE_KEY", default="")
 WEB3_RPC_URL = config("WEB3_RPC_URL", default="")

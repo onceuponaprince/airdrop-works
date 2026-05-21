@@ -3,6 +3,9 @@ from .base import *  # noqa
 
 DEBUG = True
 
+# Dev: allow heuristic fallback when Anthropic is missing or errors.
+JUDGE_HEURISTIC_FALLBACK_ENABLED = True
+
 # Base hosts + optional extras (ngrok, tunnel URLs, preview deploys).
 # Set EXTRA_ALLOWED_HOSTS=abc123.ngrok-free.app,your-app.vercel.app
 _base_hosts = ["localhost", "127.0.0.1", "0.0.0.0"]

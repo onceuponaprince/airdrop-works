@@ -27,6 +27,14 @@ Purpose: Steps to configure and validate telemetry, error reporting, and alertin
      ```
    - Send test event from frontend by visiting `/debug/sentry` route if implemented, or by invoking the Sentry SDK capture call in the browser console.
 
-5. Post-deploy
+5. Phase 2 metrics to expose (minimum)
+   - Judge: `ai_llm_calls_total{mode="anthropic|heuristic"}`, score latency histogram.
+   - Payments: credits deducted / exhausted counters per user tier.
+   - Crawl: active sources with `last_error`, `contributions.crawl_source_config` success/fail counts.
+   - Celery: queue depth for `judge` and `onchain-executor`.
+   - See panel definitions: `docs/ops/grafana-phase2-panels.md`.
+
+6. Post-deploy
    - Record the first successful rebuild timestamp for leaderboard in the deployment notes.
    - Verify alerts are routed and acknowledged by the on-call.
+   - Confirm `runbooks/alerts/prometheus_leaderboard_alert.yaml` is loaded in staging/prod.

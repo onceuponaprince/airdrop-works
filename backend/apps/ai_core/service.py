@@ -12,6 +12,21 @@ from .types import ScoreResult
 
 logger = logging.getLogger(__name__)
 
+
+class ScoringUnavailableError(Exception):
+    """Raised when LLM scoring fails and heuristic fallback is disabled."""
+
+
+def _heuristic_fallback_enabled() -> bool:
+    return bool(getattr(settings, "JUDGE_HEURISTIC_FALLBACK_ENABLED", False))
+
+
+def _heuristic_or_fail(text: str, custom_instructions: str, scope: str, scope_id: str) -> ScoreResult:
+    if _heuristic_fallback_enabled():
+        record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
+        return score_text_heuristically(text, custom_instructions)
+    raise ScoringUnavailableError("LLM scoring unavailable and heuristic fallback is disabled")
+
 BASE_SCORING_PROMPT = """You are the AI Judge for AI(r)Drop, a Web3 contribution scoring platform.
 
 Evaluate the following Web3 content and score it across three dimensions (0-100 each):
@@ -58,14 +73,12 @@ class AICoreScoringService:
         scope = "user" if user is not None else "tenant" if tenant is not None else "global"
         scope_id = str(getattr(user, "id", getattr(tenant, "id", "default")))
         if not reserve_llm_call(user=user, tenant=tenant):
-            logger.warning("[AICore] LLM budget or rate exceeded - using heuristic fallback")
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            logger.warning("[AICore] LLM budget or rate exceeded")
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
 
         if not settings.ANTHROPIC_API_KEY:
-            logger.warning("[AICore] No ANTHROPIC_API_KEY - using heuristic fallback")
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            logger.warning("[AICore] No ANTHROPIC_API_KEY")
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
 
         import anthropic
 
@@ -80,29 +93,23 @@ class AICoreScoringService:
             )
         except anthropic.AuthenticationError as exc:
             logger.error("[AICore] Anthropic auth failure: %s", exc)
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
         except anthropic.PermissionDeniedError as exc:
             api_msg = str(exc)
             if "credit balance" in api_msg.lower():
                 logger.error("[AICore] Anthropic credits exhausted")
-                record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-                return score_text_heuristically(text, custom_instructions)
-            logger.error("[AICore] Anthropic permission denied: %s", api_msg)
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            else:
+                logger.error("[AICore] Anthropic permission denied: %s", api_msg)
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
         except anthropic.RateLimitError as exc:
             logger.warning("[AICore] Anthropic rate limit hit: %s", exc)
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
         except anthropic.BadRequestError as exc:
             logger.error("[AICore] Anthropic bad request: %s", exc)
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
         except anthropic.APIStatusError as exc:
             logger.error("[AICore] Anthropic API error %s: %s", exc.status_code, exc.message)
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
 
         response_text = message.content[0].text.strip() if message.content else ""
 
@@ -127,8 +134,7 @@ class AICoreScoringService:
             )
         except (KeyError, ValueError, TypeError) as exc:
             logger.error("[AICore] Failed to parse Anthropic response: %s", exc)
-            record_llm_call(scope=scope, scope_id=scope_id, mode="heuristic")
-            return score_text_heuristically(text, custom_instructions)
+            return _heuristic_or_fail(text, custom_instructions, scope, scope_id)
 
     @staticmethod
     def analyze_twitter_sns_data(**kwargs):

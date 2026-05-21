@@ -12,7 +12,9 @@ import { useAccount, useDisconnect, useModal } from "@particle-network/connectki
 import { evmWalletConnectors } from "@particle-network/connectkit/evm"
 import { avalanche, base } from "wagmi/chains"
 import { ParticleWalletContext } from "@/hooks/useParticleWallet"
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
+import { useChainId } from "wagmi"
+import { events } from "@/lib/analytics"
 import { handleWalletError, getFallbackWalletConnectors } from "./walletUtils"
 
 export { handleWalletError, getFallbackWalletConnectors } from "./walletUtils"
@@ -62,8 +64,10 @@ const particleConfig = createConfig({
 
 function ParticleWalletBridge({ children }: { children: React.ReactNode }) {
   const { address, isConnected } = useAccount()
+  const chainId = useChainId()
   const { setOpen } = useModal()
   const { disconnect } = useDisconnect()
+  const trackedConnect = useRef<string | null>(null)
   const [lastError, setLastError] = useState<{
     type: 'error' | 'warning'
     message: string
@@ -89,8 +93,20 @@ function ParticleWalletBridge({ children }: { children: React.ReactNode }) {
   }, [setOpen])
 
   const reportWalletError = useCallback((error: unknown) => {
-    setLastError(handleWalletError(error, retryConnect))
+    const mapped = handleWalletError(error, retryConnect)
+    setLastError(mapped)
+    events.walletConnectError(mapped.message)
   }, [retryConnect])
+
+  useEffect(() => {
+    if (!isConnected || !address) {
+      trackedConnect.current = null
+      return
+    }
+    if (trackedConnect.current === address) return
+    trackedConnect.current = address
+    events.walletConnect(String(chainId || "unknown"))
+  }, [isConnected, address, chainId])
 
   return (
     <ParticleWalletContext.Provider

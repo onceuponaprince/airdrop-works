@@ -31,8 +31,20 @@ export const events = {
   walletConnect: (chain: string) =>
     trackEvent("wallet_connect", { chain }),
 
+  walletConnectError: (reason: string) =>
+    trackEvent("wallet_connect_error", { reason }),
+
+  walletAuthSuccess: (walletAddress: string) =>
+    trackEvent("wallet_auth_success", { wallet_address: walletAddress }),
+
+  walletAuthFail: (reason: string) =>
+    trackEvent("wallet_auth_fail", { reason }),
+
   walletDisconnect: () =>
     trackEvent("wallet_disconnect"),
+
+  lootClaimStarted: (chestId: string, lootType: string) =>
+    trackEvent("loot_claim_started", { chest_id: chestId, loot_type: lootType }),
 
   questViewed: (questId: string, difficulty: string) =>
     trackEvent("quest_viewed", { quest_id: questId, difficulty }),

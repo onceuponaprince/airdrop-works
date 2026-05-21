@@ -70,22 +70,22 @@ docker compose run --rm backend uv run pytest \
 ## Wave 2 — UX, policy, monitoring (parallel)
 
 ### uxPolish
-- [ ] Close top 3 items from `docs/wallet-ux-polish.md` / tickets `001`–`004` (connect errors, claim CTA, gas confirm threshold)
-- [ ] Analytics events for wallet connect success/fail (`frontend/src/lib/analytics.ts`)
+- [x] Close top 3 items from `docs/wallet-ux-polish.md` / tickets `001`–`004` (connect errors, claim CTA, gas confirm threshold)
+- [x] Analytics events for wallet connect success/fail (`frontend/src/lib/analytics.ts`)
 
 **Commit message:** `fix(frontend): wallet UX polish for launch`
 
 ### policyFlags
-- [ ] `JUDGE_HEURISTIC_FALLBACK_ENABLED` (default off in production settings)
-- [ ] Dedicated Celery queue `judge` for `score_contribution_task` + route in `config/celery.py`
-- [ ] Document rollout in `runbooks/judge.md`
+- [x] `JUDGE_HEURISTIC_FALLBACK_ENABLED` (default off in production settings)
+- [x] Dedicated Celery queue `judge` for `score_contribution_task` + route in `config/celery.py`
+- [x] Document rollout in `runbooks/judge.md`
 
 **Commit message:** `feat(judge): heuristic flag + dedicated scoring queue`
 
 ### monitoring
-- [ ] Extend `runbooks/telemetry.md` with judge credit + crawl failure metrics list
-- [ ] Grafana panel spec (markdown) for API credits + `leaderboard.rebuild_all` staleness
-- [ ] Wire existing `runbooks/alerts/prometheus_leaderboard_alert.yaml` into deploy notes
+- [x] Extend `runbooks/telemetry.md` with judge credit + crawl failure metrics list
+- [x] Grafana panel spec (markdown) for API credits + `leaderboard.rebuild_all` staleness
+- [x] Wire existing `runbooks/alerts/prometheus_leaderboard_alert.yaml` into deploy notes
 
 **Commit message:** `docs(ops): phase 2 monitoring panels and alerts`
 
