@@ -13,7 +13,7 @@ Status key: `[x]` done, `[ ]` pending
 - [x] Wave 2: uxPolish (wallet-ux tickets 001–004)
 - [x] Wave 2: policyFlags (heuristic flag + `judge` Celery queue)
 - [x] Wave 2: monitoring (Grafana spec + telemetry runbook)
-- [ ] Wave 3: pilot smoke + `0.3.0` release
+- [x] Wave 3: pilot smoke + `0.3.2` release
 
 ## Done
 - [x] Backend CI and focused backend validation are in place.

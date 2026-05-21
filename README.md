@@ -42,7 +42,7 @@ docker compose exec backend uv run python manage.py seed_demo
 
 # Logged-in app (wallet auth, judge, dashboard): see docs/PLATFORM_READY.md
 # Or: ./scripts/bootstrap_platform.sh
-# Phase 2 prep: docs/PHASE_2_PREP.md · plan: docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md
+# Phase 2: docs/PHASE_2_COMPLETE.md · gate: ./scripts/verify_phase2_gate.sh
 
 # Frontend → http://localhost:3000
 # Backend API → http://localhost:8000
