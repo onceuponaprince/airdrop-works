@@ -47,6 +47,84 @@ class ContributionDetailView(generics.RetrieveAPIView):
         return Contribution.objects.filter(user=self.request.user)
 
 
+def _admin_contribution_queryset(request):
+    qs = Contribution.objects.select_related("user").all()
+
+    platform = request.query_params.get("platform")
+    if platform:
+        qs = qs.filter(platform=platform)
+
+    farming_param = request.query_params.get("is_farming")
+    if farming_param is None:
+        farming_param = request.query_params.get("farming_flag")
+    if farming_param in {"true", "false"}:
+        qs = qs.filter(farming_flag="farming" if farming_param == "true" else "genuine")
+    elif farming_param in {"genuine", "farming", "ambiguous"}:
+        qs = qs.filter(farming_flag=farming_param)
+
+    scored = request.query_params.get("scored")
+    if scored == "true":
+        qs = qs.filter(scored_at__isnull=False)
+    elif scored == "false":
+        qs = qs.filter(scored_at__isnull=True)
+
+    min_score = request.query_params.get("min_score")
+    max_score = request.query_params.get("max_score")
+    if min_score not in {None, ""}:
+        try:
+            min_val = int(min_score)
+            if min_val < 0 or min_val > 100:
+                raise ValueError
+            qs = qs.filter(total_score__gte=min_val)
+        except ValueError:
+            pass
+    if max_score not in {None, ""}:
+        try:
+            max_val = int(max_score)
+            if max_val < 0 or max_val > 100:
+                raise ValueError
+            qs = qs.filter(total_score__lte=max_val)
+        except ValueError:
+            pass
+    if (
+        min_score not in {None, ""}
+        and max_score not in {None, ""}
+    ):
+        try:
+            if int(min_score) > int(max_score):
+                qs = qs.none()
+        except ValueError:
+            pass
+
+    user = request.query_params.get("user")
+    if user:
+        qs = qs.filter(user__wallet_address__icontains=user)
+
+    sort_by = request.query_params.get("sort_by", "-created_at")
+    allowed_sort_fields = {
+        "created_at",
+        "-created_at",
+        "scored_at",
+        "-scored_at",
+        "total_score",
+        "-total_score",
+        "score",
+        "-score",
+        "user__wallet_address",
+        "-user__wallet_address",
+        "xp_awarded",
+        "-xp_awarded",
+    }
+    if sort_by in {"score", "-score"}:
+        sort_by = sort_by.replace("score", "total_score")
+    if sort_by in allowed_sort_fields:
+        qs = qs.order_by(sort_by)
+    else:
+        qs = qs.order_by("-created_at")
+
+    return qs
+
+
 class AdminContributionListView(generics.ListAPIView):
     """Admin list of all contributions with filtering by score and farming flag."""
 
@@ -54,53 +132,15 @@ class AdminContributionListView(generics.ListAPIView):
     permission_classes = [IsAdminUser]
 
     def get_queryset(self):
-        qs = Contribution.objects.select_related("user").all().order_by("-created_at")
+        return _admin_contribution_queryset(self.request)
 
-        platform = self.request.query_params.get("platform")
-        if platform:
-            qs = qs.filter(platform=platform)
 
-        farming_flag = self.request.query_params.get("farming_flag")
-        if farming_flag in {"genuine", "farming", "ambiguous"}:
-            qs = qs.filter(farming_flag=farming_flag)
+class AdminContributionDetailView(generics.RetrieveAPIView):
+    """Admin retrieve for a single contribution."""
 
-        scored = self.request.query_params.get("scored")
-        if scored == "true":
-            qs = qs.filter(scored_at__isnull=False)
-        elif scored == "false":
-            qs = qs.filter(scored_at__isnull=True)
-
-        min_score = self.request.query_params.get("min_score")
-        if min_score not in {None, ""}:
-            qs = qs.filter(total_score__gte=min_score)
-
-        max_score = self.request.query_params.get("max_score")
-        if max_score not in {None, ""}:
-            qs = qs.filter(total_score__lte=max_score)
-
-        user = self.request.query_params.get("user")
-        if user:
-            qs = qs.filter(
-                Q(user__wallet_address__icontains=user)
-                | Q(user__display_name__icontains=user)
-                | Q(user__dynamic_user_id__icontains=user)
-            )
-
-        sort_by = self.request.query_params.get("sort_by", "-created_at")
-        allowed_sort_fields = {
-            "created_at",
-            "-created_at",
-            "scored_at",
-            "-scored_at",
-            "total_score",
-            "-total_score",
-            "xp_awarded",
-            "-xp_awarded",
-        }
-        if sort_by in allowed_sort_fields:
-            qs = qs.order_by(sort_by)
-
-        return qs
+    serializer_class = AdminContributionSerializer
+    permission_classes = [IsAdminUser]
+    queryset = Contribution.objects.select_related("user").all()
 
 
 class CrawlSourceConfigListCreateView(generics.ListCreateAPIView):

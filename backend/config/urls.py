@@ -7,7 +7,12 @@ available at both /health/ (root, for load balancers) and
 from django.contrib import admin
 from django.urls import path, include
 
+from apps.contributions.views import (
+    AdminContributionDetailView,
+    AdminContributionListView,
+)
 from apps.core.views import HealthCheckView
+from apps.quests.views import AdminCampaignDetailView, AdminCampaignListCreateView
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -28,4 +33,25 @@ urlpatterns = [
     path("api/v1/rewards/", include("apps.rewards.urls")),
     path("api/v1/payments/", include("apps.payments.urls")),
     path("api/v1/spore/", include("apps.spore.urls")),
+    path("api/v1/admin/", include("apps.admin.urls")),
+    path(
+        "api/v1/admin/campaigns/",
+        AdminCampaignListCreateView.as_view(),
+        name="admin_campaigns_alias_list",
+    ),
+    path(
+        "api/v1/admin/campaigns/<uuid:pk>/",
+        AdminCampaignDetailView.as_view(),
+        name="admin_campaigns_alias_detail",
+    ),
+    path(
+        "api/v1/admin/contributions/",
+        AdminContributionListView.as_view(),
+        name="admin_contributions_alias_list",
+    ),
+    path(
+        "api/v1/admin/contributions/<uuid:pk>/",
+        AdminContributionDetailView.as_view(),
+        name="admin_contributions_alias_detail",
+    ),
 ]

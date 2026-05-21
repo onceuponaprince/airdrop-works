@@ -5,6 +5,7 @@ urlpatterns = [
     path("", views.ContributionListView.as_view(), name="contribution_list"),
     path("<uuid:pk>/", views.ContributionDetailView.as_view(), name="contribution_detail"),
     path("admin/", views.AdminContributionListView.as_view(), name="admin_contribution_list"),
+    path("admin/<uuid:pk>/", views.AdminContributionDetailView.as_view(), name="admin_contribution_detail"),
     path("sources/", views.CrawlSourceConfigListCreateView.as_view(), name="crawl_source_list_create"),
     path("sources/<uuid:pk>/", views.CrawlSourceConfigDetailView.as_view(), name="crawl_source_detail"),
     path("sources/<uuid:pk>/crawl/", views.CrawlSourceConfigRunView.as_view(), name="crawl_source_run"),
