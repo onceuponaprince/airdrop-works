@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User
+from .models import TwitterConnection, User
 
 
 @admin.register(User)
@@ -26,3 +26,10 @@ class UserAdmin(BaseUserAdmin):
             "fields": ("wallet_address", "username", "password1", "password2"),
         }),
     )
+
+
+@admin.register(TwitterConnection)
+class TwitterConnectionAdmin(admin.ModelAdmin):
+    list_display = ["twitter_username", "user", "watch_enabled", "last_synced_at", "last_error"]
+    search_fields = ["twitter_username", "twitter_user_id", "user__wallet_address"]
+    readonly_fields = ["id", "created_at", "updated_at"]
