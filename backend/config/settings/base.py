@@ -76,6 +76,7 @@ LOCAL_APPS = [
     "apps.payments",
     "apps.spore",
     "apps.admin",
+    "apps.integrity",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
