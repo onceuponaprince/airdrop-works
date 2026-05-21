@@ -12,6 +12,20 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.3.1 - 2026-05-21
+
+### Added
+- `JUDGE_HEURISTIC_FALLBACK_ENABLED` flag (off in production; on in local dev).
+- Wallet auth/connect analytics events and loot gas confirmation dialog (`NEXT_PUBLIC_GAS_CONFIRM_THRESHOLD_USD`).
+- Grafana Phase 2 panel spec (`docs/ops/grafana-phase2-panels.md`).
+
+### Changed
+- Login errors show retry + reconnect actions; loot chests use primary **Claim loot** CTA.
+- Judge runbook documents heuristic flag and `judge` Celery queue.
+
+### Chore
+- Bumped monorepo package versions to `0.3.1`.
+
 ## 0.3.0 - 2026-05-21
 
 ### Added
