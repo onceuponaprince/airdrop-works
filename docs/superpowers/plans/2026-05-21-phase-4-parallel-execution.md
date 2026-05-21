@@ -27,9 +27,9 @@
 ## Wave 1 — Spec + catalog API (parallel)
 
 ### rubricSpec
-- [ ] `schemas/rubric/v1/rubric-spec.schema.json` + `CHANGELOG.md`
-- [ ] Canonical JSON: `contribution_quality_v1`, `performance_marketing_v1`
-- [ ] `rubric_spec.py` export helper + tests
+- [x] `schemas/rubric/v1/rubric-spec.schema.json` + `CHANGELOG.md`
+- [x] Canonical JSON: `contribution_quality_v1`, `performance_marketing_v1`
+- [x] `rubric_spec.py` export helper + tests
 
 **Commit:** `feat(judge): open rubric JSON schema v1`
 
