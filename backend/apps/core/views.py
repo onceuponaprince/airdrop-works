@@ -58,6 +58,20 @@ class AdminOverviewView(APIView):
             distinct_platforms=Count("platform", distinct=True),
         )
 
+        return Response(
+            {
+                "users": users,
+                "contributions": contributions,
+                "scoredContributions": scored,
+                "unscoredContributions": unscored,
+                "activeCrawlSources": active_sources,
+                "farmingContributions": farming_contributions,
+                "totalXpAwarded": aggregate["total_xp_awarded"] or 0,
+                "averageContributionScore": round(aggregate["average_score"] or 0, 2),
+                "trackedPlatforms": aggregate["distinct_platforms"] or 0,
+            }
+        )
+
 
 class DebugSentryView(APIView):
     """Admin-only endpoint to trigger a Sentry test event."""
@@ -74,17 +88,3 @@ class DebugSentryView(APIView):
             return Response({"sent": False, "reason": "sentry-sdk not installed"}, status=500)
         except Exception as exc:  # pragma: no cover - operational
             return Response({"sent": False, "error": str(exc)}, status=500)
-
-        return Response(
-            {
-                "users": users,
-                "contributions": contributions,
-                "scoredContributions": scored,
-                "unscoredContributions": unscored,
-                "activeCrawlSources": active_sources,
-                "farmingContributions": farming_contributions,
-                "totalXpAwarded": aggregate["total_xp_awarded"] or 0,
-                "averageContributionScore": round(aggregate["average_score"] or 0, 2),
-                "trackedPlatforms": aggregate["distinct_platforms"] or 0,
-            }
-        )

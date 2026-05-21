@@ -7,34 +7,32 @@ import { ArrowLeft } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
+import { useWalletLogin } from '@/hooks/useWalletLogin';
 
 export default function LoginPage() {
   const router = useRouter();
   const { isAuthenticated, loading, error: authError } = useWeb3Auth();
   const { login } = useWeb3Auth();
   const wallet = useParticleWallet();
+  const { signIn, isLoggingIn, error: walletLoginError, canSignIn } = useWalletLogin();
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [devLoggingIn, setDevLoggingIn] = useState(false);
 
   const attemptLogin = useCallback(async () => {
-    if (!wallet.address || isLoggingIn) return;
-
-    setIsLoggingIn(true);
+    if (!canSignIn || isLoggingIn) return;
     setLoginError(null);
     try {
-      await login(wallet.address, 'particle-managed', 'particle-managed');
+      await signIn();
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Authentication failed');
-    } finally {
-      setIsLoggingIn(false);
     }
-  }, [wallet.address, login, isLoggingIn]);
+  }, [canSignIn, isLoggingIn, signIn]);
 
   useEffect(() => {
-    if (wallet.address && !isAuthenticated && !isLoggingIn) {
+    if (canSignIn && !isAuthenticated && !isLoggingIn) {
       attemptLogin();
     }
-  }, [wallet.address, isAuthenticated, isLoggingIn, attemptLogin]);
+  }, [canSignIn, isAuthenticated, isLoggingIn, attemptLogin]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -44,14 +42,14 @@ export default function LoginPage() {
 
   // Dev bypass: allow login without wallet in development
   const handleDevLogin = async () => {
-    setIsLoggingIn(true);
+    setDevLoggingIn(true);
     setLoginError(null);
     try {
       await login('0x0000000000000000000000000000000000000000', 'dev-bypass', 'dev-bypass');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Dev login failed');
     } finally {
-      setIsLoggingIn(false);
+      setDevLoggingIn(false);
     }
   };
 
@@ -82,12 +80,22 @@ export default function LoginPage() {
           </p>
         )}
 
-        {(loginError || authError) && (
+        {(loginError || walletLoginError || authError) && (
           <div className="rounded border border-[--destructive] bg-[--destructive]/10 p-3">
             <p className="text-sm text-[--destructive]">
-              {loginError || authError?.message || 'Authentication failed'}
+              {loginError || walletLoginError || authError?.message || 'Authentication failed'}
             </p>
           </div>
+        )}
+
+        {canSignIn && !isAuthenticated && !isLoggingIn && (
+          <button
+            type="button"
+            onClick={attemptLogin}
+            className="w-full px-4 py-2 rounded border border-[--primary] text-[--primary] text-sm font-medium hover:bg-[--primary]/10 transition-colors"
+          >
+            Sign message to continue
+          </button>
         )}
 
         {process.env.NODE_ENV === 'development' && !wallet.available && (
@@ -97,10 +105,10 @@ export default function LoginPage() {
             </p>
             <button
               onClick={handleDevLogin}
-              disabled={isLoggingIn}
+              disabled={devLoggingIn || isLoggingIn}
               className="px-4 py-2 rounded border border-[--primary] text-[--primary] text-sm font-medium hover:bg-[--primary] hover:text-[--primary-foreground] transition-colors disabled:opacity-50"
             >
-              {isLoggingIn ? 'Logging in...' : 'Dev Login (no wallet)'}
+              {devLoggingIn ? 'Logging in...' : 'Dev Login (no wallet)'}
             </button>
           </div>
         )}

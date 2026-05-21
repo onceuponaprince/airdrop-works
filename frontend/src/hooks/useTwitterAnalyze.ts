@@ -17,6 +17,7 @@
 import { useState, useCallback } from 'react';
 import type { TweetScore, AccountAnalysis } from '@/types/api';
 import { useNotificationStore } from '@/stores/useNotificationStore';
+import { api } from '@/lib/api';
 
 interface TwitterAnalyzeState {
   status: 'idle' | 'fetching' | 'scoring' | 'complete' | 'error';
@@ -57,17 +58,22 @@ export function useTwitterAnalyze() {
     }));
 
     try {
-      const res = await fetch('/api/twitter-analyze', {
+      const token = localStorage.getItem('auth_token');
+      if (!token) throw new Error('Sign in to analyze accounts.');
+      api.setToken(token);
+
+      const res = await fetch('/api/v1/judge/score-account/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ username: handle }),
       });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.detail || `Analysis failed (${res.status})`);
+        throw new Error((err as { detail?: string }).detail || `Analysis failed (${res.status})`);
       }
 
       const reader = res.body?.getReader();

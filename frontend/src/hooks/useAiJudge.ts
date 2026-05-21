@@ -7,6 +7,7 @@
 import { useCallback, useRef, useState } from "react"
 import type { JudgeResult } from "@/types/api"
 import { events } from "@/lib/analytics"
+import { api, mapJudgeResult } from "@/lib/api"
 import { useNotificationStore } from "@/stores/useNotificationStore"
 
 interface LiveScore {
@@ -42,8 +43,20 @@ function liveScoreToCanonical(live: LiveScore | null): AiJudgeScores {
   }
 }
 
+type UseAiJudgeOptions = {
+  onScoreUpdate?: (scoreType: string, value: number) => void
+  /** When true, uses authenticated Django `/judge/score/` (credits + persistence). */
+  platform?: boolean
+}
+
 /** Returns judge state, `score(text)` (streaming), and `reset`; fires analytics and toast notifications on completion/error. */
-export function useAiJudge(onScoreUpdate?: (scoreType: string, value: number) => void) {
+export function useAiJudge(onScoreUpdateOrOptions?: UseAiJudgeOptions["onScoreUpdate"] | UseAiJudgeOptions) {
+  const options: UseAiJudgeOptions =
+    typeof onScoreUpdateOrOptions === "function"
+      ? { onScoreUpdate: onScoreUpdateOrOptions }
+      : (onScoreUpdateOrOptions ?? {})
+  const onScoreUpdate = options.onScoreUpdate
+  const platform = options.platform ?? false
   const notify = useNotificationStore((s) => s.push)
   const abortControllerRef = useRef<AbortController | null>(null)
   const [state, setState] = useState<AiJudgeState>({
@@ -189,25 +202,56 @@ export function useAiJudge(onScoreUpdate?: (scoreType: string, value: number) =>
     abortControllerRef.current = abortController
 
     setState({ status: "scoring", phase: null, result: null, liveScore: null, error: null })
-    events.aiJudgeDemo("custom")
+    if (!platform) events.aiJudgeDemo("custom")
 
     try {
-      const res = await fetch("/api/judge", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-        signal: abortController.signal,
-      })
+      let result: JudgeResult
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
-        throw new Error(err.error || `Scoring failed (${res.status})`)
+      if (platform) {
+        const token = localStorage.getItem("auth_token")
+        if (!token) throw new Error("Sign in to score contributions.")
+        api.setToken(token)
+
+        const raw = await api.post<Record<string, unknown>>("/judge/score/", { text })
+        result = mapJudgeResult(raw)
+
+        const steps: Array<["teaching_value" | "originality" | "community_impact", number]> = [
+          ["teaching_value", result.teachingValue],
+          ["originality", result.originality],
+          ["community_impact", result.communityImpact],
+        ]
+        for (const [key, value] of steps) {
+          if (abortController.signal.aborted) return
+          setState((prev) => ({
+            ...prev,
+            liveScore: {
+              teachingValue: key === "teaching_value" ? value : prev.liveScore?.teachingValue ?? 0,
+              originality: key === "originality" ? value : prev.liveScore?.originality ?? 0,
+              communityImpact:
+                key === "community_impact" ? value : prev.liveScore?.communityImpact ?? 0,
+            },
+          }))
+          onScoreUpdate?.(key, value)
+          await new Promise((r) => setTimeout(r, 280))
+        }
+      } else {
+        const res = await fetch("/api/judge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+          signal: abortController.signal,
+        })
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error((err as { error?: string }).error || `Scoring failed (${res.status})`)
+        }
+
+        result = await parseStream(res, abortController.signal)
       }
 
-      const result = await parseStream(res, abortController.signal)
-
       setState({ status: "complete", phase: null, result, liveScore: null, error: null })
-      events.aiJudgeResult(result.farmingFlag, result.compositeScore)
+      if (!platform) events.aiJudgeResult(result.farmingFlag, result.compositeScore)
       notify({
         type: "success",
         title: "Judge score complete",

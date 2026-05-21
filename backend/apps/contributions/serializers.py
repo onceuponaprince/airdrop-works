@@ -5,13 +5,37 @@ from .models import Contribution, CrawlSourceConfig
 
 
 class ContributionSerializer(serializers.ModelSerializer):
+    """User-facing contribution rows (camelCase for frontend contract)."""
+
+    contentText = serializers.CharField(source="content_text", read_only=True)
+    contentUrl = serializers.URLField(source="content_url", read_only=True)
+    teachingValue = serializers.IntegerField(source="teaching_value", read_only=True)
+    communityImpact = serializers.IntegerField(source="community_impact", read_only=True)
+    totalScore = serializers.IntegerField(source="total_score", read_only=True)
+    farmingFlag = serializers.CharField(source="farming_flag", read_only=True)
+    farmingExplanation = serializers.CharField(source="farming_explanation", read_only=True)
+    dimensionExplanations = serializers.JSONField(source="dimension_explanations", read_only=True)
+    xpAwarded = serializers.IntegerField(source="xp_awarded", read_only=True)
+    scoredAt = serializers.DateTimeField(source="scored_at", read_only=True)
+    createdAt = serializers.DateTimeField(source="created_at", read_only=True)
+
     class Meta:
         model = Contribution
         fields = [
-            "id", "platform", "content_text", "content_url",
-            "teaching_value", "originality", "community_impact",
-            "total_score", "farming_flag", "farming_explanation",
-            "dimension_explanations", "xp_awarded", "scored_at", "created_at",
+            "id",
+            "platform",
+            "contentText",
+            "contentUrl",
+            "teachingValue",
+            "originality",
+            "communityImpact",
+            "totalScore",
+            "farmingFlag",
+            "farmingExplanation",
+            "dimensionExplanations",
+            "xpAwarded",
+            "scoredAt",
+            "createdAt",
         ]
         read_only_fields = fields
 

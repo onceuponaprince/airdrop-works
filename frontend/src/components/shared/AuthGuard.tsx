@@ -8,23 +8,47 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { api } from '@/lib/api';
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  // Use a callback ref pattern to avoid the "setState in effect" lint rule.
-  // We read localStorage synchronously on mount — no external subscription needed.
-  const [checked] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return !!localStorage.getItem('auth_token');
-  });
+  const [status, setStatus] = useState<'checking' | 'ok' | 'denied'>('checking');
 
   useEffect(() => {
-    if (!checked) {
+    let cancelled = false;
+
+    async function verify() {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        if (!cancelled) setStatus('denied');
+        return;
+      }
+
+      api.setToken(token);
+      try {
+        await api.get('/auth/me/');
+        if (!cancelled) setStatus('ok');
+      } catch {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('refresh_token');
+        api.setToken(null);
+        if (!cancelled) setStatus('denied');
+      }
+    }
+
+    verify();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (status === 'denied') {
       router.replace('/login');
     }
-  }, [checked, router]);
+  }, [status, router]);
 
-  if (!checked) {
+  if (status !== 'ok') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[--background]">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-[--primary] border-t-transparent" />

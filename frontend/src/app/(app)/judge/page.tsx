@@ -28,7 +28,7 @@ export default function JudgePage() {
   const [twitterHandle, setTwitterHandle] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
-  const { status, result, liveScore, error, score, reset } = useAiJudge();
+  const { status, result, liveScore, error, score, reset } = useAiJudge({ platform: true });
   const twitter = useTwitterAnalyze();
   const { credits, plan, loading: creditsLoading, refresh: refreshCredits } = useCredits();
 

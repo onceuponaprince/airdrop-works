@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework.exceptions import ValidationError
 
+from apps.contributions.models import Contribution
 from apps.judge.models import ScoringRubric
 
 
@@ -77,6 +78,40 @@ def test_judge_score_requires_auth_and_returns_credits(mock_deduct_credit, mock_
     args, kwargs = mock_score_contribution.call_args
     assert args == ("Score this text",)
     assert kwargs["quota_context"]["user"] == user
+
+
+@pytest.mark.django_db
+@patch("apps.judge.views.score_contribution")
+@patch("apps.judge.views.deduct_credit")
+def test_judge_score_persists_contribution(mock_deduct_credit, mock_score_contribution):
+    mock_deduct_credit.return_value = 9
+    mock_score_contribution.return_value = {
+        "teaching_value": 70,
+        "originality": 65,
+        "community_impact": 75,
+        "composite_score": 70,
+        "farming_flag": "genuine",
+        "farming_explanation": "Solid write-up.",
+        "dimension_explanations": {"teaching_value": "Clear"},
+    }
+
+    user_model = get_user_model()
+    user = user_model.objects.create_user(
+        wallet_address="0x6666666666666666666666666666666666666666",
+        username="judge-persist-user",
+    )
+
+    client = APIClient()
+    client.force_authenticate(user=user)
+
+    response = client.post(reverse("judge_score"), {"text": "Persist me"}, format="json")
+
+    assert response.status_code == 200
+    assert response.json()["contribution_id"]
+    contribution = Contribution.objects.get(user=user)
+    assert contribution.total_score == 70
+    assert contribution.xp_awarded == 70
+    assert contribution.scored_at is not None
 
 
 @pytest.mark.django_db

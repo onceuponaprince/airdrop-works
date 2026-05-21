@@ -167,4 +167,10 @@ class ApiClient {
 
 /** Shared app-wide API client; call `hydrateFromStorage` at startup in the browser. */
 export const api = new ApiClient()
+
+if (typeof window !== "undefined") {
+  api.hydrateFromStorage()
+}
+
 export { ApiError }
+export { unwrapList, mapJudgeResult, mapContribution } from "./apiHelpers"
