@@ -55,40 +55,44 @@ def has_approved(batch_id: str | None = None) -> bool:
     ensure_table_exists()
     with connection.cursor() as c:
         if batch_id:
-            c.execute(f"SELECT 1 FROM {TABLE_NAME} WHERE approved IS TRUE AND batch_id = %s LIMIT 1", [batch_id])
+            c.execute(
+                f"SELECT 1 FROM {TABLE_NAME} WHERE approved IS TRUE AND batch_id = %s LIMIT 1",
+                [batch_id],
+            )
         else:
             c.execute(f"SELECT 1 FROM {TABLE_NAME} WHERE approved IS TRUE LIMIT 1")
         return c.fetchone() is not None
 
 
-def create_approval(batch_id: str | None = None, approved: bool = True, notes: str = "", created_by_id: int | None = None) -> int:
+def create_approval(
+    batch_id: str | None = None,
+    approved: bool = True,
+    notes: str = "",
+    created_by_id: int | None = None,
+) -> int:
     Approval = _orm_model_available()
-    if Approval:
-        approved_at = timezone.now() if approved else None
-        obj = Approval.objects.create(
-            batch_id=batch_id, approved=approved, approved_at=approved_at, notes=notes
-        )
-        # Optionally set created_by/approved_by if ids provided (do not error if not)
-        if created_by_id:
-            try:
-                from django.contrib.auth import get_user_model
+    approved_at = timezone.now() if approved else None
+    approved_by_id = created_by_id if (approved and created_by_id) else None
 
-                User = get_user_model()
-                user = User.objects.filter(id=created_by_id).first()
-                if user:
-                    obj.created_by = user
-                    if approved:
-                        obj.approved_by = user
-                    obj.save()
-            except Exception:
-                pass
+    if Approval:
+        obj = Approval.objects.create(
+            batch_id=batch_id,
+            approved=approved,
+            approved_at=approved_at,
+            notes=notes,
+            created_by=created_by_id,
+            approved_by=approved_by_id,
+        )
         return obj.id
 
     ensure_table_exists()
     with connection.cursor() as c:
-        approved_at = timezone.now() if approved else None
         c.execute(
-            f"INSERT INTO {TABLE_NAME} (batch_id, approved, approved_at, notes) VALUES (%s, %s, %s, %s) RETURNING id",
-            [batch_id, approved, approved_at, notes],
+            f"""
+            INSERT INTO {TABLE_NAME} (batch_id, approved, approved_at, notes, created_by, approved_by)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            [batch_id, approved, approved_at, notes, created_by_id, approved_by_id],
         )
         return c.fetchone()[0]
