@@ -402,6 +402,8 @@ Diamond Pattern (EIP-2535) maintained. Deploy via Hardhat/Foundry. Existing depl
 
 ## Design System (from creative-direction.md)
 
+**Figma ↔ code:** Designers use [`docs/figma-variables.md`](docs/figma-variables.md) (variable collection spec). Implementers follow [`.cursor/rules/figma-design-system.mdc`](.cursor/rules/figma-design-system.mdc) (Cursor Figma MCP rules). Code tokens: `frontend/src/app/globals.css`, `frontend/src/styles/theme.ts`, `frontend/src/lib/constants.ts`.
+
 ### CSS Variables
 ```css
 @layer base {
