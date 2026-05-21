@@ -22,6 +22,7 @@ export interface WalletContext {
   }
   // retry / reconnect helper exposed to UI
   retryConnect?: () => void;
+  reportWalletError?: (error: unknown) => void;
 }
 
 const defaultWalletContext: WalletContext = {
@@ -32,6 +33,7 @@ const defaultWalletContext: WalletContext = {
   disconnect: () => {},
   lastError: undefined,
   retryConnect: undefined,
+  reportWalletError: undefined,
 };
 
 export const ParticleWalletContext =
