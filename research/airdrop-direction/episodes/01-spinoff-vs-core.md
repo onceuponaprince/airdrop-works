@@ -136,4 +136,4 @@ Shipped in `../pilot.html`:
 
 ## Decisions triggered
 
-None from synthesis alone. ADRs land when implementation commits (e.g. rubric pack split, separate marketing subdomain).
+- **ADR 001** — `../decisions/001-sequenced-roadmap.md`: Phases 1–5 (core improvements → Sybil/anti-bot → marketing judge → open-source rubric/data coop → portable reputation network). Accepted 2026-05-21.

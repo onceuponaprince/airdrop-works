@@ -2,6 +2,8 @@
 
 **Status: Episode 1 complete — synthesis in `episodes/01-spinoff-vs-core.md`, pilot at `pilot.html`.**
 
+**Roadmap (accepted):** `decisions/001-sequenced-roadmap.md` — Phases 1–3 (core → Sybil/anti-bot → marketing), then Phases 4–5 (open-source rubric/coop → portable reputation network).
+
 ## What this is
 
 Prince is deciding where to take **airdrop-works** after building an AI Judge that scores Web3 contributions (quality dimensions + farming/abuse flags). Two spin-off ideas are on the table: **(A)** a reputation layer that stops scalpers, bots, and farmers; **(B)** a marketing tool that uses AI to judge creatives and maximise spend. This thread tests which direction earns the next twelve months of effort — and whether both can coexist as wedges on one engine.

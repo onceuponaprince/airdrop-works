@@ -1,7 +1,11 @@
 # Decisions — architecture choices from the research
 
-ADRs land here only when a **real build** forces a choice (e.g. separate `ScoringRubric` namespace for MarTech, subdomain split, delete quests subsystem).
+ADRs land here when a **real build or founder commitment** forces a durable choice.
 
-Synthesis recommendations are **not** ADRs.
+| ADR | Title | Status |
+|-----|-------|--------|
+| 001 | Sequenced product roadmap (Phases 1–5) | Accepted |
+
+Synthesis-only recommendations stay in episode files unless promoted to an ADR.
 
 Shape: `NNN-short-slug.md` with Context, Decision, Alternatives, Consequences, Source, Revisit trigger.
