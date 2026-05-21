@@ -22,6 +22,7 @@ from apps.ai_core.heuristics import score_text_heuristically
 from apps.payments.services import deduct_credit, get_or_create_user_sub
 from .models import ScoringRubric
 from .serializers import RubricSerializer
+from .persistence import persist_scored_contribution
 from .service import score_contribution
 
 logger = logging.getLogger(__name__)
@@ -91,14 +92,21 @@ class JudgeScoreView(APIView):
             detail = exc.detail if isinstance(exc.detail, dict) else {"detail": str(exc.detail)}
             remaining = detail.get("credits_remaining", 0)
             result = score_text_heuristically(text)
-        try:
-            result["credits_remaining"] = remaining
-            return Response(result)
         except ValueError as e:
             return Response({"detail": str(e)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except Exception as e:
             logger.error("[JudgeScore] Unexpected error: %s", e)
             return Response({"detail": "Scoring temporarily unavailable"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        try:
+            contribution_id = persist_scored_contribution(request.user, text, result)
+            if contribution_id:
+                result["contribution_id"] = contribution_id
+        except Exception as e:
+            logger.warning("[JudgeScore] Failed to persist contribution: %s", e)
+
+        result["credits_remaining"] = remaining
+        return Response(result)
 
 
 def _ndjson_line(obj: dict) -> str:
