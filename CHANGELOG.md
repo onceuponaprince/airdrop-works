@@ -12,6 +12,20 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.5.1 - 2026-05-21
+
+### Added
+- Twitter OAuth login/link, timeline watch (Celery), WebSocket live feed, lexicon sentiment on ingest.
+- `tools/rubric-eval` harness unchanged; see `docs/TWITTER_WATCH.md`.
+- Playwright `twitter-watch` e2e journey.
+
+### Changed
+- Docker dev backend uses Daphne for WebSocket support.
+- WagmiProvider wraps ConnectKit so wallet hooks work during static export.
+
+### Chore
+- Release **0.5.1** after [PR #18](https://github.com/onceuponaprince/airdrop-works/pull/18).
+
 ## 0.5.0 - 2026-05-21
 
 ### Added
