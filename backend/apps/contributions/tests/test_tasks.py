@@ -66,3 +66,20 @@ class CrawlSourceConfigTaskTests(TestCase):
         crawl_reddit_mock.assert_called_once_with(subreddit="python", before_fullname=None)
         record_reddit_item_mock.assert_called_once()
         score_delay_mock.assert_called_once()
+
+    @patch("apps.contributions.tasks.crawl_reddit")
+    def test_crawl_failure_records_last_error(self, crawl_reddit_mock):
+        source = CrawlSourceConfig.objects.create(
+            user=self.user,
+            platform="reddit",
+            source_key="failsub",
+            is_active=True,
+        )
+        crawl_reddit_mock.side_effect = RuntimeError("reddit rate limited")
+
+        with self.assertRaises(RuntimeError):
+            crawl_source_config_task.run(source_config_id=str(source.id))
+
+        source.refresh_from_db()
+        self.assertIn("reddit rate limited", source.last_error)
+        self.assertEqual(source.metadata.get("last_status"), "failed")
