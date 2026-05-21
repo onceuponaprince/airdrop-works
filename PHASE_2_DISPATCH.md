@@ -1,10 +1,13 @@
 Phase 2 Dispatch — airdrop-works
 
-Date: 2026-05-10
+Date: 2026-05-21 (updated)  
 Owner: @you (assign as needed)
 
+**Canonical plan:** [`docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md`](docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md)  
+**Prep:** [`docs/PHASE_2_PREP.md`](docs/PHASE_2_PREP.md) · **Verification:** [`docs/PHASE_2_VERIFICATION.md`](docs/PHASE_2_VERIFICATION.md)
+
 Goal
-- Move from Phase 1 (campaigns, judge, leaderboard, wallet) into Phase 2: growth, automation, and UX polish for launch.
+- Move from 0.2.5 platform-ready app into Phase 2: **automated crawl→score**, **B2B integrity export**, **onchain payout boundary**, and launch UX/monitoring.
 
 Top priorities
 1. Integration tests + CI

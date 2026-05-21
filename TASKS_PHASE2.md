@@ -1,6 +1,18 @@
 # Phase 2 Execution Tasks
 
+**Parallel plan:** [`docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md`](docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md)  
+**Prep checklist:** [`docs/PHASE_2_PREP.md`](docs/PHASE_2_PREP.md)
+
 This file captures concrete steps to complete the remaining Phase 2 items and the "Beyond Phase 2" decisions. Assign owners, mark progress, and update this file as tasks complete.
+
+## Wave map (2026-05-21)
+
+| Wave | Lanes | Gate |
+|------|-------|------|
+| 0 | verifySvc | `verify_phase1` + `verify_phase2` + platform smoke |
+| 1 | ingestOps, integrityApi, onchainBoundary | pytest contributions + rewards |
+| 2 | uxPolish, policyFlags, monitoring | pnpm build + judge tests |
+| 3 | verifySvc, e2ePilot | full pytest slice + `0.3.0` bump |
 
 ## Remaining Phase 2
 

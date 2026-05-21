@@ -23,7 +23,7 @@ AI(r)Drop is a gamified airdrop scoring platform that uses an AI Judge (powered 
 | Backend | Django 5 + DRF + Celery + Redis |
 | Database | PostgreSQL 16 + Redis 7 + Neo4j 5 (optional) |
 | AI | Anthropic Claude API (scoring + content generation) |
-| Web3 Auth | Dynamic.xyz + wagmi + viem |
+| Web3 Auth | Particle ConnectKit + SIWE → Django JWT + wagmi |
 | Smart Contracts | EVM Diamond Pattern (EIP-2535) on Avalanche + Base |
 | Deployment | Docker Compose (full-stack) or Vercel + Docker |
 
@@ -42,6 +42,7 @@ docker compose exec backend uv run python manage.py seed_demo
 
 # Logged-in app (wallet auth, judge, dashboard): see docs/PLATFORM_READY.md
 # Or: ./scripts/bootstrap_platform.sh
+# Phase 2 prep: docs/PHASE_2_PREP.md · plan: docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md
 
 # Frontend → http://localhost:3000
 # Backend API → http://localhost:8000

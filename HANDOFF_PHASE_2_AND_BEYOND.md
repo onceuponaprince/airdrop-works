@@ -1,7 +1,9 @@
 # airdrop-works Phase 2 and Beyond Handoff
 
-**Date:** 2026-05-11  
+**Date:** 2026-05-11 (legacy) · **Updated plan:** 2026-05-21  
 **Scope:** Phase 2 implementation status, validation results, and the cleanest path into the next workstream
+
+> **Start here for new work:** [`docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md`](docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md) and [`docs/PHASE_2_PREP.md`](docs/PHASE_2_PREP.md) (post–0.2.5 platform-ready baseline).
 
 ## Executive Summary
 
