@@ -40,6 +40,9 @@ docker compose up --build
 # 3. Seed demo data
 docker compose exec backend uv run python manage.py seed_demo
 
+# Logged-in app (wallet auth, judge, dashboard): see docs/PLATFORM_READY.md
+# Or: ./scripts/bootstrap_platform.sh
+
 # Frontend → http://localhost:3000
 # Backend API → http://localhost:8000
 # Health check → http://localhost:8000/api/v1/health/
