@@ -12,6 +12,18 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.2.3 - 2026-05-21
+
+### Added
+- Figma variable collection spec (`docs/figma-variables.md`) for landing refresh and marketing↔app parity.
+- Cursor Figma MCP design system rules (`.cursor/rules/figma-design-system.mdc`).
+
+### Changed
+- `CLAUDE.md` links designers and implementers to the Figma handoff docs.
+
+### Chore
+- Bumped monorepo package versions to `0.2.3`.
+
 ## 0.2.2 - 2026-05-21
 
 ### Added
