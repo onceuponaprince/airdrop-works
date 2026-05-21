@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/animations';
 import { QuestCard } from '@/components/app/QuestCard';
-import { api } from '@/lib/api';
+import { api, unwrapList } from '@/lib/api';
 import type { Quest } from '@/types/api';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 
@@ -23,7 +23,8 @@ export default function QuestsPage() {
       const token = localStorage.getItem('auth_token');
       if (token) api.setToken(token);
       const qs = difficultyFilter === 'ALL' ? '' : `?difficulty=${difficultyFilter}`;
-      return api.get<Quest[]>(`/quests/${qs}`);
+      const data = await api.get<Quest[] | { results: Quest[] }>(`/quests/${qs}`);
+      return unwrapList(data);
     },
   });
 

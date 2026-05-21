@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/animations';
-import { api } from '@/lib/api';
+import { api, unwrapList } from '@/lib/api';
 
 type LeaderboardScope = 'global' | 'educator' | 'builder' | 'creator' | 'scout' | 'diplomat';
 
@@ -58,7 +58,8 @@ export default function LeaderboardPage() {
       const path = scope === 'global'
         ? '/leaderboard/global/'
         : `/leaderboard/branch/${scope}/`;
-      return api.get<LeaderboardRow[]>(path);
+      const data = await api.get<LeaderboardRow[] | { results: LeaderboardRow[] }>(path);
+      return unwrapList(data);
     },
     staleTime: 30_000,
     gcTime: 5 * 60_000,

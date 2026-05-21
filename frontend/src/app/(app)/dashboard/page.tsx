@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { CreditCard, History, Settings, TrendingUp, ExternalLink } from 'lucide-react';
 import { staggerContainer, staggerItem } from '@/lib/animations';
-import { api } from '@/lib/api';
+import { api, mapContribution, unwrapList } from '@/lib/api';
 import { useCredits } from '@/hooks/useCredits';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
@@ -55,7 +55,11 @@ export default function DashboardPage() {
       const token = localStorage.getItem('auth_token');
       if (!token) return { count: 0, results: [], next: null, previous: null };
       api.setToken(token);
-      return api.get<PaginatedResponse<Contribution>>('/contributions/?page_size=10');
+      const data = await api.get<PaginatedResponse<Record<string, unknown>> | Record<string, unknown>[]>(
+        '/contributions/?page_size=10'
+      );
+      const rows = unwrapList(data).map((row) => mapContribution(row) as Contribution);
+      return { count: rows.length, results: rows, next: null, previous: null };
     },
   });
 
