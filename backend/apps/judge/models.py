@@ -18,6 +18,14 @@ class ScoringRubric(BaseModel):
         help_text="Additional instructions appended to the base AI Judge prompt.",
     )
     is_default = models.BooleanField(default=False)
+    quest = models.ForeignKey(
+        "quests.Quest",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="scoring_rubrics",
+        help_text="Optional campaign/quest this rubric applies to.",
+    )
 
     class Meta:
         db_table = "scoring_rubrics"

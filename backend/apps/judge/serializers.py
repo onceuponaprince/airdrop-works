@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from apps.quests.models import Quest
 from .models import ScoringRubric, JudgeCache
 
 
@@ -25,6 +26,8 @@ class RubricSerializer(serializers.ModelSerializer):
     )
     isDefault = serializers.BooleanField(
         source="is_default",
+        required=False,
+        default=False,
         help_text="Mark as default rubric for new scoring",
     )
     customInstructions = serializers.CharField(
@@ -32,13 +35,20 @@ class RubricSerializer(serializers.ModelSerializer):
         required=False,
         allow_blank=True,
     )
-    
+    questId = serializers.PrimaryKeyRelatedField(
+        source="quest",
+        queryset=Quest.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = ScoringRubric
         fields = [
             "id",
             "name",
             "description",
+            "questId",
             "teachingValueWeight",
             "originalityWeight",
             "communityImpactWeight",
@@ -48,7 +58,7 @@ class RubricSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
-    
+
     def validate(self, data):
         """Validate that weights are valid and sum to approximately 1.0."""
         teaching = data.get("teaching_value_weight", 0)
@@ -65,8 +75,7 @@ class RubricSerializer(serializers.ModelSerializer):
         # Check sum is approximately 1.0 (with 0.01 tolerance for floating point)
         weight_sum = teaching + originality + community
         if abs(weight_sum - 1.0) > 0.01:
-            # Non-blocking warning: log but don't fail
-            self.context.setdefault('warnings', []).append(
+            self._weight_warning = (
                 f"Weights sum to {weight_sum:.3f}, not 1.0. Scores may be skewed."
             )
 
@@ -75,9 +84,15 @@ class RubricSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         """Convert model fields to camelCase for API response."""
         data = super().to_representation(instance)
-        data['weightSum'] = (
-            instance.teaching_value_weight +
-            instance.originality_weight +
-            instance.community_impact_weight
+        data.pop("campaignId", None)
+        data["weightSum"] = (
+            instance.teaching_value_weight
+            + instance.originality_weight
+            + instance.community_impact_weight
         )
+        if instance.quest_id:
+            data["campaignId"] = str(instance.quest_id)
+        weight_warning = getattr(self, "_weight_warning", None)
+        if weight_warning:
+            data["warning"] = weight_warning
         return data
