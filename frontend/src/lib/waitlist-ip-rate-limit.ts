@@ -1,8 +1,8 @@
 import { createClient } from "redis"
 
-const WINDOW_SEC = 86_400
-const MAX_REQUESTS = 3
-const KEY_PREFIX = "waitlist:ip:"
+const DEFAULT_WINDOW_SEC = 86_400
+const DEFAULT_MAX_REQUESTS = 3
+const DEFAULT_KEY_PREFIX = "waitlist:ip:"
 
 type MemEntry = { count: number; resetAt: number }
 const memoryBuckets = new Map<string, MemEntry>()
@@ -44,28 +44,51 @@ async function getRedisClient(): Promise<RedisCli | null> {
   return redisConnectPromise
 }
 
-function checkMemory(ip: string): boolean {
+function checkMemory(key: string, windowSec: number, maxRequests: number): boolean {
   const now = Date.now()
-  const entry = memoryBuckets.get(ip)
+  const entry = memoryBuckets.get(key)
   if (!entry || now > entry.resetAt) {
-    memoryBuckets.set(ip, { count: 1, resetAt: now + WINDOW_SEC * 1000 })
+    memoryBuckets.set(key, { count: 1, resetAt: now + windowSec * 1000 })
     return true
   }
-  if (entry.count >= MAX_REQUESTS) return false
+  if (entry.count >= maxRequests) return false
   entry.count++
   return true
 }
 
-/** Returns false when IP exceeded MAX_REQUESTS signups in WINDOW_SEC. */
-export async function checkWaitlistIpRateLimit(ip: string): Promise<boolean> {
+type RateLimitOptions = {
+  windowSec: number
+  maxRequests: number
+  keyPrefix: string
+}
+
+async function checkIpRateLimit(ip: string, opts: RateLimitOptions): Promise<boolean> {
   const client = await getRedisClient()
-  const key = KEY_PREFIX + ip
+  const key = opts.keyPrefix + ip
 
   if (client?.isReady) {
     const count = await client.incr(key)
-    if (count === 1) await client.expire(key, WINDOW_SEC)
-    return count <= MAX_REQUESTS
+    if (count === 1) await client.expire(key, opts.windowSec)
+    return count <= opts.maxRequests
   }
 
-  return checkMemory(ip)
+  return checkMemory(key, opts.windowSec, opts.maxRequests)
+}
+
+/** Returns false when IP exceeded DEFAULT_MAX_REQUESTS signups in DEFAULT_WINDOW_SEC. */
+export async function checkWaitlistIpRateLimit(ip: string): Promise<boolean> {
+  return checkIpRateLimit(ip, {
+    windowSec: DEFAULT_WINDOW_SEC,
+    maxRequests: DEFAULT_MAX_REQUESTS,
+    keyPrefix: DEFAULT_KEY_PREFIX,
+  })
+}
+
+/** Higher-volume limiter used for non-critical endpoints (e.g. email existence checks). */
+export async function checkWaitlistCheckIpRateLimit(ip: string): Promise<boolean> {
+  return checkIpRateLimit(ip, {
+    windowSec: DEFAULT_WINDOW_SEC,
+    maxRequests: 60,
+    keyPrefix: "waitlist:check:ip:",
+  })
 }

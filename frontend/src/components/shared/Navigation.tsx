@@ -10,15 +10,14 @@ import { cn } from "@/lib/utils"
 import { mobileNavSlide } from "@/styles/theme"
 
 const NAV_LINKS = [
-  { label: "Score Tweet",   href: "/#ai-judge-demo" },
-  { label: "Score Account", href: "/#twitter-analyzer" },
-  { label: "Features",      href: "/#features" },
-  { label: "Pricing",       href: "/pricing" },
-  { label: "FAQ",            href: "/#faq" },
+  { label: "Try Demo",     href: "/#ai-judge-demo" },
+  { label: "Features",    href: "/#features" },
+  { label: "Pricing",     href: "/pricing" },
+  { label: "FAQ",         href: "/#faq" },
 ]
 
 export function Navigation() {
-  const [scrolled, setScrolled]   = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export function Navigation() {
         )}
       >
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
-          {/* Logo */}
           <Logo size="sm" />
 
           {/* Desktop links */}
@@ -62,12 +60,18 @@ export function Navigation() {
             ))}
           </nav>
 
-          {/* CTA */}
+          {/* Desktop actions */}
           <div className="hidden md:flex items-center gap-3">
-            <Link href="/donate" className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="/donate"
+              className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Donate
             </Link>
-            <Link href="/login" className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link
+              href="/login"
+              className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               Login
             </Link>
             <ArcadeButton
@@ -90,7 +94,6 @@ export function Navigation() {
         </div>
       </header>
 
-      {/* Mobile nav overlay */}
       <AnimatePresence>
         {mobileOpen && (
           <>

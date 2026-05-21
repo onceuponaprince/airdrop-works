@@ -1,23 +1,31 @@
-Playwright E2E skeleton
+Playwright E2E
 
-Setup
+Local
 
-1. Install Playwright test runner and browsers:
+1. Install deps + browsers
 
 ```bash
 cd frontend
-npm install -D @playwright/test
-npx playwright install
+pnpm install
+pnpm e2e:install
 ```
 
-2. Run the E2E suite:
+2. Run E2E (boots Next.js automatically on :3001)
 
 ```bash
 cd frontend
-npx playwright test
+pnpm test:e2e
+```
+
+3. Debug UI mode / headed
+
+```bash
+cd frontend
+pnpm test:e2e:ui
+pnpm test:e2e:headed
 ```
 
 Notes
 
-- These are skeleton tests to validate the wallet connect UI (Connect button, ConnectKit modal).
-- Running real wallet flows (MetaMask, WalletConnect) requires interactive browsers and/or mobile devices and additional test harnessing.
+- Journey tests under `tests/e2e/journeys/` are designed to run without the Django backend by mocking `/api/v1/*` and the streaming endpoints (`/api/judge`, `/api/twitter-analyze`).
+- Wallet-provider E2E remains inherently flaky unless you fully control the provider (see `tests/e2e/helpers/mockEthereum.ts`).

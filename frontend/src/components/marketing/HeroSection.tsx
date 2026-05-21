@@ -1,6 +1,7 @@
 "use client"
 
 import { motion, type Variants } from "framer-motion"
+import Link from "next/link"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { CrtOverlay } from "@/components/themed/CrtOverlay"
 import { staggerContainer, staggerItem } from "@/styles/theme"
@@ -65,38 +66,57 @@ export function HeroSection() {
             volume. Not who has the most alts.
           </motion.p>
 
-          {/* CTAs — the 4 core actions */}
+          {/* Primary journey: demo -> waitlist */}
           <motion.div
             variants={staggerItem as Variants}
-            className="flex flex-wrap items-center justify-center gap-3 pt-2"
+            className="flex flex-col items-center gap-3 pt-2"
           >
-            <ArcadeButton
-              size="lg"
-              onClick={() => scrollTo("ai-judge-demo")}
-            >
-              Score a Tweet
-            </ArcadeButton>
-            <ArcadeButton
-              size="lg"
-              variant="secondary"
-              onClick={() => scrollTo("twitter-analyzer")}
-            >
-              Score an Account
-            </ArcadeButton>
-            <ArcadeButton
-              size="lg"
-              variant="secondary"
-              onClick={() => scrollTo("waitlist")}
-            >
-              Join the Waitlist
-            </ArcadeButton>
-            <ArcadeButton
-              size="lg"
-              variant="secondary"
-              onClick={() => scrollTo("donate")}
-            >
-              Donate
-            </ArcadeButton>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <ArcadeButton size="lg" onClick={() => scrollTo("ai-judge-demo")}>
+                Try the Judge Demo
+              </ArcadeButton>
+              <ArcadeButton
+                size="lg"
+                variant="secondary"
+                onClick={() => scrollTo("waitlist")}
+              >
+                Join the Waitlist
+              </ArcadeButton>
+            </div>
+
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+              No wallet. No login. ~15 seconds.
+            </p>
+
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              {[
+                "Free preview",
+                "Quality-based scoring",
+                "Anti-bot focus",
+              ].map((label) => (
+                <span
+                  key={label}
+                  className="px-2.5 py-1 rounded-sm border border-border bg-secondary/30 font-mono text-[10px] uppercase tracking-widest text-muted-foreground"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-4 pt-2">
+              <button
+                onClick={() => scrollTo("twitter-analyzer")}
+                className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+              >
+                Prefer accounts? Score an account
+              </button>
+              <Link
+                href="/pricing"
+                className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+              >
+                See pricing
+              </Link>
+            </div>
           </motion.div>
 
           {/* Social proof microline */}
