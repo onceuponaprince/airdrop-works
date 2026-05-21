@@ -134,8 +134,10 @@ jobs:
 
       - name: Run Phase 2 backend test slice with coverage gate
         run: >-
-          uv run pytest tests apps/quests/tests apps/judge/tests
-          apps/integrity/tests apps/contributions/tests/test_tasks.py
+          uv run pytest tests/test_judge_integration.py tests/test_quests_integration.py
+          apps/quests/tests apps/judge/tests apps/integrity/tests
+          apps/contributions/tests/test_tasks.py apps/contributions/tests/test_sentiment.py
+          apps/accounts/tests/test_twitter_oauth.py
           apps/rewards/tests apps/ai_core/tests/test_service.py
           --cov=apps.quests --cov=apps.judge --cov=apps.integrity
           --cov-report=term-missing --cov-fail-under=20

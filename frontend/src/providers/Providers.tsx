@@ -47,13 +47,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
   )
 
+  const core = (
+    <QueryClientProvider client={queryClient}>
+      <WalletSessionSync />
+      {children}
+      <Toaster />
+    </QueryClientProvider>
+  )
+
   const inner = (
     <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <WalletSessionSync />
-        {children}
-        <Toaster />
-      </QueryClientProvider>
+      {hasParticleEnv ? (
+        <ParticleProviderWrapper>{core}</ParticleProviderWrapper>
+      ) : (
+        core
+      )}
     </WagmiProvider>
   )
 
@@ -89,7 +97,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
     )
   }
 
-  return (
-    <ParticleProviderWrapper>{inner}</ParticleProviderWrapper>
-  )
+  return inner
 }

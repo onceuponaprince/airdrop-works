@@ -1,9 +1,15 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { FormEvent, useMemo, useState } from 'react';
 import { useMutationState } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/animations';
+
+const TwitterWatchPanel = dynamic(
+  () => import('@/components/app/TwitterWatchPanel').then((m) => m.TwitterWatchPanel),
+  { ssr: false, loading: () => <div className="h-24 animate-pulse rounded-lg bg-[--card]" /> }
+);
 import { useCrawlSources } from '@/hooks/useCrawlSources';
 import { PLATFORMS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -68,11 +74,11 @@ export default function SourcesPage() {
     const errorCount = sources.filter((source) => Boolean(source.lastError)).length;
     const liveCount = sources.filter((source) => getSourceStatus(source) === 'live').length;
     const createdLastRun = sources.reduce(
-      (sum, source) => sum + Number(source.metadata.lastCreatedCount ?? 0),
+      (sum, source) => sum + Number(source.metadata?.lastCreatedCount ?? 0),
       0
     );
     const fetchedLastRun = sources.reduce(
-      (sum, source) => sum + Number(source.metadata.lastFetchedCount ?? 0),
+      (sum, source) => sum + Number(source.metadata?.lastFetchedCount ?? 0),
       0
     );
 
@@ -140,6 +146,10 @@ export default function SourcesPage() {
             value={`${stats.fetchedLastRun}/${stats.createdLastRun}`}
             hint="Fetched / created items across latest runs"
           />
+        </motion.section>
+
+        <motion.section variants={staggerItem}>
+          <TwitterWatchPanel />
         </motion.section>
 
         <motion.section
@@ -248,16 +258,16 @@ export default function SourcesPage() {
                       </div>
                       <div className="text-right text-xs text-[--muted-foreground]">
                         <div>Last crawl: {formatDateTime(source.lastCrawledAt)}</div>
-                        <div>Last run: {formatDateTime(toOptionalString(source.metadata.lastRunAt))}</div>
+                        <div>Last run: {formatDateTime(toOptionalString(source.metadata?.lastRunAt))}</div>
                       </div>
                     </div>
 
                     <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-                      <Metric label="Fetched" value={String(source.metadata.lastFetchedCount ?? 0)} />
-                      <Metric label="Created" value={String(source.metadata.lastCreatedCount ?? 0)} />
+                      <Metric label="Fetched" value={String(source.metadata?.lastFetchedCount ?? 0)} />
+                      <Metric label="Created" value={String(source.metadata?.lastCreatedCount ?? 0)} />
                       <Metric
                         label="Last cursor"
-                        value={String(source.metadata.lastCursor ?? source.cursor ?? '—')}
+                        value={String(source.metadata?.lastCursor ?? source.cursor ?? '—')}
                       />
                     </dl>
 
@@ -446,7 +456,7 @@ function getSourceStatus(source: CrawlSourceConfig): SourceStatus {
     return 'error';
   }
 
-  const lastRunValue = toOptionalString(source.metadata.lastRunAt) ?? source.lastCrawledAt;
+  const lastRunValue = toOptionalString(source.metadata?.lastRunAt) ?? source.lastCrawledAt;
   if (!lastRunValue) {
     return 'idle';
   }

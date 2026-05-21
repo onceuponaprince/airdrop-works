@@ -1,13 +1,28 @@
 """
-ASGI config for airdrop-works.
+ASGI entrypoint — HTTP (Django) + WebSocket (Channels).
 
-Exposes the ASGI application as ``config.asgi.application``.
-Currently unused (Gunicorn serves WSGI), but referenced by
-ASGI_APPLICATION in base settings and required for future
-WebSocket / async view support.
+Run locally: ``daphne -b 0.0.0.0 -p 8000 config.asgi:application``
 """
+
 import os
-from django.core.asgi import get_asgi_application
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
-application = get_asgi_application()
+
+from django.core.asgi import get_asgi_application
+
+django_asgi_app = get_asgi_application()
+
+from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
+from channels.security.websocket import AllowedHostsOriginValidator  # noqa: E402
+
+from apps.contributions.routing import websocket_urlpatterns  # noqa: E402
+from apps.core.channels_auth import JWTAuthMiddleware  # noqa: E402
+
+application = ProtocolTypeRouter(
+    {
+        "http": django_asgi_app,
+        "websocket": AllowedHostsOriginValidator(
+            JWTAuthMiddleware(URLRouter(websocket_urlpatterns))
+        ),
+    }
+)

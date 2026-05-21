@@ -55,3 +55,34 @@ class User(AbstractUser, BaseModel):
         if not self.wallet_address:
             return ""
         return f"{self.wallet_address[:6]}...{self.wallet_address[-4:]}"
+
+
+class TwitterConnection(BaseModel):
+    """OAuth-linked X/Twitter account for login and tweet watch."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="twitter_connection",
+    )
+    twitter_user_id = models.CharField(max_length=64, unique=True, db_index=True)
+    twitter_username = models.CharField(max_length=32, db_index=True)
+    display_name = models.CharField(max_length=64, blank=True, default="")
+    avatar_url = models.URLField(blank=True, default="")
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True, default="")
+    token_expires_at = models.DateTimeField(null=True, blank=True)
+    watch_enabled = models.BooleanField(default=True)
+    use_selenium_fallback = models.BooleanField(
+        default=False,
+        help_text="When true and API poll fails, attempt Selenium scrape (dev only).",
+    )
+    last_synced_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.TextField(blank=True, default="")
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = "twitter_connections"
+
+    def __str__(self) -> str:
+        return f"@{self.twitter_username}"

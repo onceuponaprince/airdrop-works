@@ -21,6 +21,14 @@ test('judge: account analysis completes and renders result', async ({ page }) =>
   await mockTwitterAnalyzeStream(page, {
     username: 'demo_user',
     aggregate: {
+      overallScore: 72,
+      teachingValue: 70,
+      originality: 68,
+      communityImpact: 75,
+      farmingPercentage: 10,
+      genuinePercentage: 80,
+      strengths: 'Consistent educational threads.',
+      weaknesses: 'Could add more primary sources.',
       verdict: 'genuine',
     },
   })

@@ -20,6 +20,9 @@ from apps.contributions.models import Contribution, CrawlSourceConfig
 from apps.spore.services.ingestion import record_reddit_item, record_twitter_item
 
 from .crawlers import CrawlResult, CrawledItem, crawl_discord, crawl_reddit, crawl_telegram, crawl_twitter
+from .realtime import broadcast_tweet_ingested
+from .sentiment import analyze_sentiment
+from .twitter_watch import sync_twitter_connection
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +34,7 @@ def _item_dimension_explanations(item: CrawledItem) -> dict[str, object]:
     extras: dict[str, object] = {
         "spore_author": (item.actor_handle or "").strip().lower(),
         "spore_mentions": item.mentions or [],
+        "sentiment": analyze_sentiment(item.content_text),
     }
     subreddit = str((item.metadata or {}).get("subreddit") or "").strip().lower()
     if subreddit:
@@ -69,6 +73,19 @@ def _persist_items(user: User, platform: str, items: Iterable[CrawledItem]) -> i
         if created:
             created_count += 1
             score_contribution_task.delay(str(contribution.id))
+            if platform == "twitter":
+                sentiment = (contribution.dimension_explanations or {}).get("sentiment", {})
+                broadcast_tweet_ingested(
+                    str(user.id),
+                    {
+                        "contributionId": str(contribution.id),
+                        "platformContentId": contribution.platform_content_id,
+                        "text": contribution.content_text[:280],
+                        "contentUrl": contribution.content_url,
+                        "sentiment": sentiment,
+                        "createdAt": contribution.created_at.isoformat(),
+                    },
+                )
 
     return created_count
 
@@ -180,4 +197,42 @@ def crawl_all_active_sources_task(self, user_id: str | None = None) -> dict[str,
         queued += 1
 
     logger.info("[Crawler/AllActive] user=%s queued=%d", user_id or "ALL", queued)
+    return {"queued": queued}
+
+
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="contributions.sync_twitter_connection")
+def sync_twitter_connection_task(self, connection_id: str) -> dict[str, int | str]:
+    """Poll OAuth-linked Twitter timeline and ingest new tweets."""
+    from apps.accounts.models import TwitterConnection
+
+    connection = (
+        TwitterConnection.objects.select_related("user")
+        .filter(id=connection_id, watch_enabled=True)
+        .first()
+    )
+    if not connection:
+        return {"status": "missing", "created": 0, "fetched": 0}
+
+    try:
+        crawl_result = sync_twitter_connection(connection)
+        created_count = _persist_items(connection.user, "twitter", crawl_result.items)
+        return {
+            "status": "ok",
+            "fetched": len(crawl_result.items),
+            "created": created_count,
+        }
+    except Exception as exc:
+        logger.error("[TwitterWatch] connection=%s failed: %s", connection_id, exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(name="contributions.sync_all_twitter_watches")
+def sync_all_twitter_watches_task() -> dict[str, int]:
+    """Queue sync for every active Twitter OAuth connection."""
+    from apps.accounts.models import TwitterConnection
+
+    queued = 0
+    for conn_id in TwitterConnection.objects.filter(watch_enabled=True).values_list("id", flat=True):
+        sync_twitter_connection_task.delay(str(conn_id))
+        queued += 1
     return {"queued": queued}
