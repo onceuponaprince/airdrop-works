@@ -10,9 +10,9 @@ Status key: `[x]` done, `[ ]` pending
 - [x] Wave 1: ingestOps (crawl→score hardening + `runbooks/ingestion.md`)
 - [x] Wave 1: integrityApi (`GET /integrity/{wallet}/` + staff export)
 - [x] Wave 1: onchainBoundary (idempotency + `onchain-executor` no-op worker)
-- [ ] Wave 2: uxPolish (wallet-ux tickets 001–004)
-- [ ] Wave 2: policyFlags (heuristic flag + `judge` Celery queue)
-- [ ] Wave 2: monitoring (Grafana spec + telemetry runbook)
+- [x] Wave 2: uxPolish (wallet-ux tickets 001–004)
+- [x] Wave 2: policyFlags (heuristic flag + `judge` Celery queue)
+- [x] Wave 2: monitoring (Grafana spec + telemetry runbook)
 - [ ] Wave 3: pilot smoke + `0.3.0` release
 
 ## Done
