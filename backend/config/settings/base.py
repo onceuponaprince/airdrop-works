@@ -181,6 +181,7 @@ REST_FRAMEWORK = {
         "spore_ops": "60/minute",
         "spore_relationship": "30/minute",
         "spore_brief_generate": "20/minute",
+        "integrity_wallet": "30/minute",
     },
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
