@@ -9,7 +9,18 @@ class ScoringRubric(BaseModel):
     Weights must sum to 1.0. Default is equal weighting.
     """
     name = models.CharField(max_length=255)
+    key = models.SlugField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text="Stable rubric identifier, e.g. performance_marketing_v1",
+    )
     description = models.TextField(blank=True)
+    dimension_config = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Optional dimension schema for non-Web3 rubrics.",
+    )
     teaching_value_weight = models.FloatField(default=0.333)
     originality_weight = models.FloatField(default=0.333)
     community_impact_weight = models.FloatField(default=0.334)
@@ -29,6 +40,13 @@ class ScoringRubric(BaseModel):
 
     class Meta:
         db_table = "scoring_rubrics"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["key"],
+                condition=models.Q(key__isnull=False),
+                name="uniq_scoring_rubric_key",
+            ),
+        ]
 
     def __str__(self):
         return self.name
