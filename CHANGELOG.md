@@ -12,6 +12,20 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.5.0 - 2026-05-21
+
+### Added
+- Open Rubric JSON Schema v1 (`schemas/rubric/v1/`) and canonical rubric JSON files.
+- Public catalog API: `GET /api/v1/judge/rubrics/`, `/rubrics/<key>/`, `/rubrics/schema/`.
+- `tools/rubric-eval` offline harness and `/developers/rubrics` integrator page.
+- `docs/RUBRIC_GOVERNANCE.md`, `docs/DATA_COOP_RULES.md`, `verify_phase4_gate.sh`.
+
+### Changed
+- Default Web3 rubric seeded as `contribution_quality_v1` stable key.
+
+### Chore
+- Phase 4 verification signed off; monorepo bumped to **0.5.0** ([PR #17](https://github.com/onceuponaprince/airdrop-works/pull/17)).
+
 ## 0.4.0 - 2026-05-21
 
 ### Added

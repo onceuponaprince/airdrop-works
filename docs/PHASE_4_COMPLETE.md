@@ -20,7 +20,7 @@ docker compose up -d db redis backend frontend
 
 ## PR
 
-- [#17](https://github.com/onceuponaprince/airdrop-works/pull/17) — Phase 4 Open Rubric (placeholder until created)
+- [#17](https://github.com/onceuponaprince/airdrop-works/pull/17) — Phase 4 Open Rubric
 
 ## Beyond Phase 4
 
