@@ -12,6 +12,21 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.3.0 - 2026-05-21
+
+### Added
+- `GET /api/v1/integrity/{wallet}/` public reputation bundle and staff `GET /api/v1/integrity/export/` (JSON/CSV).
+- Payout idempotency keys on `AirdropPayoutApproval` and `rewards.execute_payout_approval` no-op Celery task (`onchain-executor` queue).
+- `judge` Celery queue route for `ai_core.score_contribution`.
+- Phase 2 parallel execution plan, verification checklist, prep doc, and `verify_phase2_endpoints.sh`.
+
+### Changed
+- Crawl failures truncate `last_error`, update metadata, and use Celery retry.
+- `payout_batch --dry-run` prints approval idempotency keys.
+
+### Chore
+- Bumped monorepo package versions to `0.3.0`.
+
 ## 0.2.5 - 2026-05-21
 
 ### Added
