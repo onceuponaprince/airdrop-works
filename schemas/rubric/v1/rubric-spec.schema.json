@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://airdrop.works/schemas/rubric/v1/rubric-spec.schema.json",
+  "title": "AI(r)Drop Open Rubric",
+  "type": "object",
+  "required": ["key", "specVersion", "name", "dimensions"],
+  "properties": {
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*_v[0-9]+$",
+      "description": "Stable rubric identifier, e.g. contribution_quality_v1"
+    },
+    "specVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "license": { "type": "string", "default": "CC-BY-4.0" },
+    "revision": { "type": "string", "format": "date-time" },
+    "dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "weight", "label"],
+        "properties": {
+          "id": { "type": "string" },
+          "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+          "label": { "type": "string" },
+          "invert": { "type": "boolean", "default": false },
+          "description": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "signals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": { "enum": ["enum", "boolean", "score"] },
+          "values": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "customInstructions": { "type": "string" }
+  },
+  "additionalProperties": false
+}

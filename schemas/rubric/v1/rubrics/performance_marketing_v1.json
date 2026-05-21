@@ -1,0 +1,14 @@
+{
+  "key": "performance_marketing_v1",
+  "specVersion": "1.0.0",
+  "name": "Performance Marketing v1",
+  "description": "Ad copy scoring: hook, clarity, audience fit, CTA strength, and fatigue risk.",
+  "license": "CC-BY-4.0",
+  "dimensions": [
+    { "id": "hook", "weight": 0.25, "label": "Hook" },
+    { "id": "clarity", "weight": 0.25, "label": "Clarity" },
+    { "id": "audience_fit", "weight": 0.2, "label": "Audience Fit" },
+    { "id": "cta_strength", "weight": 0.2, "label": "CTA Strength" },
+    { "id": "fatigue_risk", "weight": 0.1, "label": "Fatigue Risk", "invert": true, "description": "Lower fatigue is better; inverted in composite" }
+  ]
+}

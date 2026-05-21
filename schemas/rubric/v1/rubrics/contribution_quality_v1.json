@@ -1,0 +1,15 @@
+{
+  "key": "contribution_quality_v1",
+  "specVersion": "1.0.0",
+  "name": "Contribution Quality v1",
+  "description": "Web3 contribution scoring: teaching value, originality, community impact, and farming detection.",
+  "license": "CC-BY-4.0",
+  "dimensions": [
+    { "id": "teaching_value", "weight": 0.333, "label": "Teaching Value", "description": "Helps others learn or understand" },
+    { "id": "originality", "weight": 0.333, "label": "Originality", "description": "Novel insight vs recycled takes" },
+    { "id": "community_impact", "weight": 0.334, "label": "Community Impact", "description": "Serves the community materially" }
+  ],
+  "signals": [
+    { "id": "farming_flag", "type": "enum", "values": ["genuine", "farming", "ambiguous"] }
+  ]
+}
