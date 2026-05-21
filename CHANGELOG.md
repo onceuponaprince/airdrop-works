@@ -12,6 +12,19 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.4.0 - 2026-05-21
+
+### Added
+- `performance_marketing_v1` rubric and `POST /api/v1/judge/demo/marketing/` demo API.
+- `/growth` PLG page with `MarketingJudgeDemo` and marketing analytics events.
+- `scripts/verify_phase3_endpoints.sh`, `verify_phase3_gate.sh`, and `docs/PHASE_3_COMPLETE.md`.
+
+### Changed
+- `ScoringRubric` supports optional `key` and `dimension_config` for non-Web3 rubrics.
+
+### Chore
+- Phase 3 verification signed off; monorepo bumped to **0.4.0** ([PR #16](https://github.com/onceuponaprince/airdrop-works/pull/16)).
+
 ## 0.3.2 - 2026-05-21
 
 ### Added

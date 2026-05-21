@@ -20,7 +20,7 @@ docker compose up -d db redis backend frontend
 
 ## PR
 
-- Phase 3 Marketing Judge — see GitHub PR linked at release **0.4.0**
+- [#16](https://github.com/onceuponaprince/airdrop-works/pull/16) — Phase 3 Marketing Judge
 
 ## Beyond Phase 3
 
