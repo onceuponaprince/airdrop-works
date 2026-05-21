@@ -34,6 +34,7 @@ urlpatterns = [
     path("api/v1/payments/", include("apps.payments.urls")),
     path("api/v1/spore/", include("apps.spore.urls")),
     path("api/v1/admin/", include("apps.admin.urls")),
+    path("api/v1/integrity/", include("apps.integrity.urls")),
     path(
         "api/v1/admin/campaigns/",
         AdminCampaignListCreateView.as_view(),

@@ -23,6 +23,8 @@ from .crawlers import CrawlResult, CrawledItem, crawl_discord, crawl_reddit, cra
 
 logger = logging.getLogger(__name__)
 
+MAX_LAST_ERROR_LEN = 2000
+
 
 def _item_dimension_explanations(item: CrawledItem) -> dict[str, object]:
     """Build ``dimension_explanations`` extras for Spore (author, mentions, subreddit)."""
@@ -148,7 +150,7 @@ def crawl_source_config_task(self, source_config_id: str) -> dict[str, int | str
     except Exception as exc:
         finished_at = timezone.now()
         config.last_crawled_at = finished_at
-        config.last_error = str(exc)
+        config.last_error = str(exc)[:MAX_LAST_ERROR_LEN]
         metadata = dict(config.metadata or {})
         metadata.update(
             {
@@ -159,7 +161,7 @@ def crawl_source_config_task(self, source_config_id: str) -> dict[str, int | str
         config.metadata = metadata
         config.save(update_fields=["last_crawled_at", "last_error", "metadata", "updated_at"])
         logger.error("[Crawler/%s] source=%s failed: %s", config.platform, config.source_key, exc)
-        raise
+        raise self.retry(exc=exc)
 
 
 @shared_task(bind=True, max_retries=1, default_retry_delay=60, name="contributions.crawl_all_active_sources")

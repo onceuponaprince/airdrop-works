@@ -55,9 +55,10 @@ class Command(BaseCommand):
         force = options.get("force", False)
 
         # Require DB approval before attempting any RPC/signing operations
+        approval_record = None
         if not force:
             try:
-                from apps.rewards.approvals import has_approved
+                from apps.rewards.approvals import get_latest_approved, has_approved
             except Exception:
                 self.stdout.write(self.style.ERROR("Approval helper unavailable; aborting."))
                 return
@@ -67,6 +68,11 @@ class Command(BaseCommand):
                     "No matching approved payout found. Create an approval via `apps.rewards.approvals.create_approval()` or pass --force to override."
                 ))
                 return
+            approval_record = get_latest_approved(approval_batch)
+            if approval_record:
+                self.stdout.write(
+                    f"Approval id={approval_record['id']} idempotency={approval_record.get('tx_idempotency_key') or 'n/a'}"
+                )
 
         for payout in payouts:
             token_address = payout.get("token_address") or ""
@@ -88,8 +94,10 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING("RPC URL or token address missing; skipping gas estimate."))
 
             if dry_run:
+                idem = (approval_record or {}).get("tx_idempotency_key") or "n/a"
                 self.stdout.write(
-                    f"DRY: would send {payout['amount']} {payout['token_symbol']} to {payout['recipient']}"
+                    f"DRY: would send {payout['amount']} {payout['token_symbol']} to {payout['recipient']} "
+                    f"(idempotency={idem})"
                 )
                 continue
 

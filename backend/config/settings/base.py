@@ -76,6 +76,7 @@ LOCAL_APPS = [
     "apps.payments",
     "apps.spore",
     "apps.admin",
+    "apps.integrity",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -180,6 +181,7 @@ REST_FRAMEWORK = {
         "spore_ops": "60/minute",
         "spore_relationship": "30/minute",
         "spore_brief_generate": "20/minute",
+        "integrity_wallet": "30/minute",
     },
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
@@ -233,6 +235,12 @@ AI_LLM_WARN_AT_PERCENT = config("AI_LLM_WARN_AT_PERCENT", default=80, cast=int)
 PAYOUT_SIGNER_MODE = config("PAYOUT_SIGNER_MODE", default="dry-run")
 PAYOUT_SIGNER_PRIVATE_KEY = config("PAYOUT_SIGNER_PRIVATE_KEY", default="")
 WEB3_RPC_URL = config("WEB3_RPC_URL", default="")
+
+CELERY_TASK_ROUTES = {
+    "ai_core.score_contribution": {"queue": "judge"},
+    "rewards.execute_payout_approval": {"queue": "onchain-executor"},
+}
+CELERY_TASK_DEFAULT_QUEUE = "celery"
 
 CELERY_BEAT_SCHEDULE = {
     "crawl-all-active-sources": {

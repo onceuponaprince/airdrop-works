@@ -1,6 +1,19 @@
 # Phase 2 Checklist
 
+> **Execution plan (2026-05-21):** [`docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md`](docs/superpowers/plans/2026-05-21-phase-2-parallel-execution.md)
+
 Status key: `[x]` done, `[ ]` pending
+
+## Phase 2b — Post–platform-ready (0.2.5 → 0.3.0)
+
+- [x] Wave 0: `PHASE_2_VERIFICATION.md` + `verify_phase2_endpoints.sh` baseline
+- [x] Wave 1: ingestOps (crawl→score hardening + `runbooks/ingestion.md`)
+- [x] Wave 1: integrityApi (`GET /integrity/{wallet}/` + staff export)
+- [x] Wave 1: onchainBoundary (idempotency + `onchain-executor` no-op worker)
+- [ ] Wave 2: uxPolish (wallet-ux tickets 001–004)
+- [ ] Wave 2: policyFlags (heuristic flag + `judge` Celery queue)
+- [ ] Wave 2: monitoring (Grafana spec + telemetry runbook)
+- [ ] Wave 3: pilot smoke + `0.3.0` release
 
 ## Done
 - [x] Backend CI and focused backend validation are in place.
