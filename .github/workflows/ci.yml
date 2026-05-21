@@ -132,8 +132,13 @@ jobs:
           SECRET_KEY: ci-test-secret-key
           SPORE_QDRANT_ENABLED: "false"
 
-      - name: Run quests, judge and integration tests with coverage gate
-        run: uv run pytest tests apps/quests/tests apps/judge/tests --cov=apps.quests --cov=apps.judge --cov-report=term-missing --cov-fail-under=20
+      - name: Run Phase 2 backend test slice with coverage gate
+        run: >-
+          uv run pytest tests apps/quests/tests apps/judge/tests
+          apps/integrity/tests apps/contributions/tests/test_tasks.py
+          apps/rewards/tests apps/ai_core/tests/test_service.py
+          --cov=apps.quests --cov=apps.judge --cov=apps.integrity
+          --cov-report=term-missing --cov-fail-under=20
         env:
           DJANGO_ENV: local
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/airdrop_works_test
