@@ -1,6 +1,7 @@
 from io import StringIO
 from types import SimpleNamespace
 
+import pytest
 from django.core.management import call_command
 from django.test import override_settings
 
@@ -41,40 +42,65 @@ def _patch_command_dependencies(monkeypatch, fake_signer):
     )
 
 
+@pytest.mark.django_db
 @override_settings(WEB3_RPC_URL="http://rpc", PAYOUT_CHAIN="avalanche", PAYOUT_SIGNER_PRIVATE_KEY="0xabc")
 def test_payout_batch_dry_run_reports_plan_without_sending(monkeypatch):
+    from apps.rewards.approvals import create_approval
+
     fake_signer = _FakeSigner()
     _patch_command_dependencies(monkeypatch, fake_signer)
+    create_approval(batch_id="dry-run-batch", approved=True)
 
     stdout = StringIO()
-    call_command("payout_batch", dry_run=True, approve=False, stdout=stdout)
+    call_command("payout_batch", dry_run=True, approve=False, approval_batch="dry-run-batch", stdout=stdout)
 
     output = stdout.getvalue()
     assert "Prepared 1 payouts" in output
     assert "DRY: would send 10.0 AIRDROP" in output
+    assert "idempotency=" in output
     assert fake_signer.calls == []
 
 
+@pytest.mark.django_db
 @override_settings(WEB3_RPC_URL="http://rpc", PAYOUT_CHAIN="avalanche", PAYOUT_SIGNER_PRIVATE_KEY="0xabc")
 def test_payout_batch_requires_approval_before_sending(monkeypatch):
+    from apps.rewards.approvals import create_approval
+
     fake_signer = _FakeSigner()
     _patch_command_dependencies(monkeypatch, fake_signer)
+    create_approval(batch_id="no-send-batch", approved=True)
 
     stdout = StringIO()
-    call_command("payout_batch", dry_run=False, approve=False, stdout=stdout)
+    call_command(
+        "payout_batch",
+        dry_run=False,
+        approve=False,
+        approval_batch="no-send-batch",
+        stdout=stdout,
+    )
 
     output = stdout.getvalue()
     assert "No --approve flag provided" in output
     assert fake_signer.calls == []
 
 
+@pytest.mark.django_db
 @override_settings(WEB3_RPC_URL="http://rpc", PAYOUT_CHAIN="avalanche", PAYOUT_SIGNER_PRIVATE_KEY="0xabc")
 def test_payout_batch_execute_with_approval_sends_transaction(monkeypatch):
+    from apps.rewards.approvals import create_approval
+
     fake_signer = _FakeSigner()
     _patch_command_dependencies(monkeypatch, fake_signer)
+    create_approval(batch_id="exec-batch", approved=True)
 
     stdout = StringIO()
-    call_command("payout_batch", dry_run=False, approve=True, stdout=stdout)
+    call_command(
+        "payout_batch",
+        dry_run=False,
+        approve=True,
+        approval_batch="exec-batch",
+        stdout=stdout,
+    )
 
     output = stdout.getvalue()
     assert "Sent payout transaction: 0xdeadbeef" in output

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:8000}"
+BASE_URL="${BASE_URL:-http://localhost:8001}"
 ADMIN_TOKEN="${ADMIN_TOKEN:-}"
 
 echo "Phase 1 endpoint smoke (base: $BASE_URL)"

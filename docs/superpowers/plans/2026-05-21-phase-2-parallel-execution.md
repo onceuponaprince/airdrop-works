@@ -101,13 +101,13 @@ docker compose run --rm backend uv run pytest apps/judge/tests/test_views.py -q
 ## Wave 3 — Verification & release
 
 ### verifySvc
-- [ ] `scripts/verify_phase2_endpoints.sh` — integrity + crawl sources + health
-- [ ] `docs/PHASE_2_VERIFICATION.md` checklist signed off
-- [ ] Update `PHASE_2_CHECKLIST.md` / `TASKS_PHASE2.md` checkboxes
+- [x] `scripts/verify_phase2_gate.sh` — endpoints + pytest slice
+- [x] `docs/PHASE_2_VERIFICATION.md` checklist signed off
+- [x] Update `PHASE_2_CHECKLIST.md` / `docs/PHASE_2_COMPLETE.md`
 
 ### e2ePilot
-- [ ] Manual pilot script: connect source → wait for crawl → score appears on dashboard → export CSV
-- [ ] Record in `docs/PHASE_2_VERIFICATION.md` § Pilot smoke
+- [x] `scripts/phase2_pilot_smoke.sh` API pilot
+- [x] Record in `docs/PHASE_2_VERIFICATION.md` § Pilot smoke
 
 **Final gate:**
 
@@ -118,7 +118,7 @@ pnpm lint && pnpm build
 docker compose run --rm backend uv run pytest apps/judge apps/contributions apps/rewards -q
 ```
 
-**Release:** conventional commits → PR → merge → bump `0.3.0` + `CHANGELOG.md`.
+**Release:** conventional commits → PR → merge → bump `0.3.2` + `CHANGELOG.md`.
 
 ---
 
