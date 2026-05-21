@@ -4,6 +4,7 @@ import { FormEvent, useMemo, useState } from 'react';
 import { useMutationState } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/animations';
+import { TwitterWatchPanel } from '@/components/app/TwitterWatchPanel';
 import { useCrawlSources } from '@/hooks/useCrawlSources';
 import { PLATFORMS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -140,6 +141,10 @@ export default function SourcesPage() {
             value={`${stats.fetchedLastRun}/${stats.createdLastRun}`}
             hint="Fetched / created items across latest runs"
           />
+        </motion.section>
+
+        <motion.section variants={staggerItem}>
+          <TwitterWatchPanel />
         </motion.section>
 
         <motion.section
