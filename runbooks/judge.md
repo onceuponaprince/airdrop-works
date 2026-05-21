@@ -13,10 +13,18 @@ Purpose: Guidance for operating the AI Judge scoring system, handling failures, 
 Quick Checks
 - Ensure Anthropic API key and rate limits are configured (`ANTHROPIC_API_KEY`).
 - Validate LLM quota usage and cost monitors in billing dashboard.
-- Confirm fallback heuristic scorer is available and functioning.
+- `JUDGE_HEURISTIC_FALLBACK_ENABLED`: **false** in production unless emergency (env override).
+- Celery route `ai_core.score_contribution` → queue **`judge`** (dedicated worker recommended).
+- Confirm fallback heuristic scorer is available in **local/staging** only when flag is enabled.
+
+Environment
+| Variable | Production | Local dev |
+|----------|------------|-----------|
+| `JUDGE_HEURISTIC_FALLBACK_ENABLED` | `false` (default) | `true` in `config/settings/local.py` |
+| `ANTHROPIC_API_KEY` | required | optional when flag true |
 
 Operational Steps
-- Force a fallback scoring path (heuristic) by temporarily setting `SPORE_USE_HEURISTIC=true` in environment or toggling feature flag.
+- Emergency heuristic: set `JUDGE_HEURISTIC_FALLBACK_ENABLED=true` in production env and restart workers (revert after incident).
 - Inspect `apps.judge.views` logs for exceptions and LLM timeouts.
 
 Cost Controls
