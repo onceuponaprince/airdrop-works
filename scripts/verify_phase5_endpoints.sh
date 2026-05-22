@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE_URL="${BASE_URL:-http://localhost:8001}"
+WALLET="${VERIFY_WALLET:-0x0000000000000000000000000000000000000001}"
+
+echo "Phase 5 endpoint smoke (base: $BASE_URL)"
+
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/v1/integrity/not-a-wallet/")
+if [[ "$code" == "400" ]]; then
+  echo "OK GET /api/v1/integrity/<invalid>/ → 400"
+else
+  echo "FAIL invalid wallet expected 400, got $code"
+  exit 1
+fi
+
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/v1/integrity/$WALLET/")
+if [[ "$code" == "200" || "$code" == "404" ]]; then
+  echo "OK GET /api/v1/integrity/<wallet>/ → $code"
+else
+  echo "FAIL wallet lookup expected 200|404, got $code"
+  exit 1
+fi
+
+echo "Phase 4 regression..."
+BASE_URL="$BASE_URL" "$(dirname "$0")/verify_phase4_endpoints.sh"
+echo "Done."
