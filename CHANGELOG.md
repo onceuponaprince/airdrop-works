@@ -5,12 +5,15 @@ All notable changes to this repository will be documented in this file.
 ## Unreleased
 
 ### Added
+- Phase 6 gap closure: persistent + realtime notifications (Django Channels), SPORE Phase 3 real LLM briefs, gamification auto-XP + quest loot chests, The Graph subgraph + event webhooks.
 
 ### Changed
-
-### Fixed
+- Atomic subsystem commits (notifications, spore, gamification, contracts) before integration merge.
 
 ### Chore
+- Version bump 0.6.0 → 0.7.0 after full gate verification.
+
+## 0.6.0 - 2026-05-22
 
 ## 0.6.0 - 2026-05-22
 
