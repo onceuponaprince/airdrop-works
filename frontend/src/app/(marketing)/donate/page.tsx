@@ -55,6 +55,43 @@ export default function DonatePage() {
           </p>
         </motion.div>
 
+        {/* Testnet Banner — 0.8.0 RC */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-6 rounded-lg border border-[--primary]/40 bg-[--primary]/5 p-4 text-center"
+        >
+          <div className="flex items-center justify-center gap-2 text-sm">
+            <span className="font-display text-[--primary]">🧪 TESTNET MODE — 0.8.0 RC</span>
+          </div>
+          <p className="mt-1 text-xs text-[--muted-foreground]">
+            Donate on Base Sepolia or Solana Devnet to test the full receipt flow.
+            Get free test tokens from the faucets below.
+          </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-3 text-xs">
+            <a
+              href="https://www.sepoliafaucet.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded border border-[--border] px-3 py-1 hover:border-[--primary] hover:text-[--primary]"
+            >
+              Base Sepolia Faucet <ExternalLink size={12} />
+            </a>
+            <a
+              href="https://faucet.solana.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded border border-[--border] px-3 py-1 hover:border-[--primary] hover:text-[--primary]"
+            >
+              Solana Devnet Faucet <ExternalLink size={12} />
+            </a>
+          </div>
+          <p className="mt-2 text-[10px] text-[--muted-foreground]/70">
+            All testnet donations generate rich on-chain receipts with explorer links.
+          </p>
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
