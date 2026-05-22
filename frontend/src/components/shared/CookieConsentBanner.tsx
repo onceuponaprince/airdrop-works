@@ -1,16 +1,27 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const CONSENT_KEY = 'airdrop_cookie_consent';
 
 export function CookieConsentBanner() {
+  if (process.env.NEXT_PUBLIC_E2E === '1') {
+    return null;
+  }
+
   const [consent, setConsent] = useState<string | null>(() => {
     if (typeof window === 'undefined') {
       return null;
     }
     return window.localStorage.getItem(CONSENT_KEY);
   });
+
+  useEffect(() => {
+    const stored = window.localStorage.getItem(CONSENT_KEY);
+    if (stored) {
+      setConsent(stored);
+    }
+  }, []);
 
   if (consent) {
     return null;
