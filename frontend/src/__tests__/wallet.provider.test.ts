@@ -1,26 +1,37 @@
 import { describe, it, expect, vi, beforeAll } from "vitest"
+import type { ReactNode } from "react"
+import type {
+  getFallbackWalletConnectors as getFallbackWalletConnectorsFn,
+  handleWalletError as handleWalletErrorFn,
+} from "@/providers/walletUtils"
 
-let handleWalletError: any
-let getFallbackWalletConnectors: any
+let handleWalletError: typeof handleWalletErrorFn
+let getFallbackWalletConnectors: typeof getFallbackWalletConnectorsFn
 
 beforeAll(async () => {
   // Mock localStorage before importing ParticleProvider to avoid module-level
   // side-effects from connectkit that access window.localStorage at import time.
-  ;(globalThis as any).localStorage = {
-    getItem: (_: string) => null,
-    setItem: (_: string, __: string) => undefined,
-    removeItem: (_: string) => undefined,
-    clear: () => undefined,
-  }
+  Object.defineProperty(globalThis, "localStorage", {
+    value: {
+      getItem: (_: string) => null,
+      setItem: (_: string, __: string) => undefined,
+      removeItem: (_: string) => undefined,
+      clear: () => undefined,
+    },
+    configurable: true,
+  })
 
   // Mock Particle Network modules that perform environment-specific IO at import
   // time so tests can import the provider endpoints without loading native
   // binaries or browser-only APIs.
-  ;(globalThis as any).vi = vi
+  Object.defineProperty(globalThis, "vi", {
+    value: vi,
+    configurable: true,
+  })
   vi.mock("@particle-network/connectkit", () => {
     return {
       createConfig: () => ({}),
-      ConnectKitProvider: ({ children }: any) => children,
+      ConnectKitProvider: ({ children }: { children: ReactNode }) => children,
       useAccount: () => ({ address: null, isConnected: false }),
       useDisconnect: () => ({ disconnect: () => {} }),
       useModal: () => ({ setOpen: () => {} }),
@@ -158,7 +169,7 @@ describe("Wallet Provider Functions", () => {
     })
 
     it("should handle null error gracefully", () => {
-      const result = handleWalletError(null as any)
+      const result = handleWalletError(null)
       expect(result.type).toBe("error")
       expect(result.message).toContain("unexpected wallet error")
     })

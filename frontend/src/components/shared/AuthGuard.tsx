@@ -10,6 +10,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 
+function getAuthStorage(): Storage | null {
+  try {
+    const storage = window.localStorage;
+    return typeof storage?.getItem === 'function' ? storage : null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [status, setStatus] = useState<'checking' | 'ok' | 'denied'>('checking');
@@ -18,7 +27,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     async function verify() {
-      const token = localStorage.getItem('auth_token');
+      const storage = getAuthStorage();
+      const token = storage?.getItem('auth_token');
       if (!token) {
         if (!cancelled) setStatus('denied');
         return;
@@ -29,8 +39,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         await api.get('/auth/me/');
         if (!cancelled) setStatus('ok');
       } catch {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('refresh_token');
+        storage?.removeItem('auth_token');
+        storage?.removeItem('refresh_token');
         api.setToken(null);
         if (!cancelled) setStatus('denied');
       }

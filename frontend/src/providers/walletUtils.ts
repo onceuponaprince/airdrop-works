@@ -136,7 +136,9 @@ export function getFallbackWalletConnectors() {
   ]
 }
 
-export default {
+const walletUtils = {
   handleWalletError,
   getFallbackWalletConnectors,
 }
+
+export default walletUtils

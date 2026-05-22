@@ -1,11 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 
 const pushMock = vi.fn()
 const replaceMock = vi.fn()
 const loginMock = vi.fn()
-const originalNodeEnv = process.env.NODE_ENV
-
+const signInMock = vi.fn()
+const apiGetMock = vi.hoisted(() => vi.fn())
+const apiSetTokenMock = vi.hoisted(() => vi.fn())
 function createLocalStorage() {
   const state: Record<string, string> = {}
   return {
@@ -48,15 +49,35 @@ vi.mock("@/hooks/useParticleWallet", () => ({
   }),
 }))
 
+vi.mock("@/hooks/useWalletLogin", () => ({
+  useWalletLogin: () => ({
+    signIn: signInMock,
+    isLoggingIn: false,
+    error: null,
+    canSignIn: false,
+  }),
+}))
+
+vi.mock("@/lib/api", () => ({
+  api: {
+    get: apiGetMock,
+    setToken: apiSetTokenMock,
+  },
+}))
+
 import LoginPage from "@/app/login/page"
 import { AuthGuard } from "@/components/shared/AuthGuard"
 
 describe("wallet login flow", () => {
   beforeEach(() => {
-    process.env.NODE_ENV = "development"
+    vi.stubEnv("NODE_ENV", "development")
     pushMock.mockReset()
     replaceMock.mockReset()
     loginMock.mockReset()
+    signInMock.mockReset()
+    apiGetMock.mockReset()
+    apiGetMock.mockResolvedValue({})
+    apiSetTokenMock.mockReset()
     Object.defineProperty(globalThis, "localStorage", {
       value: createLocalStorage(),
       configurable: true,
@@ -64,7 +85,7 @@ describe("wallet login flow", () => {
   })
 
   afterEach(() => {
-    process.env.NODE_ENV = originalNodeEnv
+    vi.unstubAllEnvs()
   })
 
   it("renders the login page with a dev login fallback when Particle is unavailable", async () => {
@@ -97,7 +118,7 @@ describe("wallet login flow", () => {
     expect(screen.queryByText("Protected app content")).toBeNull()
   })
 
-  it("lets authenticated app content render when auth_token exists", () => {
+  it("lets authenticated app content render when auth_token exists", async () => {
     localStorage.setItem("auth_token", "token-123")
 
     render(
@@ -106,7 +127,10 @@ describe("wallet login flow", () => {
       </AuthGuard>,
     )
 
-    expect(screen.getByText("Protected app content")).toBeTruthy()
+    await waitFor(() => {
+      expect(screen.getByText("Protected app content")).toBeTruthy()
+    })
+    expect(apiSetTokenMock).toHaveBeenCalledWith("token-123")
     expect(replaceMock).not.toHaveBeenCalled()
   })
 })

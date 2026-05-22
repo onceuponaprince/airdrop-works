@@ -1,15 +1,19 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { CreditCard, History, Settings, TrendingUp, ExternalLink } from 'lucide-react';
+import { CreditCard, History, Settings, TrendingUp, ExternalLink, Shield } from 'lucide-react';
 import { staggerContainer, staggerItem } from '@/lib/animations';
 import { api, mapContribution, unwrapList } from '@/lib/api';
 import { useCredits } from '@/hooks/useCredits';
+import { useReputation } from '@/hooks/useReputation';
+import { useAppeals } from '@/hooks/useAppeals';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
+import { ReputationCard } from '@/components/app/ReputationCard';
+import { AppealsPanel } from '@/components/app/AppealsPanel';
 import { truncateAddress } from '@/lib/utils';
 import type { Contribution, PaginatedResponse } from '@/types/api';
 
@@ -70,6 +74,18 @@ export default function DashboardPage() {
     if (!p) return 1;
     return Math.max(p.educatorXp, p.builderXp, p.creatorXp, p.scoutXp, p.diplomatXp, 1);
   }, [p]);
+
+  // Reputation and Appeals integration
+  const walletAddress = p?.walletAddress ?? null;
+  const { bundle, isLoadingBundle, loadBundle } = useReputation(walletAddress);
+  const { appeals, isLoading: appealsLoading, refresh: refreshAppeals } = useAppeals();
+
+  useEffect(() => {
+    if (walletAddress) {
+      loadBundle();
+      refreshAppeals();
+    }
+  }, [walletAddress, loadBundle, refreshAppeals]);
 
   const handleManageBilling = async () => {
     try {
@@ -241,6 +257,26 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
+      </motion.section>
+
+      {/* ── Reputation & Appeals ───────────────────────────── */}
+      <motion.section variants={staggerItem}>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <h2 className="text-lg font-bold font-heading mb-4 flex items-center gap-2">
+              <Shield size={18} className="text-[--primary]" />
+              Reputation
+            </h2>
+            <ReputationCard bundle={bundle} isLoading={isLoadingBundle} />
+          </div>
+          <div>
+            <AppealsPanel
+              appeals={appeals}
+              isLoading={appealsLoading}
+              className="h-full"
+            />
+          </div>
+        </div>
       </motion.section>
 
       {/* ── Branch Progress ────────────────────────────────── */}

@@ -1,27 +1,33 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 
 const CONSENT_KEY = 'airdrop_cookie_consent';
+const CONSENT_EVENT = 'airdrop_cookie_consent_changed';
+
+function getConsentSnapshot() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  return window.localStorage.getItem(CONSENT_KEY);
+}
+
+function subscribeToConsent(callback: () => void) {
+  window.addEventListener('storage', callback);
+  window.addEventListener(CONSENT_EVENT, callback);
+
+  return () => {
+    window.removeEventListener('storage', callback);
+    window.removeEventListener(CONSENT_EVENT, callback);
+  };
+}
 
 export function CookieConsentBanner() {
+  const consent = useSyncExternalStore(subscribeToConsent, getConsentSnapshot, () => null);
+
   if (process.env.NEXT_PUBLIC_E2E === '1') {
     return null;
   }
-
-  const [consent, setConsent] = useState<string | null>(() => {
-    if (typeof window === 'undefined') {
-      return null;
-    }
-    return window.localStorage.getItem(CONSENT_KEY);
-  });
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(CONSENT_KEY);
-    if (stored) {
-      setConsent(stored);
-    }
-  }, []);
 
   if (consent) {
     return null;
@@ -29,7 +35,7 @@ export function CookieConsentBanner() {
 
   const persistConsent = (value: 'essential' | 'analytics') => {
     window.localStorage.setItem(CONSENT_KEY, value);
-    setConsent(value);
+    window.dispatchEvent(new Event(CONSENT_EVENT));
   };
 
   return (

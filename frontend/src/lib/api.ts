@@ -9,6 +9,16 @@
 
 const BASE_URL = "/api/v1"
 
+function getBrowserStorage(): Storage | null {
+  if (typeof window === "undefined") return null
+  try {
+    const storage = window.localStorage
+    return typeof storage?.getItem === "function" ? storage : null
+  } catch {
+    return null
+  }
+}
+
 /** Thrown when the API returns a non-2xx response; carries `status` and parsed `data`. */
 class ApiError extends Error {
   constructor(
@@ -38,8 +48,9 @@ class ApiClient {
    * Call this once at app startup (e.g. from providers or layout).
    */
   hydrateFromStorage() {
-    if (typeof window === "undefined") return
-    this.accessToken = localStorage.getItem("auth_token")
+    const storage = getBrowserStorage()
+    if (!storage) return
+    this.accessToken = storage.getItem("auth_token")
   }
 
   /**
@@ -50,8 +61,9 @@ class ApiClient {
    * The promise is cleared in `finally` so the next 401 can start fresh.
    */
   private async tryRefreshToken(): Promise<string | null> {
-    if (typeof window === "undefined") return null
-    const refresh = localStorage.getItem("refresh_token")
+    const storage = getBrowserStorage()
+    if (!storage) return null
+    const refresh = storage.getItem("refresh_token")
     if (!refresh) return null
 
     // Return the in-flight refresh if one is already running
@@ -66,15 +78,15 @@ class ApiClient {
         })
 
         if (!res.ok) {
-          localStorage.removeItem("auth_token")
-          localStorage.removeItem("refresh_token")
+          storage.removeItem("auth_token")
+          storage.removeItem("refresh_token")
           return null
         }
 
         const data = await res.json()
         const newAccess = data.access as string
-        localStorage.setItem("auth_token", newAccess)
-        if (data.refresh) localStorage.setItem("refresh_token", data.refresh)
+        storage.setItem("auth_token", newAccess)
+        if (data.refresh) storage.setItem("refresh_token", data.refresh)
         this.accessToken = newAccess
         return newAccess
       } catch {
@@ -101,11 +113,10 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${this.accessToken}`
     }
 
-    if (typeof window !== "undefined") {
-      const activeTenant = window.localStorage.getItem("spore_active_tenant")
-      if (activeTenant && !headers["X-SPORE-TENANT"]) {
-        headers["X-SPORE-TENANT"] = activeTenant
-      }
+    const storage = getBrowserStorage()
+    const activeTenant = storage?.getItem("spore_active_tenant")
+    if (activeTenant && !headers["X-SPORE-TENANT"]) {
+      headers["X-SPORE-TENANT"] = activeTenant
     }
 
     const res = await fetch(`${BASE_URL}${path}`, {

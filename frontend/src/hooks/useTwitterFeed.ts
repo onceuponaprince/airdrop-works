@@ -28,10 +28,9 @@ export function useTwitterFeed(token: string | null, enabled = true) {
   const [status, setStatus] = useState<'idle' | 'connecting' | 'open' | 'closed' | 'error'>('idle');
   const socketRef = useRef<WebSocket | null>(null);
 
-  const connect = useCallback(() => {
+  const openSocket = useCallback(() => {
     if (!token || !enabled) return;
     socketRef.current?.close();
-    setStatus('connecting');
     const url = `${wsBaseUrl()}/ws/twitter/feed/?token=${encodeURIComponent(token)}`;
     const ws = new WebSocket(url);
     socketRef.current = ws;
@@ -49,15 +48,22 @@ export function useTwitterFeed(token: string | null, enabled = true) {
     };
   }, [token, enabled]);
 
+  const reconnect = useCallback(() => {
+    if (!token || !enabled) return;
+    setStatus('connecting');
+    openSocket();
+  }, [openSocket, token, enabled]);
+
   useEffect(() => {
     if (!enabled || !token) {
       socketRef.current?.close();
-      setStatus('idle');
       return;
     }
-    connect();
+    openSocket();
     return () => socketRef.current?.close();
-  }, [connect, enabled, token]);
+  }, [openSocket, enabled, token]);
 
-  return { events, status, reconnect: connect };
+  const visibleStatus = enabled && token ? (status === 'idle' ? 'connecting' : status) : 'idle';
+
+  return { events, status: visibleStatus, reconnect };
 }

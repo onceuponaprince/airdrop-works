@@ -42,14 +42,13 @@ export function useDonate() {
     }
   }, [sendTransactionAsync]);
 
-  // TODO: Phase 2 — Solana donations require @solana/web3.js and Dynamic SDK
-  // wallet signing. For now, show a helpful message directing users to connect
-  // a Solana wallet first.
+  // Phase 2 — Solana donations disabled until @solana/web3.js integration
+  // Currently UI shows disabled state; this function should not be called.
   const donateSolana = useCallback(async (_amountSol: string) => {
     setState({
       status: 'error',
       txHash: null,
-      error: 'Solana donations are coming soon. Connect a Solana wallet via the wallet button to be notified.',
+      error: 'Solana donations are not yet available. Please use Base (ETH).',
     });
   }, []);
 
