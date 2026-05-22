@@ -84,20 +84,17 @@ class MySocialAccountsView(APIView):
 class SyncSocialAccountsView(APIView):
     """
     Trigger scoring for all connected social accounts of the current user.
-    This queues the existing crawl + AI Judge pipeline.
+    Uses SocialSyncService under the hood.
     """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        accounts = UserSocialAccount.objects.filter(user=request.user)
+        from .social_sync_service import SocialSyncService
 
-        if not accounts.exists():
-            return Response({"message": "No connected accounts to sync."}, status=200)
+        result = SocialSyncService.sync_user_accounts(request.user)
 
-        # In a real implementation, we would queue Celery tasks here
-        # For MVP we just acknowledge and let the user know scoring will run.
         return Response({
             "status": "queued",
-            "accounts": [a.platform for a in accounts],
-            "message": "Scoring jobs have been queued for your connected accounts."
+            "result": result,
+            "message": "Social accounts synced and scored."
         }, status=202)
