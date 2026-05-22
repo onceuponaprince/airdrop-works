@@ -32,6 +32,7 @@ urlpatterns = [
     # Discord OAuth
     path("discord/start/", discord_views.DiscordOAuthStartView.as_view(), name="discord_oauth_start"),
     path("discord/callback/", discord_views.DiscordOAuthCallbackView.as_view(), name="discord_oauth_callback"),
+    path("discord/channels/", discord_views.UpdateDiscordChannelsView.as_view(), name="discord_update_channels"),
 
     # Telegram deep link + linking (called by bot)
     path("telegram/start/", telegram_views.TelegramDeepLinkView.as_view(), name="telegram_deep_link"),

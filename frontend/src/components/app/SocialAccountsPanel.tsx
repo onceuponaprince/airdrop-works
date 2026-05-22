@@ -27,6 +27,47 @@ function getSyncStatus(lastSynced?: string): 'fresh' | 'stale' | 'old' {
   return 'old';
 }
 
+// Simple Discord channel config (MVP)
+function DiscordChannelConfig({ userHasDiscord }: { userHasDiscord: boolean }) {
+  const [channels, setChannels] = useState('');
+  const [saving, setSaving] = useState(false);
+  const notify = useNotificationStore((s) => s.push);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const list = channels.split(',').map(c => c.trim()).filter(Boolean);
+      await api.post('/auth/discord/channels/', { channel_ids: list });
+      notify({ type: 'success', title: 'Channels saved', message: 'The system will now track these channels.' });
+    } catch (e) {
+      notify({ type: 'error', title: 'Failed to save channels', message: String(e) });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!userHasDiscord) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-xs">
+      <input
+        type="text"
+        placeholder="channel IDs (comma separated)"
+        value={channels}
+        onChange={(e) => setChannels(e.target.value)}
+        className="w-40 rounded border border-[--border] bg-[--background] px-2 py-1 font-mono text-[10px]"
+      />
+      <button
+        onClick={save}
+        disabled={saving}
+        className="rounded border border-[--primary]/60 px-2 py-0.5 text-[--primary] hover:bg-[--primary]/10 disabled:opacity-50"
+      >
+        {saving ? 'Saving...' : 'Save'}
+      </button>
+    </div>
+  );
+}
+
 const PLATFORM_META: Record<SocialAccount['platform'], { label: string; icon: React.ReactNode; placeholder: string }> = {
   twitter: { label: 'Twitter / X', icon: <Twitter size={16} />, placeholder: '@yourhandle' },
   discord: { label: 'Discord', icon: <Users size={16} />, placeholder: 'Your Discord username' },
@@ -135,12 +176,17 @@ export function SocialAccountsPanel() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => disconnect.mutate(acc.platform)}
-                  className="text-[--destructive] hover:underline flex items-center gap-1 text-xs shrink-0 ml-2"
-                >
-                  <Unlink size={14} /> Disconnect
-                </button>
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  {acc.platform === 'discord' && (
+                    <DiscordChannelConfig userHasDiscord={true} />
+                  )}
+                  <button
+                    onClick={() => disconnect.mutate(acc.platform)}
+                    className="text-[--destructive] hover:underline flex items-center gap-1 text-xs"
+                  >
+                    <Unlink size={14} /> Disconnect
+                  </button>
+                </div>
               </div>
             );
           })
