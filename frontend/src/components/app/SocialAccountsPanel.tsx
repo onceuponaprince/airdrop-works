@@ -1,12 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Twitter, MessageCircle, Users, Link as LinkIcon, Unlink } from 'lucide-react';
+import { Twitter, MessageCircle, Users, Link as LinkIcon, Unlink, RefreshCw } from 'lucide-react';
 import { useSocialAccounts, type SocialAccount } from '@/hooks/useSocialAccounts';
 import { api } from '@/lib/api';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
+
+function formatRelative(dateStr?: string): string {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  const diffMs = Date.now() - date.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function getSyncStatus(lastSynced?: string): 'fresh' | 'stale' | 'old' {
+  if (!lastSynced) return 'old';
+  const mins = (Date.now() - new Date(lastSynced).getTime()) / 60000;
+  if (mins < 60) return 'fresh';
+  if (mins < 1440) return 'stale';
+  return 'old';
+}
 
 const PLATFORM_META: Record<SocialAccount['platform'], { label: string; icon: React.ReactNode; placeholder: string }> = {
   twitter: { label: 'Twitter / X', icon: <Twitter size={16} />, placeholder: '@yourhandle' },
@@ -66,27 +85,54 @@ export function SocialAccountsPanel() {
       <div className="space-y-2 mb-6">
         {accounts.isLoading ? (
           <div className="text-sm text-[--muted-foreground]">Loading connections...</div>
+        ) : accounts.isError ? (
+          <div className="flex items-center justify-between text-sm text-[--destructive]">
+            <span>Failed to load connected accounts.</span>
+            <button onClick={() => accounts.refetch()} className="underline flex items-center gap-1">
+              <RefreshCw size={14} /> Retry
+            </button>
+          </div>
         ) : accounts.data && accounts.data.length > 0 ? (
-          accounts.data.map((acc) => (
-            <div
-              key={acc.platform}
-              className="flex items-center justify-between rounded border border-[--border] bg-[--background]/50 px-4 py-2 text-sm"
-            >
-              <div className="flex items-center gap-3">
-                {PLATFORM_META[acc.platform].icon}
-                <div>
-                  <div className="font-medium">{PLATFORM_META[acc.platform].label}</div>
-                  <div className="font-mono text-xs text-[--muted-foreground]">@{acc.username}</div>
-                </div>
-              </div>
-              <button
-                onClick={() => disconnect.mutate(acc.platform)}
-                className="text-[--destructive] hover:underline flex items-center gap-1 text-xs"
+          accounts.data.map((acc) => {
+            const status = getSyncStatus(acc.last_synced_at);
+            const statusColor =
+              status === 'fresh'
+                ? 'bg-emerald-500'
+                : status === 'stale'
+                  ? 'bg-amber-500'
+                  : 'bg-[--muted-foreground]';
+
+            return (
+              <div
+                key={acc.platform}
+                className="flex items-center justify-between rounded border border-[--border] bg-[--background]/50 px-4 py-2.5 text-sm"
               >
-                <Unlink size={14} /> Disconnect
-              </button>
-            </div>
-          ))
+                <div className="flex items-center gap-3 min-w-0">
+                  {PLATFORM_META[acc.platform].icon}
+                  <div className="min-w-0">
+                    <div className="font-medium flex items-center gap-2">
+                      {PLATFORM_META[acc.platform].label}
+                      <span className={`inline-block h-1.5 w-1.5 rounded-full ${statusColor}`} />
+                    </div>
+                    <div className="font-mono text-xs text-[--muted-foreground] truncate">@{acc.username}</div>
+                    <div className="text-[10px] text-[--muted-foreground] mt-0.5">
+                      Connected {formatRelative(acc.connected_at)}
+                      {acc.last_synced_at && (
+                        <> · Last synced {formatRelative(acc.last_synced_at)}</>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => disconnect.mutate(acc.platform)}
+                  className="text-[--destructive] hover:underline flex items-center gap-1 text-xs shrink-0 ml-2"
+                >
+                  <Unlink size={14} /> Disconnect
+                </button>
+              </div>
+            );
+          })
         ) : (
           <div className="text-sm text-[--muted-foreground] italic">No accounts connected yet.</div>
         )}
