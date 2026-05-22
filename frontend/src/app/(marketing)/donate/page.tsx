@@ -61,7 +61,7 @@ export default function DonatePage() {
           transition={{ delay: 0.1 }}
         >
           <ArcadeCard glow className="space-y-6">
-            {/* Chain toggle - Solana disabled until Phase 2 implementation */}
+            {/* Chain toggle - Solana now supported via @solana/web3.js + wallet adapter */}
             <div className="flex gap-1 bg-[--secondary] p-1 rounded-lg">
               <button
                 onClick={() => { setChain('base'); setAmount(''); }}
@@ -75,11 +75,15 @@ export default function DonatePage() {
                 Base (ETH)
               </button>
               <button
-                disabled
-                title="Solana donations coming in Phase 2"
-                className="flex-1 py-2 rounded text-sm font-medium text-[--muted-foreground]/50 cursor-not-allowed"
+                onClick={() => { setChain('solana'); setAmount(''); }}
+                className={cn(
+                  'flex-1 py-2 rounded text-sm font-medium transition-colors',
+                  chain === 'solana'
+                    ? 'bg-[--card] text-[--foreground] shadow-sm'
+                    : 'text-[--muted-foreground] hover:text-[--foreground]'
+                )}
               >
-                Solana (SOL) — Soon
+                Solana (SOL)
               </button>
             </div>
 
