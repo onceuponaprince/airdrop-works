@@ -254,7 +254,7 @@ export function SocialAccountsPanel() {
         </div>
 
         <p className="mt-2 text-[10px] text-[--muted-foreground]">
-          Twitter & Discord use real OAuth. Telegram opens the official bot — talk to it and your account will link automatically.
+          Twitter & Discord use real OAuth. Telegram opens the official bot (deep link) — talk to it to link. Then add the same bot to your groups/channels; posts are scored in real time via webhook + AI Judge.
         </p>
       </div>
     </div>

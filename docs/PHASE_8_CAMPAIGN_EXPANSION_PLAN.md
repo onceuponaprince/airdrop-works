@@ -10,7 +10,7 @@
 
 - UserSocialAccount + dedicated Twitter/Discord/Telegram connections (full models)
 - Real OAuth for Twitter + full Discord (exchange, persist dedicated + generic record, redirects)
-- Secure deep-link Telegram connection flow (token-based)
+- Production Telegram: deep-link linking + webhook receiver (secret validation, message → Contribution → AI Judge via Celery, real-time for any chat the bot sees)
 - SocialSyncService + Celery auto-sync every 10 min (Discord channel-aware)
 - Real Discord message crawling + AI Judge scoring (per tracked channels in metadata)
 - Users can configure tracked Discord channel IDs via UI (saved to DiscordConnection.metadata)
@@ -29,8 +29,8 @@
 
 ### Wave 5 — User Control & Polish
 - [x] Allow users to configure which Discord channels they want tracked (full OAuth + config UI + sync integration)
-- Telegram bot production hardening (webhook, proper payload validation, rate limiting)
-- Better error states and connection health indicators
+- [x] Telegram bot production hardening (webhook receiver + secret validation + Contribution ingestion + AI Judge scoring via Celery; deep-link linking already shipped)
+- Better error states and connection health indicators (minor text polish + freshness already in panel)
 
 ### Wave 6 — Platform Expansion
 - GitHub (commits + PRs + issues from connected account)
@@ -55,4 +55,4 @@
 
 ---
 
-**Status:** Wave 4 + first Wave 5 item complete (Campaign page + Discord channel config + full real Discord OAuth). Next: production Telegram bot or GitHub/Reddit expansion.
+**Status:** Wave 4 + Wave 5 (Discord channels + full Telegram production webhook + scoring) complete. Foundation for live multi-platform campaign is now very strong. Next natural steps: GitHub/Reddit expansion or hardening round.

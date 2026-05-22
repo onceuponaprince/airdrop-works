@@ -34,7 +34,8 @@ urlpatterns = [
     path("discord/callback/", discord_views.DiscordOAuthCallbackView.as_view(), name="discord_oauth_callback"),
     path("discord/channels/", discord_views.UpdateDiscordChannelsView.as_view(), name="discord_update_channels"),
 
-    # Telegram deep link + linking (called by bot)
+    # Telegram deep link + linking (called by bot) + production webhook receiver
     path("telegram/start/", telegram_views.TelegramDeepLinkView.as_view(), name="telegram_deep_link"),
     path("telegram/link/", telegram_views.TelegramLinkView.as_view(), name="telegram_link"),
+    path("telegram/webhook/", telegram_views.TelegramWebhookView.as_view(), name="telegram_webhook"),
 ]
