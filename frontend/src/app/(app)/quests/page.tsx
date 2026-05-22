@@ -86,7 +86,13 @@ export default function QuestsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {questList.map((quest) => {
-              const status: 'available' | 'in_progress' = inProgressIds[quest.id] ? 'in_progress' : 'available';
+              const now = Date.now();
+              const ended = quest.endDate && new Date(quest.endDate).getTime() < now;
+              const status: 'available' | 'in_progress' | 'completed' = ended
+                ? 'completed'
+                : inProgressIds[quest.id]
+                  ? 'in_progress'
+                  : 'available';
               return (
                 <QuestCard
                   key={quest.id}
