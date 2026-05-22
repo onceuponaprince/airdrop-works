@@ -1,6 +1,6 @@
 # Phase 5 prep — Portable reputation network
 
-**Baseline:** `0.5.2` (CI green + Twitter watch + Open Rubric at `0.5.0`)  
+**Baseline:** `0.6.0` (Phase 5 complete — portable reputation network)  
 **North star:** [`research/airdrop-direction/decisions/001-sequenced-roadmap.md`](research/airdrop-direction/decisions/001-sequenced-roadmap.md) § Phase 5
 
 ## Waves (4)

@@ -1,7 +1,7 @@
 # Phase 5 Verification Checklist
 
 **Plan:** [`superpowers/plans/2026-05-22-phase-5-parallel-execution.md`](superpowers/plans/2026-05-22-phase-5-parallel-execution.md)  
-**Baseline:** `0.5.2`
+**Baseline:** `0.5.2` → **Release:** `0.6.0`
 
 ## Wave 1 — History + portable export
 
@@ -135,10 +135,25 @@ Staff UI v0: Django admin `ScoreAppeal` (`/admin/integrity/scoreappeal/`).
 
 ## Wave 2 sign-off
 
-- [ ] `test_appeals.py` + `test_console.py` pass
-- [ ] `verify_phase5_endpoints.sh` hits console overview (401 without auth)
-- [ ] Migration `0001_score_appeal` applied
+- [x] `test_appeals.py` + `test_console.py` pass
+- [x] `verify_phase5_endpoints.sh` hits console overview (401 without auth)
+- [x] Migration `0001_score_appeal` applied
 
-## Release target
+## Wave 3 — Gate + E2E + release
 
-**0.6.0** at Wave 3 (portable reputation network feature-complete gate).
+| Check | Command / artifact |
+|-------|-------------------|
+| Full integrity pytest | `pytest apps/integrity/tests/` |
+| Portable export schema | `test_portable_export_schema.py` |
+| Playwright journey | `frontend/tests/e2e/journeys/reputation-portable.spec.ts` |
+| Phase complete doc | `docs/PHASE_5_COMPLETE.md` |
+
+## Wave 3 sign-off
+
+- [x] `verify_phase5_gate.sh` green (all integrity tests + phase 4 regression)
+- [x] Playwright `reputation-portable` spec passes in CI
+- [x] Monorepo version **0.6.0**
+
+## Release
+
+**0.6.0** — portable reputation network feature-complete (Phase 5).

@@ -1,5 +1,9 @@
 # Reputation schema changelog
 
+## v1.2.0 — 2026-05-22
+
+- Phase 5 complete: portable export contract test; appeals/console APIs documented in `PHASE_5_VERIFICATION.md`.
+
 ## v1.1.0 — 2026-05-22
 
 - `portable-export.schema.json` for `GET /api/v1/profiles/<wallet>/reputation/export/`.
