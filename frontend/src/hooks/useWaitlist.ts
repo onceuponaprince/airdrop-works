@@ -14,6 +14,8 @@ interface WaitlistFormData {
   honeypot?:         string   // hidden field — if filled, request is from a bot
   twitterHandle?:    string
   twitterScoreData?: Record<string, unknown>
+  /** Segmentation tag — stored in Supabase `source` (e.g. campaign_integrity_pilot) */
+  signupIntent?:     string
 }
 
 interface WaitlistState {
@@ -59,6 +61,7 @@ export function useWaitlist() {
           honeypot:         data.honeypot || undefined,
           twitterHandle:    data.twitterHandle || undefined,
           twitterScoreData: data.twitterScoreData || undefined,
+          signupIntent:     data.signupIntent || undefined,
         }),
       })
 

@@ -56,9 +56,11 @@ Phases 4–5 are **roadmapped, not deferred**. They follow Phase 3 because they 
 - [x] `docs/campaign-integrity-pilot.md` one-pager
 - [x] Hero copy: Passport vs farming positioning
 - [x] `CLAUDE.md` auth aligned to SIWE + Particle
-- [ ] CSV export v0 (API or admin)
+- [x] CSV export v0 (`exportAccountCsv.ts` + AccountScoreCard button)
+- [x] Waitlist `signupIntent` → Supabase `source` (`?intent=campaign_integrity_pilot`)
+- [x] `/judge` copy aligned to integrity narrative
 - [ ] Full Figma landing pass
-- [ ] CI green on `main`
+- [ ] CI green on `main` (verify after push)
 
 ---
 

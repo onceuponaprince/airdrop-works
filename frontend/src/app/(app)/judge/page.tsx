@@ -66,8 +66,10 @@ export default function JudgePage() {
       <div className="max-w-2xl mx-auto space-y-8">
         <div>
           <h1 className="font-display text-2xl text-[--primary] mb-2">AI Judge</h1>
-          <p className="text-sm text-[--muted-foreground]">
-            Score Web3 contributions with AI-powered precision.
+          <p className="text-sm text-[--muted-foreground] leading-relaxed">
+            Score contribution quality and farming risk in one pass. Passport filters
+            humans; this judges whether their posts deserve reward. Export account
+            batches as CSV for allocation review.
           </p>
         </div>
 

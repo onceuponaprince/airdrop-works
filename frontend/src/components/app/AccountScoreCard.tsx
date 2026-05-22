@@ -5,7 +5,9 @@ import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
 import { CrtOverlay } from '@/components/themed/CrtOverlay';
+import { Download } from 'lucide-react';
 import { FARMING_FLAGS, SCORE_DIMENSIONS } from '@/lib/constants';
+import { downloadAccountAnalysisCsv } from '@/lib/exportAccountCsv';
 import type { AccountAnalysis, TweetScore } from '@/types/api';
 
 interface AccountScoreCardProps {
@@ -15,6 +17,8 @@ interface AccountScoreCardProps {
   showReset?: boolean;
   /** Callback fired when the reset button is clicked */
   onReset?: () => void;
+  /** Show CSV export for pilot / allocator workflows */
+  showExportCsv?: boolean;
 }
 
 function TweetScoreRow({ tweet, index }: { tweet: TweetScore; index: number }) {
@@ -42,7 +46,13 @@ function TweetScoreRow({ tweet, index }: { tweet: TweetScore; index: number }) {
   );
 }
 
-export function AccountScoreCard({ analysis, className, showReset, onReset }: AccountScoreCardProps) {
+export function AccountScoreCard({
+  analysis,
+  className,
+  showReset,
+  onReset,
+  showExportCsv = true,
+}: AccountScoreCardProps) {
   const overallDisplay = useAnimatedCounter(analysis.aggregate.overallScore, { duration: 1200, delay: 200 });
   const genuineDisplay = useAnimatedCounter(analysis.aggregate.genuinePercentage, { delay: 600 });
 
@@ -163,17 +173,29 @@ export function AccountScoreCard({ analysis, className, showReset, onReset }: Ac
             </div>
           )}
 
-          {/* Optional reset action — used in the TwitterAnalyzer embed */}
-          {showReset && onReset && (
-            <div className="px-5 pb-5 pt-2">
-              <button
-                onClick={onReset}
-                className="w-full rounded-[var(--radius)] border border-[--border] bg-transparent py-2 font-mono text-xs uppercase tracking-widest text-[--muted-foreground] transition-colors hover:border-[--primary] hover:text-[--primary]"
-              >
-                Analyze Another Account
-              </button>
+          {(showExportCsv && analysis.tweets.length > 0) || (showReset && onReset) ? (
+            <div className="px-5 pb-5 pt-2 flex flex-col gap-2">
+              {showExportCsv && analysis.tweets.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => downloadAccountAnalysisCsv(analysis)}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-[var(--radius)] border border-[--primary]/40 bg-[--primary]/10 py-2 font-mono text-xs uppercase tracking-widest text-[--primary] transition-colors hover:border-[--primary] hover:bg-[--primary]/15"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden />
+                  Export CSV (pilot)
+                </button>
+              )}
+              {showReset && onReset && (
+                <button
+                  type="button"
+                  onClick={onReset}
+                  className="w-full rounded-[var(--radius)] border border-[--border] bg-transparent py-2 font-mono text-xs uppercase tracking-widest text-[--muted-foreground] transition-colors hover:border-[--primary] hover:text-[--primary]"
+                >
+                  Analyze Another Account
+                </button>
+              )}
             </div>
-          )}
+          ) : null}
         </div>
       </CrtOverlay>
     </div>

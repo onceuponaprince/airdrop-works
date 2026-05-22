@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { waitlistUrlWithIntent, WAITLIST_INTENT_CAMPAIGN_PILOT } from "@/lib/waitlist-intent"
 import { Shield, FileSpreadsheet, Users, Layers } from "lucide-react"
 import { AnimatedSection } from "@/components/shared/AnimatedSection"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
@@ -91,11 +92,11 @@ export function CampaignIntegritySection() {
               <ArcadeButton
                 size="lg"
                 variant="secondary"
-                onClick={() =>
-                  document.getElementById("waitlist")?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-                }
+                onClick={() => {
+                  window.location.href = waitlistUrlWithIntent(
+                    WAITLIST_INTENT_CAMPAIGN_PILOT
+                  )
+                }}
               >
                 Request a pilot
               </ArcadeButton>

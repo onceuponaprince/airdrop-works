@@ -8,6 +8,11 @@ import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { useWaitlist } from "@/hooks/useWaitlist"
 import { useReferral } from "@/hooks/useReferral"
 import { scoreReveal } from "@/styles/theme"
+import {
+  WAITLIST_INTENT_CAMPAIGN_PILOT,
+  waitlistIntentLabel,
+  type WaitlistSignupIntent,
+} from "@/lib/waitlist-intent"
 import type { AccountAnalysis } from "@/types/api"
 
 interface StepSubmitProps {
@@ -15,11 +20,20 @@ interface StepSubmitProps {
   email: string
   twitterHandle?: string
   twitterScoreData?: AccountAnalysis
+  signupIntent?: WaitlistSignupIntent
   onBack?: () => void
   onSuccess?: () => void
 }
 
-export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreData, onBack, onSuccess }: StepSubmitProps) {
+export function StepSubmit({
+  walletAddress,
+  email,
+  twitterHandle,
+  twitterScoreData,
+  signupIntent,
+  onBack,
+  onSuccess,
+}: StepSubmitProps) {
   const { status, rank, referralUrl, alreadyExists, error, submit } = useWaitlist()
   const inboundReferralCode = useReferral()
   const [honeypot, setHoneypot] = useState("")
@@ -53,6 +67,7 @@ export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreDa
       honeypot: honeypot || undefined,
       twitterHandle,
       twitterScoreData: scoreDataForDb,
+      signupIntent,
     })
   }
 
@@ -118,6 +133,13 @@ export function StepSubmit({ walletAddress, email, twitterHandle, twitterScoreDa
   // Pre-submit review
   return (
     <ArcadeCard className="space-y-4">
+      {signupIntent === WAITLIST_INTENT_CAMPAIGN_PILOT && (
+        <p className="font-body text-sm text-primary bg-primary/10 border border-primary/30 rounded-sm px-3 py-2">
+          You&apos;re requesting a{" "}
+          <strong>{waitlistIntentLabel(signupIntent)}</strong>. We&apos;ll prioritise
+          protocol outreach for your email.
+        </p>
+      )}
       <p className="font-body text-sm text-muted-foreground">
         Review your quest progress and claim your rank.
       </p>
