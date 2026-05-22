@@ -57,6 +57,7 @@ urlpatterns = [
         name="admin_contributions_alias_detail",
     ),
     path("api/v1/notifications/", include("apps.notifications.urls")),
+    path("api/v1/referrals/", include("apps.referrals.urls")),
 
     # Subgraph webhook for on-chain event sync
     path("api/v1/webhooks/subgraph/", subgraph_webhook, name="subgraph_webhook"),
