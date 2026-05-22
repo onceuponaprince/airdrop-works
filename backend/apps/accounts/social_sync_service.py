@@ -25,27 +25,52 @@ class SocialSyncService:
     @staticmethod
     def sync_user_accounts(user: User) -> dict:
         """
-        Sync all connected social accounts for a user and trigger scoring.
+        Sync connected social accounts and run AI Judge scoring on recent activity.
         """
         from apps.accounts.social_models import UserSocialAccount
         from apps.accounts.models import DiscordConnection
+        from apps.contributions.crawlers import crawl_discord
+        from apps.contributions.models import Contribution
+        from apps.ai_core.workflow import run_scoring_pipeline
 
-        synced = []
+        synced_platforms: set[str] = set()
 
-        # Generic social accounts
+        # 1. Generic social accounts (manual entry for now)
         for account in UserSocialAccount.objects.filter(user=user):
-            logger.info("[SocialSync] Syncing %s for user %s", account.platform, user.wallet_address[:6])
-            synced.append(account.platform)
+            logger.info("[SocialSync] Generic sync for %s (user=%s)", account.platform, user.wallet_address[:6])
+            synced_platforms.add(account.platform)
 
-        # Dedicated Discord connection
-        if DiscordConnection.objects.filter(user=user).exists():
-            logger.info("[SocialSync] Discord connection found for user %s", user.wallet_address[:6])
-            synced.append("discord")
+        # 2. Real Discord crawling + scoring
+        discord_conn = DiscordConnection.objects.filter(user=user).first()
+        if discord_conn:
+            tracked_channels = discord_conn.metadata.get("tracked_channels", []) if discord_conn.metadata else []
 
-        # TODO: Call crawl_discord + AI Judge + award XP here
+            if tracked_channels:
+                for channel_id in tracked_channels[:3]:  # limit to first 3 channels
+                    try:
+                        result = crawl_discord(channel_id=channel_id)
+                        for item in result.items:
+                            contribution, created = Contribution.objects.get_or_create(
+                                user=user,
+                                platform="discord",
+                                content_url=item.content_url,
+                                defaults={
+                                    "content_text": item.content_text[:4000],
+                                    "discovered_at": item.discovered_at or timezone.now(),
+                                },
+                            )
+                            if created:
+                                run_scoring_pipeline(str(contribution.id))
+                                logger.info("[SocialSync] Scored new Discord message for user %s", user.wallet_address[:6])
+
+                        synced_platforms.add("discord")
+                    except Exception as exc:
+                        logger.warning("[SocialSync] Discord crawl failed for channel %s: %s", channel_id, exc)
+            else:
+                logger.info("[SocialSync] Discord connected but no tracked channels configured yet")
 
         return {
             "user_id": str(user.id),
-            "synced_platforms": list(set(synced)),
+            "synced_platforms": sorted(synced_platforms),
             "synced_at": timezone.now().isoformat(),
         }
