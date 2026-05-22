@@ -22,6 +22,22 @@ else
   exit 1
 fi
 
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/v1/profiles/$WALLET/reputation/history/")
+if [[ "$code" == "200" || "$code" == "404" ]]; then
+  echo "OK GET /api/v1/profiles/<wallet>/reputation/history/ → $code"
+else
+  echo "FAIL reputation history expected 200|404, got $code"
+  exit 1
+fi
+
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/v1/profiles/$WALLET/reputation/export/")
+if [[ "$code" == "200" || "$code" == "404" ]]; then
+  echo "OK GET /api/v1/profiles/<wallet>/reputation/export/ → $code"
+else
+  echo "FAIL reputation export expected 200|404, got $code"
+  exit 1
+fi
+
 echo "Phase 4 regression..."
 BASE_URL="$BASE_URL" "$(dirname "$0")/verify_phase4_endpoints.sh"
 echo "Done."

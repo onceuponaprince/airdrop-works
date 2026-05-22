@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://airdrop.works/schemas/reputation/v1/portable-export.schema.json",
+  "title": "PortableReputationExport",
+  "description": "Portable reputation bundle from GET /api/v1/profiles/<wallet>/reputation/export/",
+  "type": "object",
+  "required": [
+    "@context",
+    "type",
+    "specVersion",
+    "exportedAt",
+    "walletAddress",
+    "summary",
+    "history",
+    "meta"
+  ],
+  "properties": {
+    "@context": { "type": "string", "const": "https://airdrop.works/schemas/reputation/v1" },
+    "type": { "type": "string", "const": "PortableReputationExport" },
+    "specVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "exportedAt": { "type": "string", "format": "date-time" },
+    "walletAddress": { "type": "string", "pattern": "^0x[a-fA-F0-9]{40}$" },
+    "summary": { "$ref": "profile-reputation.schema.json" },
+    "profile": {
+      "type": ["object", "null"],
+      "properties": {
+        "totalXp": { "type": "integer" },
+        "rank": { "type": ["integer", "null"] },
+        "primaryBranch": { "type": "string" }
+      }
+    },
+    "history": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/historyItem" }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["historyCount", "historyLimit"],
+      "properties": {
+        "historyCount": { "type": "integer", "minimum": 0 },
+        "historyLimit": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "historyItem": {
+      "type": "object",
+      "required": [
+        "id",
+        "platform",
+        "contentPreview",
+        "compositeScore",
+        "farmingFlag",
+        "scoredAt"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "platform": { "type": "string" },
+        "contentUrl": { "type": "string" },
+        "contentPreview": { "type": "string" },
+        "teachingValue": { "type": ["integer", "null"] },
+        "originality": { "type": ["integer", "null"] },
+        "communityImpact": { "type": ["integer", "null"] },
+        "compositeScore": { "type": ["integer", "null"] },
+        "farmingFlag": { "type": ["string", "null"] },
+        "xpAwarded": { "type": "integer" },
+        "scoredAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  },
+  "additionalProperties": false
+}
