@@ -7,6 +7,7 @@ from .social_views import (
     ConnectSocialAccountView,
     DisconnectSocialAccountView,
     MySocialAccountsView,
+    SyncSocialAccountsView,
 )
 
 urlpatterns = [
@@ -24,4 +25,5 @@ urlpatterns = [
     path("social/connect/", ConnectSocialAccountView.as_view(), name="social_connect"),
     path("social/disconnect/", DisconnectSocialAccountView.as_view(), name="social_disconnect"),
     path("social/me/", MySocialAccountsView.as_view(), name="social_me"),
+    path("social/sync/", SyncSocialAccountsView.as_view(), name="social_sync"),
 ]
