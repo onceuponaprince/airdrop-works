@@ -307,6 +307,31 @@ certbot --nginx -d api.airdrop.works
 
 ---
 
+### Live Campaign / Social Connections (Phase 8 — Twitter, Discord, Telegram)
+
+These are required to enable the real-time multi-platform contribution scoring campaign.
+
+| Variable                        | Required     | Default                  | Description |
+|---------------------------------|--------------|--------------------------|-------------|
+| `TELEGRAM_BOT_TOKEN`            | For Telegram | —                        | BotFather token for deep-link linking + webhook ingestion |
+| `TELEGRAM_BOT_USERNAME`         | For Telegram | `airdropworks_bot`       | Public @username of the campaign bot (used to build t.me deep links) |
+| `TELEGRAM_WEBHOOK_SECRET`       | Recommended  | —                        | Random secret string. Set on the Telegram setWebhook call and validated by `TelegramWebhookView` and `TelegramLinkView` |
+| `DISCORD_CLIENT_ID`             | For Discord  | —                        | Discord OAuth2 application client ID |
+| `DISCORD_CLIENT_SECRET`         | For Discord  | —                        | Discord OAuth2 client secret |
+| `DISCORD_OAUTH_CALLBACK_URL`    | Optional     | Derived from SITE_URL    | Full callback URL for Discord OAuth (must match the one registered in Discord dev portal) |
+| `TWITTER_*` (existing)          | For Twitter  | —                        | Already used for the Twitter OAuth flow |
+
+**One-time bot setup (Telegram webhook):**
+```bash
+curl -F "url=https://api.airdrop.works/api/v1/auth/telegram/webhook/" \
+     -F "secret_token=$TELEGRAM_WEBHOOK_SECRET" \
+     https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook
+```
+
+After setting the webhook, every message the bot can see from a linked user is automatically turned into a scored Contribution.
+
+---
+
 ## Database & Migrations
 
 ### Running migrations
