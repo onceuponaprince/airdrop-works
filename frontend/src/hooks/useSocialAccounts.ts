@@ -53,9 +53,21 @@ export function useSocialAccounts() {
     },
   });
 
+  const sync = useMutation({
+    mutationFn: () => api.post('/auth/social/sync/'),
+    onSuccess: (data) => {
+      notify({
+        type: 'success',
+        title: 'Sync started',
+        message: (data as any)?.message || 'Scoring jobs queued for your accounts.',
+      });
+    },
+  });
+
   return {
     accounts,
     connect,
     disconnect,
+    sync,
   };
 }

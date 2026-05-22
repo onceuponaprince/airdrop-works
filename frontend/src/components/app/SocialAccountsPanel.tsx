@@ -14,7 +14,7 @@ const PLATFORM_META: Record<SocialAccount['platform'], { label: string; icon: Re
 };
 
 export function SocialAccountsPanel() {
-  const { accounts, connect, disconnect } = useSocialAccounts();
+  const { accounts, connect, disconnect, sync } = useSocialAccounts();
   const [form, setForm] = useState({ platform: 'twitter' as SocialAccount['platform'], username: '', external_id: '' });
 
   const connectedPlatforms = new Set(accounts.data?.map((a) => a.platform) ?? []);
@@ -105,8 +105,19 @@ export function SocialAccountsPanel() {
           </ArcadeButton>
         </div>
 
+        <div className="mt-3 flex justify-end">
+          <ArcadeButton
+            size="sm"
+            variant="secondary"
+            onClick={() => sync.mutate()}
+            disabled={sync.isPending || !accounts.data?.length}
+          >
+            {sync.isPending ? 'Syncing...' : 'Sync & Score Now'}
+          </ArcadeButton>
+        </div>
+
         <p className="mt-2 text-[10px] text-[--muted-foreground]">
-          For now, enter your username or ID. Full OAuth login coming soon.
+          For now, enter your username or ID. Full OAuth login coming soon. “Sync & Score” queues the AI Judge on your recent activity.
         </p>
       </div>
     </div>
