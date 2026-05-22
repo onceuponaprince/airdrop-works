@@ -5,10 +5,11 @@ All notable changes to this repository will be documented in this file.
 ## Unreleased
 
 ### Added
-- Phase 7 Wave 3: Quest completion E2E polish — completed status on ended quests, loot-ready preparation (backend Celery + rarity + Notification already wired).
+- Solana donations: full implementation using @solana/web3.js + connected wallet (Phantom/Solflare/Dynamic).
+- Stabilization sweep for 0.8.0: notification store backward compatibility, type safety, production build clean.
 
 ### Chore
-- Version bump 0.7.2 → 0.7.3 after atomic integration.
+- Version bump to **0.8.0** (Release Candidate) — all previous phases complete, post-roadmap polish shipped.
 
 ## 0.6.0 - 2026-05-22
 

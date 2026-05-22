@@ -61,7 +61,7 @@ export default function DonatePage() {
           transition={{ delay: 0.1 }}
         >
           <ArcadeCard glow className="space-y-6">
-            {/* Chain toggle - Solana disabled until Phase 2 implementation */}
+            {/* Chain toggle - Solana now supported via @solana/web3.js + wallet adapter */}
             <div className="flex gap-1 bg-[--secondary] p-1 rounded-lg">
               <button
                 onClick={() => { setChain('base'); setAmount(''); }}
@@ -75,11 +75,15 @@ export default function DonatePage() {
                 Base (ETH)
               </button>
               <button
-                disabled
-                title="Solana donations coming in Phase 2"
-                className="flex-1 py-2 rounded text-sm font-medium text-[--muted-foreground]/50 cursor-not-allowed"
+                onClick={() => { setChain('solana'); setAmount(''); }}
+                className={cn(
+                  'flex-1 py-2 rounded text-sm font-medium transition-colors',
+                  chain === 'solana'
+                    ? 'bg-[--card] text-[--foreground] shadow-sm'
+                    : 'text-[--muted-foreground] hover:text-[--foreground]'
+                )}
               >
-                Solana (SOL) — Soon
+                Solana (SOL)
               </button>
             </div>
 
@@ -143,35 +147,60 @@ export default function DonatePage() {
                   : `Donate ${amount || '0'} ${unit}`}
             </ArcadeButton>
 
-            {/* Success */}
-            {status === 'success' && (
+            {/* Success Receipt */}
+            {status === 'success' && txHash && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-lg border border-[--primary]/50 bg-[--primary]/10 p-4 text-center"
+                className="rounded-lg border border-[--primary] bg-[--card] p-5 text-left"
               >
-                <CheckCircle className="mx-auto text-[--primary] mb-2" size={24} />
-                <p className="text-sm font-medium text-[--foreground] mb-1">Thank you for your donation!</p>
-                {txHash && (
-                  <a
-                    href={chain === 'base'
-                      ? `https://basescan.org/tx/${txHash}`
-                      : `https://solscan.io/tx/${txHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-[--primary] hover:underline"
-                  >
-                    View transaction <ExternalLink size={10} />
-                  </a>
-                )}
-                <div className="mt-3">
-                  <button
-                    onClick={reset}
-                    className="text-xs text-[--muted-foreground] hover:text-[--foreground] underline"
-                  >
-                    Make another donation
-                  </button>
+                <div className="flex items-center gap-2 mb-3">
+                  <CheckCircle className="text-[--primary]" size={20} />
+                  <p className="font-display text-sm text-[--primary]">Donation Receipt</p>
                 </div>
+
+                <div className="space-y-2 text-sm mb-4">
+                  <div className="flex justify-between">
+                    <span className="text-[--muted-foreground]">Chain</span>
+                    <span className="font-mono text-[--foreground]">{chain === 'base' ? 'Base' : 'Solana'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[--muted-foreground]">Amount</span>
+                    <span className="font-mono text-[--primary]">{amount} {unit}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[--muted-foreground]">Transaction</span>
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono text-xs bg-[--secondary] px-1.5 py-0.5 rounded">
+                        {txHash.slice(0, 6)}...{txHash.slice(-4)}
+                      </code>
+                      <button
+                        onClick={() => navigator.clipboard.writeText(txHash)}
+                        className="text-[--primary] hover:underline text-xs"
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <a
+                  href={chain === 'base'
+                    ? `https://basescan.org/tx/${txHash}`
+                    : `https://solscan.io/tx/${txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 w-full justify-center rounded bg-[--primary] px-4 py-2 text-sm font-medium text-[--primary-foreground] hover:brightness-105 transition"
+                >
+                  View on {chain === 'base' ? 'BaseScan' : 'Solscan'} <ExternalLink size={14} />
+                </a>
+
+                <button
+                  onClick={reset}
+                  className="mt-3 w-full text-center text-xs text-[--muted-foreground] hover:text-[--foreground] underline"
+                >
+                  Make another donation
+                </button>
               </motion.div>
             )}
 

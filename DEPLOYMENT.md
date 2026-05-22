@@ -490,3 +490,51 @@ docker compose exec db pg_dump -U postgres airdrop_works > backup.sql
 cd frontend && pnpm lint && pnpm type-check
 cd backend && uv run ruff check . && uv run ruff format --check .
 ```
+
+---
+
+## Testnet Deployment (Base Sepolia + Solana Devnet)
+
+This section prepares the 0.8.0 release candidate for public testnet deployment.
+
+### 1. Donation Addresses (Testnet)
+
+Add these to your `.env` (or Vercel environment variables):
+
+```bash
+# Base Sepolia (testnet)
+NEXT_PUBLIC_DONATION_ADDRESS_BASE=0xYourTestnetDonationWalletOnBaseSepolia
+
+# Solana Devnet
+NEXT_PUBLIC_DONATION_ADDRESS_SOLANA=YourTestnetDonationWalletOnSolanaDevnet
+
+# Optional: custom RPCs for better reliability
+NEXT_PUBLIC_SOLANA_RPC_URL=https://api.devnet.solana.com
+```
+
+### 2. Frontend (Vercel)
+
+1. Create a new Vercel project or use existing `airdrop-works` preview.
+2. Set environment:
+   - `NEXT_PUBLIC_SITE_URL=https://your-preview.vercel.app`
+   - All `NEXT_PUBLIC_*` donation and Dynamic keys
+3. Deploy the `release/0.8.0-rc` branch.
+4. Verify donate page works on both Base Sepolia and Solana Devnet.
+
+### 3. Backend (Optional for Donations)
+
+Donations are pure native-token transfers — no backend involvement required for the current flow.
+If you later add on-chain receipt verification webhooks, deploy the Django backend to Railway / Render / Fly.io with the same env vars.
+
+### 4. Verification Checklist
+
+- [ ] Donate with small amount on Base Sepolia → receipt shows correct explorer link
+- [ ] Donate with small amount on Solana Devnet → receipt shows correct explorer link
+- [ ] Tx hash copy works on both chains
+- [ ] No console errors in production build
+
+### 5. Next Steps After Testnet
+
+- Monitor real donations on mainnet
+- Consider adding on-chain donation NFT / badge for large contributors (Phase 8)
+- Add multi-sig donation address for transparency
