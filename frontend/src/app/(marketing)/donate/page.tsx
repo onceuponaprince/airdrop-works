@@ -25,6 +25,7 @@ export default function DonatePage() {
   const [amount, setAmount] = useState('');
   const [customMode, setCustomMode] = useState(false);
   const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const { status, txHash, error, donate, reset } = useDonate();
 
   const presets = chain === 'base' ? BASE_PRESETS : SOLANA_PRESETS;
@@ -137,15 +138,24 @@ export default function DonatePage() {
             {/* Solana wallet connect helper / indicator */}
             {chain === 'solana' && (
               solanaAddress ? (
-                <div className="flex items-center justify-between rounded-lg border border-[--primary]/50 bg-[--primary]/10 px-4 py-2 text-sm">
+                <button
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(solanaAddress);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                  className="flex w-full items-center justify-between rounded-lg border border-[--primary]/50 bg-[--primary]/10 px-4 py-2 text-sm transition hover:border-[--primary]/70 hover:bg-[--primary]/15"
+                >
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-[--primary] animate-pulse" />
                     <span className="font-mono text-[--primary]">
                       {solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}
                     </span>
                   </div>
-                  <span className="text-xs text-[--muted-foreground]">Connected</span>
-                </div>
+                  <span className="text-xs text-[--muted-foreground]">
+                    {copied ? 'Copied!' : 'Connected'}
+                  </span>
+                </button>
               ) : (
                 <button
                   onClick={async () => {
