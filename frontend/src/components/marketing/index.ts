@@ -1,5 +1,6 @@
 export { HeroSection }        from "./HeroSection"
-export { AiJudgeDemo }        from "./AiJudgeDemo"
+export { AiJudgeDemo }              from "./AiJudgeDemo"
+export { CampaignIntegritySection } from "./CampaignIntegritySection"
 export { ProblemSection }     from "./ProblemSection"
 export { SolutionSection }    from "./SolutionSection"
 export { FeaturesSection }    from "./FeaturesSection"

@@ -149,7 +149,7 @@ These must stay visually aligned during the refresh:
 | Pattern | Marketing | App | Shared implementation |
 |---------|-----------|-----|-------------------------|
 | AI Judge score | `AiJudgeDemo`, `ScoreReveal` | `ScoreCard`, `(app)/judge` | Same dimensions, farming badge, CRT, bar colors from `SCORE_DIMENSIONS` |
-| Wallet CTA | `Navigation`, `WaitlistForm` steps | `WalletButton`, `AuthGuard` | Dynamic.xyz via `useWeb3Auth` / `WalletButton` |
+| Wallet CTA | `Navigation`, `WaitlistForm` steps | `WalletButton`, `AuthGuard` | Particle ConnectKit + SIWE via `useWeb3Auth` / `WalletButton` |
 | Quest metaphor | `QuestChain`, copy sections | `QuestCard`, `(app)/quests` | `DifficultyBadge`, branch borders |
 | XP / progress | Social proof counters | `XpBar`, profile | `xp-bar-track` / `xp-bar-fill` classes or `XpBar` |
 

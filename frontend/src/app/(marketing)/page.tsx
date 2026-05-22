@@ -1,6 +1,7 @@
-import { HeroSection }        from "@/components/marketing/HeroSection"
-import { AiJudgeDemo }        from "@/components/marketing/AiJudgeDemo"
-import { SocialProofSection } from "@/components/marketing/SocialProofSection"
+import { HeroSection }              from "@/components/marketing/HeroSection"
+import { AiJudgeDemo }              from "@/components/marketing/AiJudgeDemo"
+import { CampaignIntegritySection } from "@/components/marketing/CampaignIntegritySection"
+import { SocialProofSection }       from "@/components/marketing/SocialProofSection"
 import { CTASection }         from "@/components/marketing/CTASection"
 import { TwitterAnalyzer }    from "@/components/marketing/TwitterAnalyzer"
 import { ProblemSection }     from "@/components/marketing/ProblemSection"
@@ -15,6 +16,7 @@ export default function LandingPage() {
     <>
       <HeroSection />
       <AiJudgeDemo />
+      <CampaignIntegritySection />
       <SocialProofSection />
       <ProblemSection />
       <SolutionSection />

@@ -11,6 +11,7 @@ import { mobileNavSlide } from "@/styles/theme"
 
 const NAV_LINKS = [
   { label: "Try Demo",     href: "/#ai-judge-demo" },
+  { label: "For Protocols", href: "/#campaign-integrity-pilot" },
   { label: "Features",    href: "/#features" },
   { label: "Pricing",     href: "/pricing" },
   { label: "FAQ",         href: "/#faq" },

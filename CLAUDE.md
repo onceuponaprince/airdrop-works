@@ -29,7 +29,7 @@ docker compose up --build
 1. Read this entire document.
 2. The product is a gamified airdrop scoring platform. The AI Judge is the core mechanism — it scores Web3 contributions by quality, not volume.
 3. The aesthetic is "Arcade RPG" — neon-on-dark, CRT effects, skill trees, quest cards, loot mechanics. Not a SaaS dashboard.
-4. Auth is Web3-first: wallet connect via Dynamic.xyz → signature → Django JWT. Email is secondary.
+4. Auth is Web3-first: wallet connect via Particle ConnectKit (optional) + SIWE signature → Django JWT (`/api/v1/auth/wallet-verify/`). Email is secondary.
 5. Existing smart contracts (TG archives) are being adapted. Don't rewrite — refactor.
 
 ---
@@ -49,14 +49,14 @@ docker compose up --build
     │   ├── AI Judge Service ─── Anthropic Claude API wrapper
     │   ├── Twitter Crawler ─── OAuth + rate-limited polling (Celery)
     │   ├── Scoring Pipeline ─── Celery async tasks
-    │   ├── Auth ─── Dynamic.xyz wallet verify → SimpleJWT
+    │   ├── Auth ─── SIWE wallet verify → SimpleJWT (Particle ConnectKit on frontend)
     │   └── PostgreSQL + Redis
     │
     ├── Smart Contracts
     │   ├── EVM (Avalanche + Base) ─── Diamond Pattern EIP-2535
     │   └── Solana (Phase 2) ─── Anchor
     │
-    └── Services: Supabase | Anthropic API | Twitter API v2 | Dynamic.xyz
+    └── Services: Supabase | Anthropic API | Twitter API v2 | Particle Network
                   Stripe | Resend | Sentry | GA4 | Vercel Analytics | The Graph
 ```
 
@@ -70,7 +70,7 @@ docker compose up --build
 - **Styling:** Tailwind CSS + shadcn/ui
 - **Animation:** Framer Motion
 - **State:** Zustand (global) + React Query (server)
-- **Web3:** Dynamic.xyz SDK (wallet UX + session) + wagmi + viem (contract hooks)
+- **Web3:** Particle ConnectKit (wallet UX) + wagmi + viem (chain reads); SIWE → Django JWT
 - **Package Manager:** pnpm
 
 ### File Structure
@@ -122,7 +122,7 @@ frontend/
 │   │   │   ├── Navigation.tsx
 │   │   │   ├── Footer.tsx
 │   │   │   ├── Logo.tsx                # "AI(r)DROP" in Press Start 2P
-│   │   │   ├── WalletButton.tsx        # Dynamic.xyz connect trigger
+│   │   │   ├── WalletButton.tsx        # Particle / wallet connect trigger
 │   │   │   ├── ThemeToggle.tsx         # (not needed — dark only, but keep for accessibility)
 │   │   │   └── CrtOverlay.tsx          # Scanline CSS overlay component
 │   │   └── themed/
@@ -141,7 +141,7 @@ frontend/
 │   ├── hooks/
 │   │   ├── useWaitlist.ts
 │   │   ├── useAuth.ts
-│   │   ├── useWeb3Auth.ts             # Dynamic.xyz wallet auth
+│   │   ├── useWeb3Auth.ts             # SIWE + JWT session (localStorage)
 │   │   ├── useAiJudge.ts             # Score a contribution (streaming)
 │   │   └── useAnimatedCounter.ts      # Number counting animation hook
 │   │
@@ -153,7 +153,7 @@ frontend/
 │   │   └── index.ts
 │   │
 │   └── providers/
-│       ├── DynamicProvider.tsx         # Dynamic.xyz wallet connector
+│       ├── ParticleProvider.tsx        # Particle ConnectKit (when env set)
 │       ├── QueryProvider.tsx
 │       └── Web3Provider.tsx            # wagmi config
 │
@@ -222,7 +222,7 @@ backend/
 
 ### Django Apps Detail
 
-**accounts** — Custom User with `wallet_address` as unique identifier. `email` optional. `dynamic_user_id` for Dynamic.xyz link. Web3 verification endpoint.
+**accounts** — Custom User with `wallet_address` as unique identifier. `email` optional. Web3 via SIWE at `wallet-verify/` (DEBUG may skip signature when `ENFORCE_SIWE` is false).
 
 **judge** — The AI Judge service. Contains the scoring prompt, Anthropic API wrapper, and response parser. Scoring is async (Celery task). Results cached in Redis (keyed by content hash). Configurable rubric system (JSON schema stored per campaign).
 
@@ -237,7 +237,7 @@ backend/
 ### API Endpoints
 ```
 /api/v1/auth/
-    POST /wallet-verify/     → Dynamic.xyz wallet → JWT
+    POST /wallet-verify/     → SIWE message + signature → JWT
     POST /token/refresh/     → Refresh JWT
     GET  /profile/           → Current user profile
 
@@ -278,10 +278,10 @@ backend/
 
 ### Strategy: Web3-First
 
-**Primary auth:** Dynamic.xyz wallet connect → Django JWT
-- User connects wallet via Dynamic.xyz SDK on frontend
-- Frontend sends wallet_address to `/api/v1/auth/wallet-verify/`
-- Django verifies via Dynamic API (or SIWE signature)
+**Primary auth:** Wallet connect → SIWE → Django JWT
+- User connects wallet via Particle ConnectKit on frontend (when `NEXT_PUBLIC_PROJECT_ID` + keys set)
+- Frontend signs SIWE message and posts to `/api/v1/auth/wallet-verify/`
+- Django verifies signature via `siwe` library
 - Returns access token (15 min) + refresh token (7 days, httpOnly cookie)
 - User model: `wallet_address` is the unique identifier, `email` is optional
 
@@ -289,10 +289,10 @@ backend/
 - Email + optional wallet address → direct Supabase insert
 - No JWT needed for waitlist submission
 
-**Dynamic.xyz Setup (Free Tier):**
-- Chains: Avalanche C-Chain, Base, (Solana later)
-- Wallets: MetaMask, WalletConnect, Coinbase Wallet
-- Environment: sandbox (development), live (production)
+**Particle ConnectKit (when enabled):**
+- Chains: Avalanche C-Chain, Base (via wagmi config)
+- Env: `NEXT_PUBLIC_PROJECT_ID`, `NEXT_PUBLIC_CLIENT_KEY`, `NEXT_PUBLIC_APP_ID`
+- Without Particle env, dev banner shows; SIWE login still works with compatible wallet flow
 
 ---
 
@@ -370,7 +370,7 @@ class Quest(BaseModel):
 
 ### Other Integrations
 - **Supabase:** Waitlist only. One project for airdrop.works. Table: `waitlist_entries`.
-- **Dynamic.xyz:** Free tier. EVM wallets. Env ID in NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID.
+- **Particle Network:** ConnectKit for wallet UX. See frontend `.env` Particle vars.
 - **Stripe:** Post-launch (white-label subscriptions). Checkout + webhooks.
 - **Resend:** Waitlist confirmation email. 100/day free tier sufficient for launch.
 - **Sentry:** Both frontend (@sentry/nextjs) and backend (sentry-sdk[django]).

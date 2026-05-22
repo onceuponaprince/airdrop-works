@@ -61,9 +61,10 @@ export function HeroSection() {
             variants={staggerItem as Variants}
             className="font-body text-base sm:text-lg text-muted-foreground max-w-[580px] mx-auto leading-relaxed"
           >
-            AI(r)Drop&apos;s AI Judge scores contributions by what actually matters —
-            teaching value, originality, and community impact. Not likes. Not
-            volume. Not who has the most alts.
+            Fair distribution starts with judging contributions — not counting
+            wallets. The AI Judge scores teaching value, originality, and impact,
+            and flags farming in the same pass. Passport filters humans; we filter
+            farmers.
           </motion.p>
 
           {/* Primary journey: demo -> waitlist */}
@@ -91,8 +92,8 @@ export function HeroSection() {
             <div className="flex flex-wrap justify-center gap-2 pt-1">
               {[
                 "Free preview",
-                "Quality-based scoring",
-                "Anti-bot focus",
+                "Farming detection",
+                "Campaign pilot",
               ].map((label) => (
                 <span
                   key={label}
@@ -110,11 +111,18 @@ export function HeroSection() {
               >
                 Prefer accounts? Score an account
               </button>
+              <button
+                type="button"
+                onClick={() => scrollTo("campaign-integrity-pilot")}
+                className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+              >
+                Campaign Integrity Pilot
+              </button>
               <Link
                 href="/pricing"
                 className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
               >
-                See pricing
+                Pricing
               </Link>
             </div>
           </motion.div>

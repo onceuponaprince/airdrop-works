@@ -50,6 +50,16 @@ Phases 4–5 are **roadmapped, not deferred**. They follow Phase 3 because they 
 - One-pager that leads with integrity, not RPG mechanics
 - No critical CI/Vercel blockers on `main`
 
+**Phase 1 progress (2026-05-21):**
+
+- [x] `CampaignIntegritySection` on landing + nav anchor
+- [x] `docs/campaign-integrity-pilot.md` one-pager
+- [x] Hero copy: Passport vs farming positioning
+- [x] `CLAUDE.md` auth aligned to SIWE + Particle
+- [ ] CSV export v0 (API or admin)
+- [ ] Full Figma landing pass
+- [ ] CI green on `main`
+
 ---
 
 ## Phase 2 — Sybil / anti-bot (reputation)
