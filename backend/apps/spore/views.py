@@ -27,6 +27,7 @@ from apps.spore.security.auth import SporeApiKeyAuthentication
 from apps.spore.security.keys import generate_api_key, hash_api_key, key_prefix
 from apps.spore.security.metering import QuotaExceededError, enforce_quota_or_raise, meter_usage
 from apps.spore.security.tenancy import has_tenant_admin_role, resolve_request_tenant
+from apps.ai_core.service import AICoreScoringService
 from apps.spore.serializers import (
     AuditLogSerializer,
     BriefGenerationSerializer,
@@ -236,6 +237,117 @@ class TwitterRelationshipView(SporeBaseView):
         )
 
 
+BRIEF_GENERATION_PROMPT = """You are an expert marketing copywriter for Web3 and crypto projects.
+
+Generate marketing brief concepts based on the following inputs:
+- Brand: {brand}
+- Objective: {objective}
+- Tone: {tone}
+- Target Audience: {audience}
+- Platform: {platform}
+- Budget Context: {budget}
+
+Generate {concept_count} distinct creative concepts. For each concept, provide:
+1. A compelling title (max 60 chars)
+2. Marketing copy suitable for the platform (max 280 chars for Twitter, max 500 for others)
+3. Engagement prediction (0-100) based on typical performance for this audience/platform
+4. Risk score (0-100) for brand safety concerns
+5. Risk flags: list of concerns like "brand_safety_high", "regulatory_risk", "audience_mismatch", or "brand_safety_low"
+6. Confidence interval [low, high] for the engagement prediction
+
+Respond ONLY with valid JSON in this exact format:
+{{
+  "concepts": [
+    {{
+      "title": "Concept Title",
+      "copy": "The marketing copy...",
+      "engagement_prediction": 72,
+      "risk_score": 25,
+      "risk_flags": ["brand_safety_low"],
+      "confidence_interval": [65, 80]
+    }}
+  ]
+}}"""
+
+
+def _generate_briefs_with_claude(
+    brand: str,
+    objective: str,
+    tone: str,
+    audience: str,
+    platform: str,
+    budget: str,
+    concept_count: int,
+) -> dict:
+    """Generate marketing brief concepts using Claude API."""
+    import anthropic
+
+    if not settings.ANTHROPIC_API_KEY:
+        raise RuntimeError("ANTHROPIC_API_KEY not configured")
+
+    client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+    prompt = BRIEF_GENERATION_PROMPT.format(
+        brand=brand,
+        objective=objective,
+        tone=tone,
+        audience=audience,
+        platform=platform,
+        budget=budget or "Not specified",
+        concept_count=concept_count,
+    )
+
+    message = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2048,
+        messages=[{"role": "user", "content": prompt}],
+    )
+
+    response_text = message.content[0].text.strip() if message.content else ""
+
+    # Strip markdown fences if present
+    if response_text.startswith("```"):
+        first_nl = response_text.index("\n") if "\n" in response_text else 3
+        response_text = response_text[first_nl + 1 :]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3].strip()
+
+    import json
+
+    data = json.loads(response_text)
+    return data
+
+
+def _generate_stub_concepts(
+    brand: str,
+    objective: str,
+    tone: str,
+    audience: str,
+    platform: str,
+    concept_count: int,
+) -> list:
+    """Fallback stub generator when LLM is unavailable."""
+    concepts = []
+    for idx in range(concept_count):
+        base = f"{brand} | {objective} | {tone} | {audience} | {idx}"
+        digest = hashlib.sha256(base.encode("utf-8")).hexdigest()
+        engagement = 55 + (int(digest[:2], 16) % 40)
+        risk = int(digest[2:4], 16) % 100
+        confidence_low = max(0, engagement - 8 - (risk // 12))
+        confidence_high = min(100, engagement + 8 - (risk // 20))
+        concepts.append(
+            {
+                "title": f"{brand} concept {idx + 1}",
+                "copy": f"[{tone}] {objective} for {audience} on {platform}. Variant {idx + 1}.",
+                "engagement_prediction": engagement,
+                "risk_score": risk,
+                "confidence_interval": [confidence_low, confidence_high],
+                "risk_flags": _risk_flags(risk),
+            }
+        )
+    return concepts
+
+
 class BriefGenerateView(SporeBaseView):
     permission_classes = [IsAuthenticated]
     throttle_scope = "spore_brief_generate"
@@ -253,32 +365,48 @@ class BriefGenerateView(SporeBaseView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        concepts = []
         brand = data["brand"]
         objective = data["objective"]
         tone = data["tone"]
         audience = data["audience"]
+        platform = data["platform"]
+        budget = data.get("budget", "")
+        concept_count = data["concept_count"]
 
-        for idx in range(data["concept_count"]):
-            base = f"{brand} | {objective} | {tone} | {audience} | {idx}"
-            digest = hashlib.sha256(base.encode("utf-8")).hexdigest()
-            engagement = 55 + (int(digest[:2], 16) % 40)
-            risk = int(digest[2:4], 16) % 100
-            confidence_low = max(0, engagement - 8 - (risk // 12))
-            confidence_high = min(100, engagement + 8 - (risk // 20))
-            concepts.append(
-                {
-                    "title": f"{brand} concept {idx + 1}",
-                    "copy": f"[{tone}] {objective} for {audience} on {data['platform']}. Variant {idx + 1}.",
-                    "engagement_prediction": engagement,
-                    "risk_score": risk,
-                    "confidence_interval": [confidence_low, confidence_high],
-                    "risk_flags": _risk_flags(risk),
-                }
+        # Attempt LLM generation via ai_core.service, fall back to stub on failure
+        concepts = []
+        model_used = "phase3-stub-v1"
+
+        try:
+            result = AICoreScoringService.generate_brief_concepts(
+                brand=brand,
+                objective=objective,
+                tone=tone,
+                audience=audience,
+                platform=platform,
+                budget=budget,
+                concept_count=concept_count,
             )
+            concepts = result.get("concepts", [])
+            model_used = "claude-3-sonnet"
+        except Exception as exc:
+            # Log the error but continue with stub fallback
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.warning(f"[BriefGenerate] LLM generation failed: {exc}. Using stub fallback.")
+            concepts = _generate_stub_concepts(
+                brand=brand,
+                objective=objective,
+                tone=tone,
+                audience=audience,
+                platform=platform,
+                concept_count=concept_count,
+            )
+            model_used = "phase3-stub-v1-fallback"
 
         self.meter(request, tenant, "spore.brief_generate", status.HTTP_200_OK)
-        return Response({"concepts": concepts, "model": "phase3-stub-v1"}, status=status.HTTP_200_OK)
+        return Response({"concepts": concepts, "model": model_used}, status=status.HTTP_200_OK)
 
 
 class SporeOpsSummaryView(SporeBaseView):

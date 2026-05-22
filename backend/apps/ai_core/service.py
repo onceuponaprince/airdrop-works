@@ -141,3 +141,82 @@ class AICoreScoringService:
         from .twitter_analysis import analyze_twitter_sns_data
 
         return analyze_twitter_sns_data(**kwargs)
+
+    BRIEF_GENERATION_PROMPT = """You are an expert marketing copywriter for Web3 and crypto projects.
+
+Generate marketing brief concepts based on the following inputs:
+- Brand: {brand}
+- Objective: {objective}
+- Tone: {tone}
+- Target Audience: {audience}
+- Platform: {platform}
+- Budget Context: {budget}
+
+Generate {concept_count} distinct creative concepts. For each concept, provide:
+1. A compelling title (max 60 chars)
+2. Marketing copy suitable for the platform (max 280 chars for Twitter, max 500 for others)
+3. Engagement prediction (0-100) based on typical performance for this audience/platform
+4. Risk score (0-100) for brand safety concerns
+5. Risk flags: list of concerns like "brand_safety_high", "regulatory_risk", "audience_mismatch", or "brand_safety_low"
+6. Confidence interval [low, high] for the engagement prediction
+
+Respond ONLY with valid JSON in this exact format:
+{{
+  "concepts": [
+    {{
+      "title": "Concept Title",
+      "copy": "The marketing copy...",
+      "engagement_prediction": 72,
+      "risk_score": 25,
+      "risk_flags": ["brand_safety_low"],
+      "confidence_interval": [65, 80]
+    }}
+  ]
+}}"""
+
+    @staticmethod
+    def generate_brief_concepts(
+        brand: str,
+        objective: str,
+        tone: str,
+        audience: str,
+        platform: str,
+        budget: str,
+        concept_count: int,
+    ) -> dict:
+        """Generate marketing brief concepts using Claude API. Raises on failure."""
+        if not settings.ANTHROPIC_API_KEY:
+            raise RuntimeError("ANTHROPIC_API_KEY not configured")
+
+        import anthropic
+        import json
+
+        prompt = AICoreScoringService.BRIEF_GENERATION_PROMPT.format(
+            brand=brand,
+            objective=objective,
+            tone=tone,
+            audience=audience,
+            platform=platform,
+            budget=budget or "Not specified",
+            concept_count=concept_count,
+        )
+
+        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        response_text = message.content[0].text.strip() if message.content else ""
+
+        # Strip markdown fences if present
+        if response_text.startswith("```"):
+            first_nl = response_text.index("\n") if "\n" in response_text else 3
+            response_text = response_text[first_nl + 1 :]
+            if response_text.endswith("```"):
+                response_text = response_text[:-3].strip()
+
+        data = json.loads(response_text)
+        return data

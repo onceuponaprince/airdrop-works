@@ -1,3 +1,5 @@
+from unittest import mock
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.urls import reverse
@@ -255,8 +257,39 @@ class SporeViewsTests(APITestCase):
         self.assertEqual(response.status_code, 201)
         self.assertEqual(response.data["scenario"], "campaign_launch")
 
-    @override_settings(SPORE_ENABLE_PHASE3=True)
-    def test_phase3_brief_generate(self):
+    @override_settings(SPORE_ENABLE_PHASE3=True, ANTHROPIC_API_KEY="test-key")
+    @mock.patch("apps.ai_core.service.AICoreScoringService.generate_brief_concepts")
+    def test_phase3_brief_generate_with_llm(self, mock_generate):
+        """Test brief generation with mocked Claude API."""
+        mock_generate.return_value = {
+            "concepts": [
+                {
+                    "title": "DeFi Innovation Spotlight",
+                    "copy": "Discover how SPORE is revolutionizing on-chain analysis for crypto builders.",
+                    "engagement_prediction": 78,
+                    "risk_score": 15,
+                    "confidence_interval": [70, 85],
+                    "risk_flags": ["brand_safety_low"],
+                },
+                {
+                    "title": "Builder Analytics Suite",
+                    "copy": "New tools for serious crypto builders. Data-driven insights, zero fluff.",
+                    "engagement_prediction": 72,
+                    "risk_score": 20,
+                    "confidence_interval": [65, 78],
+                    "risk_flags": ["brand_safety_low"],
+                },
+                {
+                    "title": "On-Chain Intelligence",
+                    "copy": "SPORE analyzes millions of data points so you don't have to. Built for builders.",
+                    "engagement_prediction": 75,
+                    "risk_score": 18,
+                    "confidence_interval": [68, 82],
+                    "risk_flags": ["brand_safety_low"],
+                },
+            ]
+        }
+
         response = self.client.post(
             reverse("spore_brief_generate"),
             {
@@ -271,4 +304,42 @@ class SporeViewsTests(APITestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.data["concepts"]), 3)
+        self.assertEqual(response.data["model"], "claude-3-sonnet")
+
+        # Verify mock was called with correct arguments
+        mock_generate.assert_called_once()
+        call_kwargs = mock_generate.call_args.kwargs
+        self.assertEqual(call_kwargs["brand"], "SPORE")
+        self.assertEqual(call_kwargs["audience"], "crypto builders")
+        self.assertEqual(call_kwargs["platform"], "twitter")
+        self.assertEqual(call_kwargs["tone"], "analytical")
+        self.assertEqual(call_kwargs["objective"], "increase awareness")
+        self.assertEqual(call_kwargs["concept_count"], 3)
+
+    @override_settings(SPORE_ENABLE_PHASE3=True, ANTHROPIC_API_KEY="")
+    def test_phase3_brief_generate_fallback_to_stub(self):
+        """Test that brief generation falls back to stub when LLM fails."""
+        response = self.client.post(
+            reverse("spore_brief_generate"),
+            {
+                "brand": "SPORE",
+                "audience": "crypto builders",
+                "platform": "twitter",
+                "tone": "analytical",
+                "objective": "increase awareness",
+                "concept_count": 3,
+            },
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data["concepts"]), 3)
+        self.assertEqual(response.data["model"], "phase3-stub-v1-fallback")
+        # Verify stub structure
+        for concept in response.data["concepts"]:
+            self.assertIn("title", concept)
+            self.assertIn("copy", concept)
+            self.assertIn("engagement_prediction", concept)
+            self.assertIn("risk_score", concept)
+            self.assertIn("confidence_interval", concept)
+            self.assertIn("risk_flags", concept)
 

@@ -1,0 +1,347 @@
+# AI(r)Drop Subgraph Schema
+# On-chain reputation and reward tracking entities
+
+# ============================================================================
+# Core Entities
+# ============================================================================
+
+"""
+Represents a user profile in the AI(r)Drop system.
+Links wallet address to off-chain Django user via wallet_address.
+"""
+type Profile @entity {
+  id: ID!                          # Wallet address (lowercase)
+  tokenID: BigInt                  # ProfileNFT token ID (0 if no NFT)
+  tokenURI: String                 # Profile metadata URI
+  createdAt: BigInt!               # Block timestamp of profile creation
+  updatedAt: BigInt!               # Block timestamp of last update
+  
+  # Relations
+  balances: [UserTokenBalance!]! @derivedFrom(field: "user")
+  contributions: [ContributionReward!]! @derivedFrom(field: "contributor")
+  lootDistributions: [LootDistribution!]! @derivedFrom(field: "recipient")
+  badges: [UserBadge!]! @derivedFrom(field: "user")
+  
+  # Aggregated stats
+  totalRewardsEarned: BigInt!
+  contributionCount: BigInt!
+  campaignsParticipated: [CampaignParticipation!]! @derivedFrom(field: "user")
+}
+
+"""
+ERC20 token balance tracking for InnovatorToken (INOV).
+"""
+type UserTokenBalance @entity {
+  id: ID!                          # userAddress-tokenAddress
+  user: Profile!                   # Owner of the balance
+  token: Token!                    # Token reference
+  balance: BigInt!                  # Current balance
+  totalReceived: BigInt!            # Cumulative transfers in
+  totalSent: BigInt!                # Cumulative transfers out (should be 0 for INOV)
+  lastUpdatedAt: BigInt!           # Block timestamp
+}
+
+"""
+Token metadata entity.
+"""
+type Token @entity {
+  id: ID!                          # Token contract address
+  name: String!
+  symbol: String!
+  decimals: Int!
+  totalSupply: BigInt!
+  distributor: String              # Current distributor address
+  balances: [UserTokenBalance!]! @derivedFrom(field: "token")
+  transfers: [TokenTransfer!]! @derivedFrom(field: "token")
+}
+
+# ============================================================================
+# Transfer & Mint Events
+# ============================================================================
+
+"""
+ERC20 Transfer event from InnovatorToken.
+"""
+type TokenTransfer @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  token: Token!                    # Token reference
+  from: String!                    # Sender address
+  to: String!                      # Recipient address
+  amount: BigInt!                  # Transfer amount
+  
+  # Block info
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+  logIndex: BigInt!
+}
+
+"""
+InnovatorToken mint event (emitted via Transfer from 0x0).
+"""
+type TokenMint @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  token: Token!
+  to: String!                      # Recipient
+  amount: BigInt!
+  
+  # Block info
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+"""
+Distributor change event.
+"""
+type DistributorChange @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  token: Token!
+  oldDistributor: String!
+  newDistributor: String!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+# ============================================================================
+# Profile NFT Events
+# ============================================================================
+
+"""
+Profile NFT transfer event.
+"""
+type ProfileTransfer @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  profile: Profile!                # Profile entity (linked by tokenID)
+  from: String!                    # Previous owner
+  to: String!                      # New owner
+  tokenID: BigInt!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+"""
+Profile metadata URI update.
+"""
+type ProfileMetadataUpdate @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  profile: Profile!
+  oldURI: String!
+  newURI: String!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+# ============================================================================
+# Campaign & Quest Entities
+# ============================================================================
+
+"""
+Campaign created in CampaignEscrow.
+"""
+type Campaign @entity {
+  id: ID!                          # campaignId (uint256 as string)
+  project: String!                 # Project wallet address
+  token: Token!                    # Reward token
+  totalPool: BigInt!               # Total reward pool
+  distributed: BigInt!             # Amount already distributed
+  startTime: BigInt!               # Campaign start timestamp
+  endTime: BigInt!                 # Campaign end timestamp
+  status: CampaignStatus!          # Active, Completed, Cancelled
+  
+  # Relations
+  rewards: [CampaignReward!]! @derivedFrom(field: "campaign")
+  
+  # Block info
+  createdAt: BigInt!
+  createdBlock: BigInt!
+  createdTxHash: String!
+}
+
+enum CampaignStatus {
+  Active
+  Completed
+  Cancelled
+}
+
+"""
+Individual reward distribution from a campaign.
+"""
+type CampaignReward @entity(immutable: true) {
+  id: ID!                          # campaignId-txHash-logIndex
+  campaign: Campaign!
+  contributor: Profile!            # Recipient
+  amount: BigInt!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+  logIndex: BigInt!
+}
+
+"""
+Quest participation tracking (user participation in campaigns).
+"""
+type CampaignParticipation @entity {
+  id: ID!                          # userAddress-campaignId
+  user: Profile!
+  campaign: Campaign!
+  totalRewards: BigInt!
+  rewardCount: Int!
+  firstRewardAt: BigInt!
+  lastRewardAt: BigInt!
+}
+
+# ============================================================================
+# Reward Distributor Events
+# ============================================================================
+
+"""
+Reward distribution from RewardDistributor contract.
+Links on-chain event to off-chain contribution via contributionId.
+"""
+type ContributionReward @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  contributor: Profile!            # Recipient profile
+  score: Int!                      # AI Judge score (0-100)
+  amount: BigInt!                  # Reward amount in INOV
+  contributionId: String!          # Off-chain contribution UUID from Django
+  
+  # For cross-referencing with backend
+  tier: RewardTier!                # Computed tier from score
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+  logIndex: BigInt!
+}
+
+enum RewardTier {
+  None      # 0-25: No reward (farming detected)
+  Small     # 26-50: Marginal contribution
+  Medium    # 51-75: Solid contribution
+  Large     # 76-100: Exceptional contribution
+}
+
+"""
+Batch reward distribution summary.
+"""
+type BatchRewardSummary @entity(immutable: true) {
+  id: ID!                          # txHash
+  count: BigInt!                   # Number of distributions
+  totalAmount: BigInt!             # Total INOV distributed
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+"""
+Reward tier configuration update.
+"""
+type RewardTierConfig @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  smallReward: BigInt!
+  mediumReward: BigInt!
+  largeReward: BigInt!
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+"""
+User stats aggregated from RewardDistributor.
+"""
+type UserStats @entity {
+  id: ID!                          # Wallet address
+  profile: Profile!
+  totalDistributed: BigInt!
+  contributionCount: BigInt!
+  lastUpdatedAt: BigInt!
+}
+
+# ============================================================================
+# Loot & Badge Entities (Extended)
+# ============================================================================
+
+"""
+Loot distribution event for gamified rewards.
+"""
+type LootDistribution @entity(immutable: true) {
+  id: ID!                          # txHash-logIndex
+  recipient: Profile!
+  lootType: LootType!
+  rarity: Rarity!
+  amount: BigInt
+  metadataURI: String
+  
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+enum LootType {
+  Badge
+  InnovatorToken
+  Multiplier
+  NFT
+}
+
+enum Rarity {
+  Common
+  Uncommon
+  Rare
+  Epic
+  Legendary
+}
+
+"""
+User badge minting tracking.
+"""
+type UserBadge @entity {
+  id: ID!                          # badgeId-userAddress
+  user: Profile!
+  badgeId: String!                 # Badge contract token ID or identifier
+  badgeType: String!               # Badge category/type
+  rarity: Rarity!
+  mintedAt: BigInt!
+  transactionHash: String!
+}
+
+# ============================================================================
+# Webhook Event Queue (for backend synchronization)
+# ============================================================================
+
+"""
+Pending webhook events for backend notification.
+Subgraph writes here; backend polls or receives webhooks.
+"""
+type PendingWebhookEvent @entity {
+  id: ID!                          # txHash-logIndex
+  eventType: WebhookEventType!
+  payload: String!                 # JSON string of event data
+  createdAt: BigInt!
+  processed: Boolean!              # Marked true by backend after processing
+  processedAt: BigInt
+  retryCount: Int!                 # For retry logic
+}
+
+enum WebhookEventType {
+  TokenTransfer
+  TokenMint
+  ProfileCreated
+  ProfileUpdated
+  CampaignCreated
+  RewardDistributed
+  ContributionScored
+  LootDistributed
+  TierAchieved
+  BatchRewards
+}

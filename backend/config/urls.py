@@ -13,6 +13,7 @@ from apps.contributions.views import (
 )
 from apps.core.views import HealthCheckView
 from apps.quests.views import AdminCampaignDetailView, AdminCampaignListCreateView
+from apps.rewards.webhooks import subgraph_webhook, webhook_health
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -55,4 +56,9 @@ urlpatterns = [
         AdminContributionDetailView.as_view(),
         name="admin_contributions_alias_detail",
     ),
+    path("api/v1/notifications/", include("apps.notifications.urls")),
+
+    # Subgraph webhook for on-chain event sync
+    path("api/v1/webhooks/subgraph/", subgraph_webhook, name="subgraph_webhook"),
+    path("api/v1/webhooks/subgraph/health/", webhook_health, name="subgraph_webhook_health"),
 ]

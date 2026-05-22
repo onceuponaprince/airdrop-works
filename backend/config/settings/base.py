@@ -78,6 +78,7 @@ LOCAL_APPS = [
     "apps.spore",
     "apps.admin",
     "apps.integrity",
+    "apps.notifications",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -192,6 +193,8 @@ REST_FRAMEWORK = {
         "console_overview": "60/minute",
         "console_wallets": "60/minute",
         "console_appeals": "60/minute",
+        "notifications_list": "60/minute",
+        "notifications_action": "30/minute",
     },
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
@@ -286,6 +289,10 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": 24 * 60 * 60,
         "args": (SPORE_AUDIT_RETENTION_DAYS,),
     },
+    "quests-check-all-active": {
+        "task": "quests.check_all_active_quests",
+        "schedule": 300,  # 5 minutes
+    },
 }
 
 # ── Email (Resend) ────────────────────────────────────────────────────────────
@@ -338,7 +345,7 @@ SPORE_QDRANT_URL = config("SPORE_QDRANT_URL", default="http://localhost:6333")
 SPORE_QDRANT_COLLECTION = config("SPORE_QDRANT_COLLECTION", default="spore_nodes")
 SPORE_QDRANT_TIMEOUT_SECONDS = config("SPORE_QDRANT_TIMEOUT_SECONDS", default=5, cast=int)
 SPORE_ACTIVATION_TTL_SECONDS = config("SPORE_ACTIVATION_TTL_SECONDS", default=900, cast=int)
-SPORE_ENABLE_PHASE3 = config("SPORE_ENABLE_PHASE3", default=False, cast=bool)
+SPORE_ENABLE_PHASE3 = config("SPORE_ENABLE_PHASE3", default=True, cast=bool)
 SPORE_NEO4J_ENABLED = config("SPORE_NEO4J_ENABLED", default=False, cast=bool)
 SPORE_NEO4J_URI = config("SPORE_NEO4J_URI", default="bolt://localhost:7687")
 SPORE_NEO4J_USER = config("SPORE_NEO4J_USER", default="neo4j")

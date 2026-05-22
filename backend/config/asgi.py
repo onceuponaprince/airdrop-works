@@ -15,8 +15,18 @@ django_asgi_app = get_asgi_application()
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
 from channels.security.websocket import AllowedHostsOriginValidator  # noqa: E402
 
-from apps.contributions.routing import websocket_urlpatterns  # noqa: E402
+from apps.contributions.routing import (
+    websocket_urlpatterns as contributions_websocket_patterns,
+)  # noqa: E402
+from apps.notifications.routing import (
+    websocket_urlpatterns as notifications_websocket_patterns,
+)  # noqa: E402
 from apps.core.channels_auth import JWTAuthMiddleware  # noqa: E402
+
+# Combine all WebSocket routes
+websocket_urlpatterns = (
+    contributions_websocket_patterns + notifications_websocket_patterns
+)
 
 application = ProtocolTypeRouter(
     {

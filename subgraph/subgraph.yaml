@@ -1,0 +1,137 @@
+# AI(r)Drop Subgraph Manifest
+# Indexes on-chain events for reputation and reward tracking
+# Deploys to The Graph Hosted Service (Avalanche/Base)
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+dataSources:
+  # InnovatorToken - ERC20 with Transfer and Mint events
+  - kind: ethereum
+    name: InnovatorToken
+    network: fuji  # Default for development; overridden for production
+    source:
+      abi: InnovatorToken
+      address: "0x321C565962d52f1DdAcFb0486B61cE9B2613F5DE"  # Fuji deployment
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TokenTransfer
+        - TokenMint
+        - UserTokenBalance
+      abis:
+        - name: InnovatorToken
+          file: ./abis/InnovatorToken.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+        - event: DistributorSet(indexed address,indexed address)
+          handler: handleDistributorSet
+      file: ./src/mappings/innovatorToken.ts
+
+  # ProfileNFT - ERC721 with Profile creation and badges
+  - kind: ethereum
+    name: ProfileNFT
+    network: fuji
+    source:
+      abi: ProfileNFT
+      address: "0xdCfc12B0C68833c1A33c03e39D4A81402a6e17bC"  # Fuji deployment
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Profile
+        - ProfileTransfer
+      abis:
+        - name: ProfileNFT
+          file: ./abis/ProfileNFT.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleProfileTransfer
+        - event: NewURI(string,string)
+          handler: handleNewURI
+      file: ./src/mappings/profileNFT.ts
+
+  # CampaignEscrow - Quest creation and reward distribution
+  - kind: ethereum
+    name: CampaignEscrow
+    network: fuji
+    source:
+      abi: CampaignEscrow
+      address: "0xDE3a8301e78A0d730e4d139be2024F4451918A98"  # Fuji deployment
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Quest
+        - RewardDistribution
+        - Campaign
+      abis:
+        - name: CampaignEscrow
+          file: ./abis/CampaignEscrow.json
+      eventHandlers:
+        - event: CampaignCreated(indexed uint256,indexed address,address,uint256,uint256)
+          handler: handleCampaignCreated
+        - event: RewardDistributed(indexed uint256,indexed address,uint256)
+          handler: handleRewardDistributed
+        - event: CampaignCompleted(indexed uint256,uint256)
+          handler: handleCampaignCompleted
+        - event: CampaignCancelled(indexed uint256,uint256)
+          handler: handleCampaignCancelled
+      file: ./src/mappings/campaignEscrow.ts
+
+  # RewardDistributor - Loot and tier achievement tracking
+  - kind: ethereum
+    name: RewardDistributor
+    network: fuji
+    source:
+      abi: RewardDistributor
+      address: "0x2105Ec890751b165A80cb207EBE9e12053cD34a6"  # Fuji deployment
+      startBlock: 1
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - ContributionReward
+        - UserStats
+        - RewardTier
+      abis:
+        - name: RewardDistributor
+          file: ./abis/RewardDistributor.json
+      eventHandlers:
+        - event: RewardDistributed(indexed address,uint256,uint256,string)
+          handler: handleRewardDistributed
+        - event: BatchRewardsDistributed(uint256,uint256)
+          handler: handleBatchRewardsDistributed
+        - event: RewardTiersUpdated(uint256,uint256,uint256)
+          handler: handleRewardTiersUpdated
+      file: ./src/mappings/rewardDistributor.ts
+
+# Base Sepolia configuration for cross-chain indexing
+templates:
+  - kind: ethereum
+    name: InnovatorTokenTemplate
+    network: base-sepolia
+    source:
+      abi: InnovatorToken
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - TokenTransfer
+        - TokenMint
+      abis:
+        - name: InnovatorToken
+          file: ./abis/InnovatorToken.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleTransfer
+      file: ./src/mappings/innovatorToken.ts
