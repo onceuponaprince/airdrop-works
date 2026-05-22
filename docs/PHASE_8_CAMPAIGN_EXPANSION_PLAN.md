@@ -8,13 +8,15 @@
 
 ## Current Foundation (Already Shipped)
 
-- UserSocialAccount + dedicated Twitter/Discord/Telegram connections
-- Real OAuth for Twitter + Discord
+- UserSocialAccount + dedicated Twitter/Discord/Telegram connections (full models)
+- Real OAuth for Twitter + full Discord (exchange, persist dedicated + generic record, redirects)
 - Secure deep-link Telegram connection flow (token-based)
-- SocialSyncService + Celery auto-sync every 10 min
-- Real Discord message crawling + AI Judge scoring
+- SocialSyncService + Celery auto-sync every 10 min (Discord channel-aware)
+- Real Discord message crawling + AI Judge scoring (per tracked channels in metadata)
+- Users can configure tracked Discord channel IDs via UI (saved to DiscordConnection.metadata)
 - Multi-platform aggregated leaderboard
-- Polished SocialAccountsPanel with freshness indicators
+- Polished SocialAccountsPanel with freshness indicators + inline Discord channel config
+- Dedicated `/campaign` marketing + leaderboard page + sidebar nav
 
 ---
 
@@ -26,7 +28,7 @@
 - First-connect micro-rewards + progress tracking
 
 ### Wave 5 — User Control & Polish
-- Allow users to configure which Discord channels they want tracked
+- [x] Allow users to configure which Discord channels they want tracked (full OAuth + config UI + sync integration)
 - Telegram bot production hardening (webhook, proper payload validation, rate limiting)
 - Better error states and connection health indicators
 
@@ -53,4 +55,4 @@
 
 ---
 
-**Status:** Wave 4 in progress (starting with Campaign page)
+**Status:** Wave 4 + first Wave 5 item complete (Campaign page + Discord channel config + full real Discord OAuth). Next: production Telegram bot or GitHub/Reddit expansion.

@@ -1,0 +1,60 @@
+# Generated manually for Phase 8 Discord/Telegram dedicated connections
+
+import django.db.models.deletion
+import uuid
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('accounts', '0004_usersocialaccount'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='DiscordConnection',
+            fields=[
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('discord_user_id', models.CharField(db_index=True, max_length=64, unique=True)),
+                ('discord_username', models.CharField(db_index=True, max_length=32)),
+                ('display_name', models.CharField(blank=True, default='', max_length=64)),
+                ('avatar_url', models.URLField(blank=True, default='')),
+                ('access_token', models.TextField()),
+                ('refresh_token', models.TextField(blank=True, default='')),
+                ('token_expires_at', models.DateTimeField(blank=True, null=True)),
+                ('last_synced_at', models.DateTimeField(blank=True, null=True)),
+                ('last_error', models.TextField(blank=True, default='')),
+                ('metadata', models.JSONField(blank=True, default=dict)),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='discord_connection', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'Discord connection',
+                'verbose_name_plural': 'Discord connections',
+            },
+        ),
+        migrations.CreateModel(
+            name='TelegramConnection',
+            fields=[
+                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True, db_index=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('telegram_user_id', models.CharField(db_index=True, max_length=64, unique=True)),
+                ('telegram_username', models.CharField(db_index=True, max_length=32)),
+                ('display_name', models.CharField(blank=True, default='', max_length=64)),
+                ('avatar_url', models.URLField(blank=True, default='')),
+                ('access_token', models.TextField(blank=True, default='')),
+                ('last_synced_at', models.DateTimeField(blank=True, null=True)),
+                ('last_error', models.TextField(blank=True, default='')),
+                ('metadata', models.JSONField(blank=True, default=dict)),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='telegram_connection', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'verbose_name': 'Telegram connection',
+                'verbose_name_plural': 'Telegram connections',
+            },
+        ),
+    ]
