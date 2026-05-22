@@ -294,6 +294,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "quests.check_all_active_quests",
         "schedule": 300,  # 5 minutes
     },
+    "social-sync-all-accounts": {
+        "task": "accounts.sync_all_social_accounts",
+        "schedule": 600,  # 10 minutes
+    },
 }
 
 # ── Email (Resend) ────────────────────────────────────────────────────────────
