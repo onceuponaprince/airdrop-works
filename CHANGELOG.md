@@ -5,13 +5,10 @@ All notable changes to this repository will be documented in this file.
 ## Unreleased
 
 ### Added
-- Phase 6 gap closure: persistent + realtime notifications (Django Channels), SPORE Phase 3 real LLM briefs, gamification auto-XP + quest loot chests, The Graph subgraph + event webhooks.
-
-### Changed
-- Atomic subsystem commits (notifications, spore, gamification, contracts) before integration merge.
+- Phase 7 Wave 1: Full referral system — Django Referral model + code generation + leaderboard API + personal referral code with share/copy buttons.
 
 ### Chore
-- Version bump 0.6.0 → 0.7.0 after full gate verification.
+- Version bump 0.7.0 → 0.7.1 after atomic integration.
 
 ## 0.6.0 - 2026-05-22
 

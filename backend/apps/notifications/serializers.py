@@ -71,7 +71,7 @@ class BroadcastNotificationSerializer(serializers.Serializer):
     """Serializer for admin broadcast creation."""
 
     title = serializers.CharField(max_length=255)
-    message = serializers.TextField()
+    message = serializers.CharField()
     notification_type = serializers.ChoiceField(
         choices=[("system", "System")],
         default="system",
