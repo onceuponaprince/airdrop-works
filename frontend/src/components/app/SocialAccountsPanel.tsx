@@ -32,6 +32,22 @@ export function SocialAccountsPanel() {
     setForm({ ...form, username: '', external_id: '' });
   };
 
+  const handleRealOAuth = async (platform: string) => {
+    try {
+      const res = await api.get<{ authorizeUrl?: string; deepLink?: string }>(
+        `/auth/${platform}/start/`
+      );
+      const url = res.authorizeUrl || res.deepLink;
+      if (url) {
+        window.location.href = url;
+      } else {
+        notify({ type: 'error', title: 'Connection error', message: 'No redirect URL returned' });
+      }
+    } catch (err) {
+      notify({ type: 'error', title: 'Failed to start OAuth', message: String(err) });
+    }
+  };
+
   return (
     <div className="rounded-lg border border-[--border] bg-[--card] p-6">
       <div className="mb-4 flex items-center gap-2">
@@ -88,21 +104,29 @@ export function SocialAccountsPanel() {
             ))}
           </select>
 
-          <input
-            type="text"
-            placeholder={PLATFORM_META[form.platform].placeholder}
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
-            className="rounded border border-[--border] bg-[--background] px-3 py-2 text-sm font-mono"
-          />
+          {['twitter', 'discord'].includes(form.platform) ? (
+            <ArcadeButton size="sm" onClick={() => handleRealOAuth(form.platform)}>
+              Connect with {PLATFORM_META[form.platform as SocialAccount['platform']].label}
+            </ArcadeButton>
+          ) : (
+            <input
+              type="text"
+              placeholder={PLATFORM_META[form.platform].placeholder}
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              className="rounded border border-[--border] bg-[--background] px-3 py-2 text-sm font-mono"
+            />
+          )}
 
-          <ArcadeButton
-            size="sm"
-            onClick={handleConnect}
-            disabled={connect.isPending || (!form.username && !form.external_id)}
-          >
-            {connect.isPending ? 'Connecting...' : 'Connect Account'}
-          </ArcadeButton>
+          {['telegram', 'github'].includes(form.platform) && (
+            <ArcadeButton
+              size="sm"
+              onClick={handleConnect}
+              disabled={connect.isPending || !form.username}
+            >
+              {connect.isPending ? 'Connecting...' : 'Connect Account'}
+            </ArcadeButton>
+          )}
         </div>
 
         <div className="mt-3 flex justify-end">
@@ -117,7 +141,7 @@ export function SocialAccountsPanel() {
         </div>
 
         <p className="mt-2 text-[10px] text-[--muted-foreground]">
-          For now, enter your username or ID. Full OAuth login coming soon. “Sync & Score” queues the AI Judge on your recent activity.
+          Twitter & Discord now use real OAuth. Telegram & GitHub still use manual username for MVP.
         </p>
       </div>
     </div>
