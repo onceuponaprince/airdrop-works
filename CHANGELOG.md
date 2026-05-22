@@ -2,6 +2,21 @@
 
 All notable changes to this repository will be documented in this file.
 
+## 0.8.1 - 2026-05-22
+
+### Added
+- Solana wallet connection helper: "Connect Phantom / Solflare" button when Solana tab is active.
+- Visual connected indicator showing shortened address with green pulsing dot.
+- Clickable connected indicator: copies full Solana address to clipboard with "Copied!" feedback.
+
+### Changed
+- Improved Solana donation flow: automatic wallet connection, clearer error messages, Devnet RPC as default for testnet.
+- Testnet Mode banner now includes direct links to Base Sepolia and Solana Devnet faucets.
+
+### Chore
+- Version bump to **0.8.1** after Solana UX stabilization.
+- Atomic commits for all donation-related improvements.
+
 ## 0.8.0 - 2026-05-22
 
 ### Added
