@@ -24,6 +24,7 @@ export default function DonatePage() {
   const [chain, setChain] = useState<DonateChain>('base');
   const [amount, setAmount] = useState('');
   const [customMode, setCustomMode] = useState(false);
+  const [solanaAddress, setSolanaAddress] = useState<string | null>(null);
   const { status, txHash, error, donate, reset } = useDonate();
 
   const presets = chain === 'base' ? BASE_PRESETS : SOLANA_PRESETS;
@@ -37,6 +38,15 @@ export default function DonatePage() {
   const handleDonate = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
     await donate(chain, amount);
+  };
+
+  // Clear Solana address when switching away from Solana tab
+  const handleChainChange = (newChain: DonateChain) => {
+    if (newChain !== 'solana') {
+      setSolanaAddress(null);
+    }
+    setChain(newChain);
+    setAmount('');
   };
 
   return (
@@ -101,7 +111,7 @@ export default function DonatePage() {
             {/* Chain toggle - Solana now supported via @solana/web3.js + wallet adapter */}
             <div className="flex gap-1 bg-[--secondary] p-1 rounded-lg">
               <button
-                onClick={() => { setChain('base'); setAmount(''); }}
+                onClick={() => handleChainChange('base')}
                 className={cn(
                   'flex-1 py-2 rounded text-sm font-medium transition-colors',
                   chain === 'base'
@@ -112,7 +122,7 @@ export default function DonatePage() {
                 Base (ETH)
               </button>
               <button
-                onClick={() => { setChain('solana'); setAmount(''); }}
+                onClick={() => handleChainChange('solana')}
                 className={cn(
                   'flex-1 py-2 rounded text-sm font-medium transition-colors',
                   chain === 'solana'
@@ -124,25 +134,39 @@ export default function DonatePage() {
               </button>
             </div>
 
-            {/* Solana wallet connect helper */}
+            {/* Solana wallet connect helper / indicator */}
             {chain === 'solana' && (
-              <button
-                onClick={async () => {
-                  const provider = (window as any).solana || (window as any).phantom?.solana;
-                  if (provider) {
-                    try {
-                      await provider.connect();
-                    } catch {
-                      // User will see the wallet popup error
+              solanaAddress ? (
+                <div className="flex items-center justify-between rounded-lg border border-[--primary]/50 bg-[--primary]/10 px-4 py-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-[--primary] animate-pulse" />
+                    <span className="font-mono text-[--primary]">
+                      {solanaAddress.slice(0, 4)}...{solanaAddress.slice(-4)}
+                    </span>
+                  </div>
+                  <span className="text-xs text-[--muted-foreground]">Connected</span>
+                </div>
+              ) : (
+                <button
+                  onClick={async () => {
+                    const provider = (window as any).solana || (window as any).phantom?.solana;
+                    if (provider) {
+                      try {
+                        const resp = await provider.connect();
+                        const addr = resp?.publicKey?.toString() || provider.publicKey?.toString();
+                        if (addr) setSolanaAddress(addr);
+                      } catch {
+                        // wallet will show its own error
+                      }
+                    } else {
+                      window.open('https://phantom.app/', '_blank');
                     }
-                  } else {
-                    window.open('https://phantom.app/', '_blank');
-                  }
-                }}
-                className="w-full rounded-lg border border-[--primary]/60 bg-[--primary]/5 py-2 text-sm font-medium text-[--primary] hover:bg-[--primary]/10 transition"
-              >
-                Connect Phantom / Solflare
-              </button>
+                  }}
+                  className="w-full rounded-lg border border-[--primary]/60 bg-[--primary]/5 py-2 text-sm font-medium text-[--primary] hover:bg-[--primary]/10 transition"
+                >
+                  Connect Phantom / Solflare
+                </button>
+              )
             )}
 
             {/* Preset amounts */}
