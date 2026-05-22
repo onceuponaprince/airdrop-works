@@ -38,6 +38,22 @@ else
   exit 1
 fi
 
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/v1/integrity/console/overview/")
+if [[ "$code" == "401" || "$code" == "403" ]]; then
+  echo "OK GET /api/v1/integrity/console/overview/ (unauthenticated) → $code"
+else
+  echo "FAIL console overview expected 401|403 without auth, got $code"
+  exit 1
+fi
+
+code=$(curl -s -o /dev/null -w "%{http_code}" "$BASE_URL/api/v1/integrity/appeals/me/")
+if [[ "$code" == "401" || "$code" == "403" ]]; then
+  echo "OK GET /api/v1/integrity/appeals/me/ (unauthenticated) → $code"
+else
+  echo "FAIL appeals me expected 401|403 without auth, got $code"
+  exit 1
+fi
+
 echo "Phase 4 regression..."
 BASE_URL="$BASE_URL" "$(dirname "$0")/verify_phase4_endpoints.sh"
 echo "Done."

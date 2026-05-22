@@ -24,4 +24,10 @@ docker compose run --rm backend uv run pytest \
 echo "=== Integrity API tests ==="
 docker compose run --rm backend uv run pytest apps/integrity/tests/test_views.py -q --tb=line
 
-echo "=== Phase 5 Wave 0 gate passed ==="
+echo "=== Appeals + protocol console tests ==="
+docker compose run --rm backend uv run pytest \
+  apps/integrity/tests/test_appeals.py \
+  apps/integrity/tests/test_console.py \
+  -q --tb=line
+
+echo "=== Phase 5 gate passed (through Wave 2) ==="
