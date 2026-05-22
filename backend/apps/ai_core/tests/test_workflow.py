@@ -47,8 +47,11 @@ class ScoringWorkflowTests(TestCase):
         self.contribution.refresh_from_db()
         self.profile.refresh_from_db()
         self.assertEqual(self.contribution.total_score, 70)
-        self.assertEqual(self.contribution.xp_awarded, 70)
-        self.assertEqual(self.profile.total_xp, 70)
+        # XP: base=70*5=350, genuine*2.0=700; +50 builder bonus (impact>70) → xp_awarded=750; total_xp=700 (base only)
+        self.assertEqual(self.contribution.xp_awarded, 750)
+        self.assertEqual(self.profile.total_xp, 700)
+        self.assertEqual(self.profile.builder_xp, 50)
+        self.assertEqual(self.profile.educator_xp, 700)  # twitter platform branch
 
     @patch("apps.ai_core.workflow._score_contribution_v2")
     def test_pipeline_blocks_farming_xp(self, score_mock):
@@ -73,3 +76,31 @@ class ScoringWorkflowTests(TestCase):
         self.profile.refresh_from_db()
         self.assertEqual(self.contribution.xp_awarded, 0)
         self.assertEqual(self.profile.total_xp, 0)
+
+
+class XPMathTests(TestCase):
+    """Pure math tests for XP calculation per spec: base=score*5 (0-500), multipliers, dim bonuses."""
+
+    def test_calculate_xp_genuine(self):
+        from apps.ai_core.workflow import _calculate_xp
+        xp, breakdown = _calculate_xp(80, "genuine")
+        self.assertEqual(xp, 800)  # 80*5*2
+        self.assertEqual(breakdown["farming_multiplier"], 2.0)
+
+    def test_calculate_xp_ambiguous(self):
+        from apps.ai_core.workflow import _calculate_xp
+        xp, _ = _calculate_xp(60, "ambiguous")
+        self.assertEqual(xp, 375)  # 60*5*1.25
+
+    def test_calculate_xp_farming(self):
+        from apps.ai_core.workflow import _calculate_xp
+        xp, _ = _calculate_xp(90, "farming")
+        self.assertEqual(xp, 0)
+
+    def test_dimension_bonuses_high_scores(self):
+        from apps.ai_core.workflow import _calculate_dimension_bonuses
+        result = {"teaching_value": 85, "originality": 75, "community_impact": 65}
+        bonuses = _calculate_dimension_bonuses(result)
+        self.assertEqual(bonuses.get("educator_xp"), 50)
+        self.assertEqual(bonuses.get("creator_xp"), 50)
+        self.assertNotIn("builder_xp", bonuses)
