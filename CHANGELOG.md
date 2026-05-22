@@ -5,10 +5,10 @@ All notable changes to this repository will be documented in this file.
 ## Unreleased
 
 ### Added
-- Phase 7 Wave 1: Full referral system — Django Referral model + code generation + leaderboard API + personal referral code with share/copy buttons.
+- Phase 7 Wave 2: Skill tree progression v1 — XP thresholds, auto-suggestion notifications via NotificationService, visual total XP progress bar.
 
 ### Chore
-- Version bump 0.7.0 → 0.7.1 after atomic integration.
+- Version bump 0.7.1 → 0.7.2 after atomic integration.
 
 ## 0.6.0 - 2026-05-22
 
