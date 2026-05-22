@@ -78,8 +78,15 @@ def resolve_appeal(
     if appeal.status != "pending":
         raise AppealValidationError("Appeal is already resolved.", "already_resolved")
 
+    note = (resolution_note or "").strip()
+    if status == "rejected" and len(note) < 10:
+        raise AppealValidationError(
+            "Resolution note is required for rejections (minimum 10 characters).",
+            "resolution_note_required"
+        )
+
     appeal.status = status
-    appeal.resolution_note = (resolution_note or "").strip()
+    appeal.resolution_note = note
     appeal.resolved_by = staff_user
     appeal.resolved_at = timezone.now()
     appeal.save(
