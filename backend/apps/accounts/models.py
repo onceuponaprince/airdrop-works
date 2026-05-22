@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 from common.models import BaseModel
+from .social_models import UserSocialAccount  # noqa: F401 - registers the model
 
 
 class User(AbstractUser, BaseModel):
