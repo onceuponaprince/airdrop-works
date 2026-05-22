@@ -95,8 +95,49 @@
 
 ## Wave 1 sign-off
 
-- [ ] `test_reputation_history.py` + `test_reputation_export.py` pass
-- [ ] `verify_phase5_endpoints.sh` hits history + export paths
+- [x] `test_reputation_history.py` + `test_reputation_export.py` pass
+- [x] `verify_phase5_endpoints.sh` hits history + export paths
+
+## Wave 2 — Appeals + protocol console
+
+| Resource | Path | Auth |
+|----------|------|------|
+| Submit appeal | `POST /api/v1/integrity/appeals/` | Authenticated |
+| My appeals | `GET /api/v1/integrity/appeals/me/` | Authenticated |
+| Resolve appeal | `POST /api/v1/integrity/appeals/<uuid>/resolve/` | Admin |
+| Console overview | `GET /api/v1/integrity/console/overview/` | Admin |
+| Console wallets | `GET /api/v1/integrity/console/wallets/?limit=&offset=` | Admin |
+| Console appeals | `GET /api/v1/integrity/console/appeals/?status=&limit=&offset=` | Admin |
+
+Staff UI v0: Django admin `ScoreAppeal` (`/admin/integrity/scoreappeal/`).
+
+### Appeal create (minimum)
+
+```json
+{
+  "contribution_id": "uuid",
+  "reason": "At least 20 characters explaining why the farming flag is wrong."
+}
+```
+
+### Console overview (minimum)
+
+```json
+{
+  "walletsWithScores": 42,
+  "scoredContributions": 120,
+  "averageCompositeScore": 68,
+  "farmingRatePercent": 12,
+  "pendingAppeals": 3,
+  "resolvedAppeals": 7
+}
+```
+
+## Wave 2 sign-off
+
+- [ ] `test_appeals.py` + `test_console.py` pass
+- [ ] `verify_phase5_endpoints.sh` hits console overview (401 without auth)
+- [ ] Migration `0001_score_appeal` applied
 
 ## Release target
 
