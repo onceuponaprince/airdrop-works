@@ -5,10 +5,10 @@ All notable changes to this repository will be documented in this file.
 ## Unreleased
 
 ### Added
-- Phase 7 Wave 2: Skill tree progression v1 — XP thresholds, auto-suggestion notifications via NotificationService, visual total XP progress bar.
+- Phase 7 Wave 3: Quest completion E2E polish — completed status on ended quests, loot-ready preparation (backend Celery + rarity + Notification already wired).
 
 ### Chore
-- Version bump 0.7.1 → 0.7.2 after atomic integration.
+- Version bump 0.7.2 → 0.7.3 after atomic integration.
 
 ## 0.6.0 - 2026-05-22
 
