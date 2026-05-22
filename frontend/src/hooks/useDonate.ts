@@ -53,19 +53,29 @@ export function useDonate() {
     setState({ status: 'pending', txHash: null, error: null });
 
     try {
-      // Use Dynamic or browser Solana provider (Phantom, Solflare, etc.)
+      // Support Phantom, Solflare, and other injected providers
       const provider = (window as any).solana || (window as any).phantom?.solana;
 
-      if (!provider || !provider.isConnected) {
-        throw new Error('Please connect a Solana wallet (Phantom, Solflare, or via Dynamic)');
+      if (!provider) {
+        throw new Error('No Solana wallet detected. Please install Phantom or Solflare.');
+      }
+
+      // Auto-connect if the wallet is not yet connected (user gesture required)
+      if (!provider.isConnected) {
+        try {
+          await provider.connect();
+        } catch {
+          throw new Error('Please connect your Solana wallet (Phantom / Solflare) and try again.');
+        }
       }
 
       const connection = new Connection(
-        process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com',
+        process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
         'confirmed'
       );
 
-      const fromPubkey = new PublicKey(await provider.publicKey.toString());
+      const publicKey = provider.publicKey || (await provider.connect()).publicKey;
+      const fromPubkey = new PublicKey(publicKey.toString());
       const toPubkey = new PublicKey(DONATION_ADDRESS_SOLANA);
 
       const lamports = Math.floor(parseFloat(amountSol) * LAMPORTS_PER_SOL);
