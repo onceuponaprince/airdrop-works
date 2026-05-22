@@ -86,6 +86,17 @@ export default function SkillTreePage() {
         ))}
       </motion.div>
 
+      <motion.div variants={staggerItem} className="rounded-lg border border-[--border] bg-[--card] p-4">
+        <div className="flex items-center justify-between text-sm mb-2">
+          <span className="text-[--muted-foreground]">Total XP</span>
+          <span className="font-mono text-[--primary]">{profileXp}</span>
+        </div>
+        <div className="h-2 bg-[--border] rounded overflow-hidden">
+          <div className="h-2 bg-[--primary]" style={{ width: `${Math.min(100, (profileXp / 2500) * 100)}%` }} />
+        </div>
+        <p className="text-[10px] text-[--muted-foreground] mt-1">Next major threshold at 2500 XP</p>
+      </motion.div>
+
       <motion.div variants={staggerItem}>
         <div className="rounded-lg border border-[--border] bg-[--card] p-6">
           <SkillTree

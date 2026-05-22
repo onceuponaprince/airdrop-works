@@ -46,6 +46,18 @@ def notify_skill_tree_suggestions(self, user_id: str) -> dict:
             "[Profiles/Task] Skill tree suggestions for user %s: %d nodes",
             user_id, len(suggestions)
         )
+        # Create in-app notification for new suggestions
+        try:
+            from apps.notifications.service import NotificationService
+            NotificationService.create_notification(
+                user=profile.user,
+                notification_type="system",
+                title="New skill nodes available",
+                message=f"{len(suggestions)} skill tree nodes are now unlockable based on your XP.",
+                data={"suggestions": suggestions},
+            )
+        except Exception:
+            logger.exception("Failed to deliver skill tree suggestion notification")
 
     return {
         "status": "ok",
