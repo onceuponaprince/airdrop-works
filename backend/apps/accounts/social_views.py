@@ -2,18 +2,27 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from .models import DiscordConnection, TelegramConnection, TwitterConnection
 from .social_models import UserSocialAccount
+
+
+def _account_row(platform, username, display_name, connected_at, last_synced_at=None):
+    return {
+        "platform": platform,
+        "username": username or "",
+        "display_name": display_name or username or "",
+        "connected_at": connected_at,
+        "last_synced_at": last_synced_at,
+    }
 
 
 class ConnectSocialAccountView(APIView):
     permission_classes = [IsAuthenticated]
+    throttle_scope = "social_connect"
 
     def post(self, request):
-        """
-        Connect a social account (Telegram, Discord, Twitter, etc.).
-        For MVP: accepts platform, external_id, username.
-        Real OAuth flows can be added later per platform.
-        """
+        """Connect a manually-entered social account for platforms without OAuth."""
         platform = request.data.get("platform")
         external_id = request.data.get("external_id")
         username = request.data.get("username", "")
@@ -53,9 +62,26 @@ class DisconnectSocialAccountView(APIView):
         if not platform:
             return Response({"error": "platform is required"}, status=400)
 
-        deleted, _ = UserSocialAccount.objects.filter(
+        deleted = 0
+        generic_deleted, _ = UserSocialAccount.objects.filter(
             user=request.user, platform=platform
         ).delete()
+        deleted += generic_deleted
+
+        if platform == "twitter":
+            deleted += TwitterConnection.objects.filter(user=request.user).delete()[0]
+            try:
+                from apps.contributions.models import CrawlSourceConfig
+
+                CrawlSourceConfig.objects.filter(
+                    user=request.user, platform="twitter"
+                ).delete()
+            except Exception:
+                pass
+        elif platform == "discord":
+            deleted += DiscordConnection.objects.filter(user=request.user).delete()[0]
+        elif platform == "telegram":
+            deleted += TelegramConnection.objects.filter(user=request.user).delete()[0]
 
         return Response(
             {"status": "disconnected" if deleted else "not_found"},
@@ -67,34 +93,81 @@ class MySocialAccountsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        accounts = UserSocialAccount.objects.filter(user=request.user)
-        data = [
-            {
-                "platform": a.platform,
-                "username": a.username,
-                "display_name": a.display_name,
-                "connected_at": a.connected_at,
-                "last_synced_at": a.last_synced_at,
-            }
-            for a in accounts
-        ]
+        data = []
+        seen_platforms = set()
+
+        twitter = TwitterConnection.objects.filter(user=request.user).first()
+        if twitter:
+            data.append(_account_row(
+                "twitter",
+                twitter.twitter_username,
+                twitter.display_name,
+                twitter.created_at,
+                twitter.last_synced_at,
+            ))
+            seen_platforms.add("twitter")
+
+        discord = DiscordConnection.objects.filter(user=request.user).first()
+        if discord:
+            data.append(_account_row(
+                "discord",
+                discord.discord_username,
+                discord.display_name,
+                discord.created_at,
+                discord.last_synced_at,
+            ))
+            seen_platforms.add("discord")
+
+        telegram = TelegramConnection.objects.filter(user=request.user).first()
+        if telegram:
+            data.append(_account_row(
+                "telegram",
+                telegram.telegram_username,
+                telegram.display_name,
+                telegram.created_at,
+                telegram.last_synced_at,
+            ))
+            seen_platforms.add("telegram")
+
+        for account in UserSocialAccount.objects.filter(user=request.user):
+            if account.platform in seen_platforms:
+                continue
+            data.append(_account_row(
+                account.platform,
+                account.username,
+                account.display_name,
+                account.connected_at,
+                account.last_synced_at,
+            ))
+            seen_platforms.add(account.platform)
+
         return Response(data)
 
 
 class SyncSocialAccountsView(APIView):
-    """
-    Trigger scoring for all connected social accounts of the current user.
-    Uses SocialSyncService under the hood.
-    """
+    """Trigger scoring for all connected social accounts of the current user."""
+
     permission_classes = [IsAuthenticated]
+    throttle_scope = "social_sync"
 
     def post(self, request):
         from .social_sync_service import SocialSyncService
 
         result = SocialSyncService.sync_user_accounts(request.user)
 
+        twitter = TwitterConnection.objects.filter(user=request.user).first()
+        if twitter:
+            from apps.contributions.tasks import sync_twitter_connection_task
+
+            task = sync_twitter_connection_task.delay(str(twitter.id))
+            result["twitter_task_id"] = task.id
+            result.setdefault("synced_platforms", [])
+            if "twitter" not in result["synced_platforms"]:
+                result["synced_platforms"].append("twitter")
+                result["synced_platforms"].sort()
+
         return Response({
             "status": "queued",
             "result": result,
-            "message": "Social accounts synced and scored."
+            "message": "Social accounts synced and scoring jobs queued.",
         }, status=202)

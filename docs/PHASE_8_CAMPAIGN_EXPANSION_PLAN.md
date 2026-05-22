@@ -55,4 +55,4 @@
 
 ---
 
-**Status:** Wave 4 + Wave 5 (Discord channels + full Telegram production webhook + scoring) complete. Foundation for live multi-platform campaign is now very strong. Next natural steps: GitHub/Reddit expansion or hardening round.
+**Status:** Wave 4 + Wave 5 complete. **Hardening round engaged (user priority 2 > 1)** — backlog created in `PHASE_8_HARDENING_BACKLOG.md`. GitHub/Reddit expansion (Wave 6) queued after hardening.

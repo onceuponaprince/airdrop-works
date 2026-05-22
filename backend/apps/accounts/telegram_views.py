@@ -49,6 +49,7 @@ class TelegramLinkView(APIView):
     }
     """
     permission_classes = [AllowAny]  # Bot calls this without user session
+    throttle_scope = "telegram_link"
 
     def post(self, request):
         token = request.data.get("link_token")
@@ -108,6 +109,7 @@ class TelegramWebhookView(APIView):
     This + the deep-link flow gives a complete "connect Telegram → post anywhere the bot can see → earn points" experience.
     """
     permission_classes = [AllowAny]
+    throttle_scope = "telegram_webhook"  # bounded via DEFAULT_THROTTLE_RATES in settings
 
     def post(self, request):
         from django.conf import settings

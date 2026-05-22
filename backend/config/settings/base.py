@@ -196,6 +196,13 @@ REST_FRAMEWORK = {
         "console_appeals": "60/minute",
         "notifications_list": "60/minute",
         "notifications_action": "30/minute",
+
+        # Campaign / social connections (Phase 8)
+        "telegram_webhook": "300/minute",   # public bot ingest — generous for real groups, hard ceiling against abuse
+        "telegram_link": "60/minute",       # bot-called account linking completion
+        "social_connect": "30/minute",
+        "social_sync": "20/minute",
+        "discord_channels_update": "30/minute",
     },
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
