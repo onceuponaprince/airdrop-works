@@ -167,7 +167,7 @@ class AppealApiTests(TestCase):
         self.client.force_authenticate(user=self.staff)
         response = self.client.post(
             reverse("integrity_appeal_resolve", kwargs={"appeal_id": appeal.id}),
-            {"status": "rejected"},
+            {"status": "rejected", "resolution_note": "Insufficient evidence provided."},
             format="json",
         )
         self.assertEqual(response.status_code, 200)
@@ -201,3 +201,106 @@ class AppealApiTests(TestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 401)
+
+    def test_rejection_requires_resolution_note(self):
+        """Rejecting an appeal requires a minimum resolution note (10 chars)."""
+        appeal = ScoreAppeal.objects.create(
+            user=self.user,
+            contribution=self.scored_farming,
+            subject="contribution",
+            reason="Rejected without note should fail.",
+            status="pending",
+            snapshot_farming_flag="farming",
+            snapshot_composite_score=15,
+        )
+        self.client.force_authenticate(user=self.staff)
+        # Empty note
+        response = self.client.post(
+            reverse("integrity_appeal_resolve", kwargs={"appeal_id": appeal.id}),
+            {"status": "rejected", "resolution_note": ""},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "resolution_note_required")
+        # Short note
+        response = self.client.post(
+            reverse("integrity_appeal_resolve", kwargs={"appeal_id": appeal.id}),
+            {"status": "rejected", "resolution_note": "short"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 400)
+        # Valid note
+        response = self.client.post(
+            reverse("integrity_appeal_resolve", kwargs={"appeal_id": appeal.id}),
+            {"status": "rejected", "resolution_note": "Valid rejection reason."},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "rejected")
+
+    def test_upheld_does_not_require_resolution_note(self):
+        """Upholding an appeal does not require a resolution note."""
+        appeal = ScoreAppeal.objects.create(
+            user=self.user,
+            contribution=self.scored_farming,
+            subject="contribution",
+            reason="Uphold without note should work.",
+            status="pending",
+            snapshot_farming_flag="farming",
+            snapshot_composite_score=15,
+        )
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.post(
+            reverse("integrity_appeal_resolve", kwargs={"appeal_id": appeal.id}),
+            {"status": "upheld"},
+            format="json",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "upheld")
+
+    def test_contribution_deletion_cascades_to_appeals(self):
+        """Deleting a contribution removes its appeals (CASCADE behavior)."""
+        appeal = ScoreAppeal.objects.create(
+            user=self.user,
+            contribution=self.scored_farming,
+            subject="contribution",
+            reason="This appeal will be deleted with its contribution.",
+            status="pending",
+            snapshot_farming_flag="farming",
+            snapshot_composite_score=15,
+        )
+        appeal_id = appeal.id
+        self.assertEqual(ScoreAppeal.objects.filter(id=appeal_id).count(), 1)
+        # Delete contribution
+        self.scored_farming.delete()
+        self.assertEqual(ScoreAppeal.objects.filter(id=appeal_id).count(), 0)
+
+    def test_staff_can_get_appeal_detail(self):
+        """Staff can retrieve a single appeal by ID."""
+        appeal = ScoreAppeal.objects.create(
+            user=self.user,
+            contribution=self.scored_farming,
+            subject="contribution",
+            reason="Get this appeal detail.",
+            status="pending",
+            snapshot_farming_flag="farming",
+            snapshot_composite_score=15,
+        )
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            reverse("integrity_appeal_detail", kwargs={"appeal_id": appeal.id})
+        )
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["id"], str(appeal.id))
+        self.assertEqual(data["walletAddress"], self.wallet)
+
+    def test_appeal_detail_not_found(self):
+        """Getting a non-existent appeal returns 404."""
+        import uuid
+
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            reverse("integrity_appeal_detail", kwargs={"appeal_id": uuid.uuid4()})
+        )
+        self.assertEqual(response.status_code, 404)

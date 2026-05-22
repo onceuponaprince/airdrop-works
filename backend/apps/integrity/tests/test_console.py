@@ -91,3 +91,29 @@ class ProtocolConsoleApiTests(TestCase):
     def test_console_anonymous_forbidden(self):
         response = self.client.get(reverse("integrity_console_overview"))
         self.assertEqual(response.status_code, 401)
+
+    def test_console_wallets_boundary_limits(self):
+        """Limit is clamped between 1 and 100; negative offset becomes 0."""
+        self.client.force_authenticate(user=self.staff)
+        # Excessive limit is clamped
+        response = self.client.get(reverse("integrity_console_wallets"), {"limit": 200})
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertLessEqual(data["limit"], 100)
+        # Negative offset is clamped
+        response = self.client.get(reverse("integrity_console_wallets"), {"offset": -5})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["offset"], 0)
+
+    def test_console_appeals_invalid_limit_offset(self):
+        """Non-integer limit or offset returns 400."""
+        self.client.force_authenticate(user=self.staff)
+        response = self.client.get(
+            reverse("integrity_console_appeals"), {"limit": "abc"}
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("integers", response.json()["detail"])
+        response = self.client.get(
+            reverse("integrity_console_appeals"), {"offset": "xyz"}
+        )
+        self.assertEqual(response.status_code, 400)
