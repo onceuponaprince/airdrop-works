@@ -27,10 +27,17 @@
 - [x] `schemas/reputation/v1/portable-export.schema.json`
 - [x] `test_reputation_history.py`, `test_reputation_export.py`
 
-## Wave 2+ (not started)
+## Wave 2 tasks
 
-- Appeals queue + resolution states
-- Protocol console read routes under `/api/v1/integrity/`
+- [x] `ScoreAppeal` model + migration
+- [x] `POST /api/v1/integrity/appeals/`, `GET .../appeals/me/`, `POST .../appeals/<id>/resolve/`
+- [x] `GET /api/v1/integrity/console/overview|wallets|appeals/`
+- [x] Django admin `ScoreAppealAdmin`
+- [x] `test_appeals.py`, `test_console.py`
+
+## Wave 3 (not started)
+
+- E2E + full gate + **0.6.0**
 
 ## Prereq
 
