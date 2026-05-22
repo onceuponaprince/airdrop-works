@@ -6,28 +6,13 @@ cd "$ROOT"
 
 export BASE_URL="${BASE_URL:-http://localhost:8001}"
 
-echo "=== Phase 5 gate (Wave 0) ==="
+echo "=== Phase 5 gate ==="
 ./scripts/verify_phase5_endpoints.sh
 
 echo "=== Phase 4 regression ==="
 ./scripts/verify_phase4_gate.sh
 
-echo "=== Reputation schema contract tests ==="
-docker compose run --rm backend uv run pytest apps/integrity/tests/test_reputation_schema.py -q --tb=line
+echo "=== Integrity + reputation test suite ==="
+docker compose run --rm backend uv run pytest apps/integrity/tests/ -q --tb=line
 
-echo "=== Reputation history + export tests ==="
-docker compose run --rm backend uv run pytest \
-  apps/integrity/tests/test_reputation_history.py \
-  apps/integrity/tests/test_reputation_export.py \
-  -q --tb=line
-
-echo "=== Integrity API tests ==="
-docker compose run --rm backend uv run pytest apps/integrity/tests/test_views.py -q --tb=line
-
-echo "=== Appeals + protocol console tests ==="
-docker compose run --rm backend uv run pytest \
-  apps/integrity/tests/test_appeals.py \
-  apps/integrity/tests/test_console.py \
-  -q --tb=line
-
-echo "=== Phase 5 gate passed (through Wave 2) ==="
+echo "=== Phase 5 gate passed (0.6.0) ==="

@@ -12,6 +12,19 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.6.0 - 2026-05-22
+
+### Added
+- Phase 5 portable reputation network: cross-campaign history, portable export bundle, appeals workflow, protocol console read API.
+- JSON schemas: `profile-reputation`, `portable-export`; contract tests for both.
+- Playwright `reputation-portable` journey with API mocks for integrity/history/export/appeals.
+
+### Changed
+- `verify_phase5_gate.sh` runs full `apps/integrity/tests/` suite.
+
+### Chore
+- `docs/PHASE_5_COMPLETE.md`; release **0.6.0** after Wave 3 gate.
+
 ## 0.5.2 - 2026-05-22
 
 ### Fixed

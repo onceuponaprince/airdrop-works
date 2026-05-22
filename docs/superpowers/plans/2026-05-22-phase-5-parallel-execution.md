@@ -35,9 +35,13 @@
 - [x] Django admin `ScoreAppealAdmin`
 - [x] `test_appeals.py`, `test_console.py`
 
-## Wave 3 (not started)
+## Wave 3 tasks
 
-- E2E + full gate + **0.6.0**
+- [x] `test_portable_export_schema.py`
+- [x] Playwright `reputation-portable.spec.ts` + mockApi reputation routes
+- [x] Full `verify_phase5_gate.sh` (`pytest apps/integrity/tests/`)
+- [x] `docs/PHASE_5_COMPLETE.md`
+- [x] Release **0.6.0**
 
 ## Prereq
 
