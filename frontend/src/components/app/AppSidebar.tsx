@@ -11,25 +11,24 @@ import { api } from '@/lib/api';
 
 // HANDOVER: Keep this as the single source of truth for app navigation labels/routes.
 // If route groups change, update this list and (app)/layout.tsx together.
-const NAVIGATION: {
-  label: string;
-  href: string;
-  icon?: string;
-}[] = [
-  { label: 'AI Judge', href: '/judge' },
+const CONSUMER_NAV: { label: string; href: string }[] = [
   { label: 'Dashboard', href: '/dashboard' },
+  { label: 'AI Judge', href: '/judge' },
   { label: 'Quests', href: '/quests' },
   { label: 'Leaderboard', href: '/leaderboard' },
   { label: 'Referrals', href: '/referrals' },
   { label: 'Skill Tree', href: '/skill-tree' },
   { label: 'Loot', href: '/loot' },
-  { label: 'Notifications', href: '/notifications' },
   { label: 'Sources', href: '/sources' },
+  { label: 'Notifications', href: '/notifications' },
+  { label: 'Settings', href: '/settings' },
+];
+
+const STAFF_NAV: { label: string; href: string }[] = [
   { label: 'Observability', href: '/observability' },
   { label: 'SPORE Lab', href: '/spore-lab' },
   { label: 'Onboarding', href: '/onboarding' },
   { label: 'Admin', href: '/admin' },
-  { label: 'Settings', href: '/settings' },
 ];
 
 export function AppSidebar() {
@@ -63,7 +62,7 @@ export function AppSidebar() {
   }, []);
 
   const visibleNavigation = useMemo(
-    () => NAVIGATION.filter((item) => item.href !== '/admin' || isStaff),
+    () => (isStaff ? [...CONSUMER_NAV, ...STAFF_NAV] : CONSUMER_NAV),
     [isStaff]
   );
 

@@ -7,6 +7,7 @@ import { StepEmail } from "@/components/marketing/steps/StepEmail"
 import { StepTwitter } from "@/components/marketing/steps/StepTwitter"
 import { StepSubmit } from "@/components/marketing/steps/StepSubmit"
 import type { AccountAnalysis } from "@/types/api"
+import { events } from "@/lib/analytics"
 
 const STORAGE_KEY = "airdrop_quest_state"
 const ADMIN_BYPASS_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_BYPASS ?? ""
@@ -87,7 +88,13 @@ export function WaitlistForm() {
     persistState({ currentStep, completedSteps, walletAddress, email, twitterHandle })
   }, [hydrated, currentStep, completedSteps, walletAddress, email, twitterHandle])
 
+  useEffect(() => {
+    if (!hydrated) return
+    events.waitlistStepStarted(currentStep)
+  }, [hydrated, currentStep])
+
   const completeStep = (step: QuestStep, nextStep: QuestStep) => {
+    events.waitlistStepCompleted(step)
     setCompletedSteps(prev => [...new Set([...prev, step])])
     setCurrentStep(nextStep)
   }

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/animations';
 import { api, unwrapList } from '@/lib/api';
+import { markStartEarningLeaderboardViewed } from '@/components/app/StartEarningChecklist';
 
 type LeaderboardScope = 'global' | 'educator' | 'builder' | 'creator' | 'scout' | 'diplomat';
 
@@ -49,6 +50,10 @@ function shortAddress(addr: string): string {
 
 export default function LeaderboardPage() {
   const [scope, setScope] = useState<LeaderboardScope>('global');
+
+  useEffect(() => {
+    markStartEarningLeaderboardViewed();
+  }, []);
 
   const leaderboard = useQuery({
     queryKey: ['leaderboard', scope],

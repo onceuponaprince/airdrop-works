@@ -60,23 +60,24 @@ export function Navigation() {
             ))}
           </nav>
 
-          {/* Desktop actions */}
+          {/* Desktop actions — primary: demo + waitlist; donate/login secondary */}
           <div className="hidden md:flex items-center gap-3">
             <Link
               href="/donate"
               className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
+              title="Support the build"
             >
-              Donate
-            </Link>
-            <Link
-              href="/login"
-              className="font-body text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Login
+              Support
             </Link>
             <ArcadeButton
               size="sm"
               variant="secondary"
+              onClick={() => document.getElementById("ai-judge-demo")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Try Demo
+            </ArcadeButton>
+            <ArcadeButton
+              size="sm"
               onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
             >
               Join Waitlist
@@ -137,16 +138,20 @@ export function Navigation() {
                 >
                   Donate
                 </Link>
-                <Link
-                  href="/login"
-                  onClick={() => setMobileOpen(false)}
-                  className="py-3 px-2 font-body text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 rounded-sm transition-colors"
-                >
-                  Login
-                </Link>
               </nav>
 
-              <div className="mt-6">
+              <div className="mt-6 flex flex-col gap-2">
+                <ArcadeButton
+                  size="md"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => {
+                    setMobileOpen(false)
+                    setTimeout(() => document.getElementById("ai-judge-demo")?.scrollIntoView({ behavior: "smooth" }), 100)
+                  }}
+                >
+                  Try Demo
+                </ArcadeButton>
                 <ArcadeButton
                   size="md"
                   className="w-full"

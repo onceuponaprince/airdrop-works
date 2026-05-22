@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Search, Twitter } from "lucide-react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { FARMING_FLAGS, type FarmingFlag } from "@/lib/constants"
 import type { TweetScore } from "@/types/api"
 import { fadeInUp } from "@/styles/theme"
+import { events } from "@/lib/analytics"
 
 export function TwitterAnalyzer() {
   const [handle, setHandle] = useState("")
@@ -24,6 +25,15 @@ export function TwitterAnalyzer() {
     analyze,
     reset,
   } = useTwitterAnalyze()
+
+  const scrollToWaitlist = () =>
+    document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })
+
+  useEffect(() => {
+    if (status === "complete" && analysis) {
+      events.twitterAnalyzeComplete(analysis.username, tweetsFetched)
+    }
+  }, [status, analysis, tweetsFetched])
 
   const handleAnalyze = () => {
     const cleaned = handle.trim().replace(/^@/, "")
@@ -189,6 +199,19 @@ export function TwitterAnalyzer() {
                     showReset
                     onReset={handleReset}
                   />
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="mt-4 p-4 rounded-[var(--radius)] border border-primary/20 bg-primary/5 text-center space-y-3"
+                  >
+                    <p className="font-body text-xs text-muted-foreground">
+                      Want this score on the leaderboard? Join the waitlist — you can link this handle in step 3.
+                    </p>
+                    <ArcadeButton size="sm" onClick={scrollToWaitlist}>
+                      Join Waitlist
+                    </ArcadeButton>
+                  </motion.div>
                 </motion.div>
               ) : isLoading ? (
                 <motion.div

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Check, Zap, Crown, Users } from 'lucide-react';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
+import { events } from '@/lib/analytics';
 
 const PLANS = [
   {
@@ -20,7 +21,8 @@ const PLANS = [
       'Score breakdown',
       'Community leaderboard',
     ],
-    cta: 'Get Started',
+    cta: 'Join Waitlist',
+    href: '/#waitlist',
     variant: 'secondary' as const,
     popular: false,
   },
@@ -38,7 +40,8 @@ const PLANS = [
       'Score breakdown + insights',
       'Priority support',
     ],
-    cta: 'Upgrade to Pro',
+    cta: 'Join Waitlist for Early Access',
+    href: '/#waitlist',
     variant: 'primary' as const,
     popular: true,
   },
@@ -56,7 +59,8 @@ const PLANS = [
       'Bulk scoring',
       'Dedicated support',
     ],
-    cta: 'Upgrade to Team',
+    cta: 'Join Waitlist for Early Access',
+    href: '/#waitlist',
     variant: 'secondary' as const,
     popular: false,
   },
@@ -119,7 +123,11 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/signup" className="w-full">
+                <Link
+                  href={'href' in plan && plan.href ? plan.href : '/#waitlist'}
+                  className="w-full"
+                  onClick={() => events.pricingPlanClick(plan.key)}
+                >
                   <ArcadeButton variant={plan.variant} className="w-full">
                     {plan.cta}
                   </ArcadeButton>
@@ -147,9 +155,13 @@ export default function PricingPage() {
                   {pack.credits} credits
                 </p>
                 <p className="text-2xl font-bold text-primary mb-4">{pack.price}</p>
-                <Link href="/signup" className="w-full">
+                <Link
+                  href="/#waitlist"
+                  className="w-full"
+                  onClick={() => events.pricingPlanClick(`pack_${pack.key}`)}
+                >
                   <ArcadeButton variant="secondary" size="sm" className="w-full">
-                    Sign Up to Buy
+                    Join Waitlist to Buy
                   </ArcadeButton>
                 </Link>
               </ArcadeCard>

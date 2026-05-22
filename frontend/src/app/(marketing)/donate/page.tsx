@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, CheckCircle, AlertCircle, ExternalLink } from 'lucide-react';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 import { useDonate, type DonateChain } from '@/hooks/useDonate';
+import { events } from '@/lib/analytics';
 
 const BASE_PRESETS = [
   { label: '0.01 ETH', value: '0.01' },
@@ -38,8 +40,15 @@ export default function DonatePage() {
 
   const handleDonate = async () => {
     if (!amount || parseFloat(amount) <= 0) return;
+    events.donateStarted(chain, amount);
     await donate(chain, amount);
   };
+
+  useEffect(() => {
+    if (status === 'success' && txHash) {
+      events.donateSuccess(chain, amount, txHash);
+    }
+  }, [status, txHash, chain, amount]);
 
   // Clear Solana address when switching away from Solana tab
   const handleChainChange = (newChain: DonateChain) => {
@@ -66,42 +75,14 @@ export default function DonatePage() {
           </p>
         </motion.div>
 
-        {/* Testnet Banner — 0.8.0 RC */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mb-6 rounded-lg border border-[--primary]/40 bg-[--primary]/5 p-4 text-center"
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mb-6 text-center text-xs text-[--muted-foreground]"
         >
-          <div className="flex items-center justify-center gap-2 text-sm">
-            <span className="font-display text-[--primary]">🧪 TESTNET MODE — 0.8.0 RC</span>
-          </div>
-          <p className="mt-1 text-xs text-[--muted-foreground]">
-            Donate on Base Sepolia or Solana Devnet to test the full receipt flow.
-            Get free test tokens from the faucets below.
-          </p>
-          <div className="mt-3 flex flex-wrap justify-center gap-3 text-xs">
-            <a
-              href="https://www.sepoliafaucet.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded border border-[--border] px-3 py-1 hover:border-[--primary] hover:text-[--primary]"
-            >
-              Base Sepolia Faucet <ExternalLink size={12} />
-            </a>
-            <a
-              href="https://faucet.solana.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded border border-[--border] px-3 py-1 hover:border-[--primary] hover:text-[--primary]"
-            >
-              Solana Devnet Faucet <ExternalLink size={12} />
-            </a>
-          </div>
-          <p className="mt-2 text-[10px] text-[--muted-foreground]/70">
-            All testnet donations generate rich on-chain receipts with explorer links.
-          </p>
-        </motion.div>
+          Donations settle on <span className="text-[--primary] font-mono">Base mainnet</span> (ETH) and{' '}
+          <span className="text-[--primary] font-mono">Solana mainnet</span> (SOL). Use the same wallet you connect in the nav.
+        </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -293,6 +274,17 @@ export default function DonatePage() {
                 >
                   Make another donation
                 </button>
+                <div className="mt-4 pt-4 border-t border-[--border] text-center space-y-2">
+                  <p className="text-xs text-[--muted-foreground]">
+                    Want early access to the full platform? Join the waitlist — separate from your donation.
+                  </p>
+                  <Link
+                    href="/#waitlist"
+                    className="inline-flex items-center justify-center rounded bg-[--secondary] px-4 py-2 text-sm font-medium hover:bg-[--secondary]/80 transition"
+                  >
+                    Join the waitlist
+                  </Link>
+                </div>
               </motion.div>
             )}
 

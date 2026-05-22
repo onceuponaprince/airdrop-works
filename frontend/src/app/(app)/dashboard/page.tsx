@@ -16,6 +16,7 @@ import { ReputationCard } from '@/components/app/ReputationCard';
 import { AppealsPanel } from '@/components/app/AppealsPanel';
 import { SocialAccountsPanel } from '@/components/app/SocialAccountsPanel';
 import { CampaignLeaderboard } from '@/components/app/CampaignLeaderboard';
+import { StartEarningChecklist } from '@/components/app/StartEarningChecklist';
 import { truncateAddress } from '@/lib/utils';
 import type { Contribution, PaginatedResponse } from '@/types/api';
 
@@ -111,6 +112,10 @@ export default function DashboardPage() {
           Your usage, history, and account at a glance.
         </p>
       </motion.div>
+
+      <motion.section variants={staggerItem}>
+        <StartEarningChecklist hasScored={(contributions.data?.count ?? 0) > 0} />
+      </motion.section>
 
       {/* ── Usage & Subscription ────────────────────────────────── */}
       <motion.section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4" variants={staggerItem}>
@@ -281,6 +286,11 @@ export default function DashboardPage() {
         </div>
       </motion.section>
 
+      {/* ── Connected Social Accounts ──────────────────────── */}
+      <motion.section id="social-accounts" variants={staggerItem}>
+        <SocialAccountsPanel />
+      </motion.section>
+
       {/* ── Branch Progress ────────────────────────────────── */}
       <motion.section className="space-y-4" variants={staggerItem}>
         <h2 className="text-lg font-bold font-heading">Branch Progress</h2>
@@ -307,11 +317,6 @@ export default function DashboardPage() {
             );
           })}
         </div>
-      </motion.section>
-
-      {/* ── Connected Social Accounts ──────────────────────── */}
-      <motion.section variants={staggerItem}>
-        <SocialAccountsPanel />
       </motion.section>
 
       {/* ── Live Campaign Leaderboard ──────────────────────── */}

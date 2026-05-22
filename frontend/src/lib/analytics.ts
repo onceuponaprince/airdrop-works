@@ -66,4 +66,28 @@ export const events = {
 
   leaderboardViewed: (tab: string) =>
     trackEvent("leaderboard_viewed", { tab }),
+
+  waitlistStepStarted: (step: string) =>
+    trackEvent("waitlist_step_started", { step }),
+
+  waitlistStepCompleted: (step: string) =>
+    trackEvent("waitlist_step_completed", { step }),
+
+  waitlistSubmitSuccess: (walletConnected: boolean, rank?: number) =>
+    trackEvent("waitlist_submit_success", {
+      wallet_connected: walletConnected,
+      rank,
+    }),
+
+  twitterAnalyzeComplete: (handle: string, tweetCount?: number) =>
+    trackEvent("twitter_analyze_complete", { handle, tweet_count: tweetCount }),
+
+  donateStarted: (chain: string, amount: string) =>
+    trackEvent("donate_started", { chain, amount }),
+
+  donateSuccess: (chain: string, amount: string, txHash: string) =>
+    trackEvent("donate_success", { chain, amount, tx_hash: txHash.slice(0, 16) }),
+
+  pricingPlanClick: (plan: string) =>
+    trackEvent("pricing_plan_click", { plan }),
 }

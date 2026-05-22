@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Twitter, MessageCircle, Users, Link as LinkIcon, Unlink } from 'lucide-react';
 import { useSocialAccounts, type SocialAccount } from '@/hooks/useSocialAccounts';
+import { api } from '@/lib/api';
+import { useNotificationStore } from '@/stores/useNotificationStore';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 
 const PLATFORM_META: Record<SocialAccount['platform'], { label: string; icon: React.ReactNode; placeholder: string }> = {
@@ -15,6 +17,7 @@ const PLATFORM_META: Record<SocialAccount['platform'], { label: string; icon: Re
 
 export function SocialAccountsPanel() {
   const { accounts, connect, disconnect, sync } = useSocialAccounts();
+  const notify = useNotificationStore((s) => s.push);
   const [form, setForm] = useState({ platform: 'twitter' as SocialAccount['platform'], username: '', external_id: '' });
 
   const connectedPlatforms = new Set(accounts.data?.map((a) => a.platform) ?? []);

@@ -15,6 +15,8 @@ interface DonateState {
 
 const DONATION_ADDRESS_BASE = process.env.NEXT_PUBLIC_DONATION_ADDRESS_BASE || '';
 const DONATION_ADDRESS_SOLANA = process.env.NEXT_PUBLIC_DONATION_ADDRESS_SOLANA || '';
+const SOLANA_RPC_URL =
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.mainnet-beta.solana.com';
 
 export function useDonate() {
   const [state, setState] = useState<DonateState>({
@@ -69,10 +71,7 @@ export function useDonate() {
         }
       }
 
-      const connection = new Connection(
-        process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com',
-        'confirmed'
-      );
+      const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
 
       const publicKey = provider.publicKey || (await provider.connect()).publicKey;
       const fromPubkey = new PublicKey(publicKey.toString());

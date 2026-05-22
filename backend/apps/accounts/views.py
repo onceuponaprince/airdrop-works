@@ -16,6 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.contributions.models import Contribution
 from apps.payments.models import Subscription
+from apps.payments.services import get_or_create_user_sub
 from apps.profiles.models import Profile
 from apps.rewards.models import LootChest, UserBadge
 from apps.spore.models import (
@@ -74,6 +75,8 @@ class WalletVerifyView(APIView):
                 "username": f"user_{wallet_address[:8]}",
             },
         )
+
+        get_or_create_user_sub(user)
 
         tokens = get_tokens_for_user(user)
         logger.info("[Auth] Wallet login: %s (new=%s)", wallet_address, created)

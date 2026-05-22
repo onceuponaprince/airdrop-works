@@ -36,7 +36,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/judge');
+      router.push('/dashboard');
     }
   }, [isAuthenticated, router]);
 

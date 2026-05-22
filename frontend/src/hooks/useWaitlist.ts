@@ -81,6 +81,7 @@ export function useWaitlist() {
       })
 
       events.waitlistSignup(!!data.walletAddress, data.primaryBranch)
+      events.waitlistSubmitSuccess(!!data.walletAddress, rank)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Something went wrong. Try again."

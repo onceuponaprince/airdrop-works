@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { toast } from '@/hooks/useToast';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 
 export interface SocialAccount {
@@ -11,6 +12,15 @@ export interface SocialAccount {
   connected_at: string;
   last_synced_at?: string;
 }
+
+const PLATFORM_LABELS: Record<SocialAccount['platform'], string> = {
+  twitter: 'Twitter / X',
+  discord: 'Discord',
+  telegram: 'Telegram',
+  github: 'GitHub',
+};
+
+const FIRST_CONNECT_XP = 50;
 
 export function useSocialAccounts() {
   const queryClient = useQueryClient();
@@ -25,10 +35,26 @@ export function useSocialAccounts() {
     mutationFn: (data: { platform: string; external_id: string; username?: string; display_name?: string }) =>
       api.post('/auth/social/connect/', data),
     onSuccess: (_, variables) => {
+      const previous =
+        queryClient.getQueryData<SocialAccount[]>(['social-accounts']) ?? [];
+      const isFirstAccount = previous.length === 0;
+      const platform =
+        variables.platform as SocialAccount['platform'];
+      const platformLabel = PLATFORM_LABELS[platform] ?? variables.platform;
+
+      if (isFirstAccount) {
+        toast({
+          title: 'First source linked!',
+          description: `+${FIRST_CONNECT_XP} XP for connecting ${platformLabel}`,
+        });
+      }
+
       notify({
         type: 'success',
-        title: 'Account connected',
-        message: `${variables.platform} account linked successfully.`,
+        title: isFirstAccount ? `+${FIRST_CONNECT_XP} XP earned` : 'Account connected',
+        message: isFirstAccount
+          ? `${platformLabel} linked — welcome to the contributor loop.`
+          : `${platformLabel} account linked successfully.`,
       });
       queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
     },

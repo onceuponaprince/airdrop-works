@@ -16,10 +16,10 @@ export default function LandingPage() {
       <HeroSection />
       <AiJudgeDemo />
       <SocialProofSection />
-      <CTASection />
-      <TwitterAnalyzer />
       <ProblemSection />
       <SolutionSection />
+      <CTASection />
+      <TwitterAnalyzer />
       <FeaturesSection />
       <ComparisonSection />
       <FAQSection />

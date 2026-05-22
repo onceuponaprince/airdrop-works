@@ -4,14 +4,16 @@ import { useState, useEffect } from "react"
 import { AnimatedSection } from "@/components/shared/AnimatedSection"
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
-import { getWaitlistCount } from "@/lib/supabase"
 import { ExternalLink } from "lucide-react"
 
 function WaitlistCounter() {
   const [count, setCount] = useState(0)
 
   useEffect(() => {
-    getWaitlistCount().then(setCount).catch(() => setCount(0))
+    fetch("/api/waitlist/count")
+      .then((res) => (res.ok ? res.json() : { count: 0 }))
+      .then((data: { count?: number }) => setCount(typeof data.count === "number" ? data.count : 0))
+      .catch(() => setCount(0))
   }, [])
 
   const display = useAnimatedCounter(count, { duration: 1400, delay: 300 })
@@ -25,7 +27,7 @@ function WaitlistCounter() {
 const CREDIBILITY = [
   {
     label: "Infrastructure",
-    value: "Battle-tested smart contracts on Avalanche mainnet",
+    value: "Rewards on Base, Solana, and Avalanche — your chain, your choice",
   },
   {
     label: "AI Engine",
