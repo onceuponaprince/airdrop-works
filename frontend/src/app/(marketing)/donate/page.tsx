@@ -124,6 +124,27 @@ export default function DonatePage() {
               </button>
             </div>
 
+            {/* Solana wallet connect helper */}
+            {chain === 'solana' && (
+              <button
+                onClick={async () => {
+                  const provider = (window as any).solana || (window as any).phantom?.solana;
+                  if (provider) {
+                    try {
+                      await provider.connect();
+                    } catch {
+                      // User will see the wallet popup error
+                    }
+                  } else {
+                    window.open('https://phantom.app/', '_blank');
+                  }
+                }}
+                className="w-full rounded-lg border border-[--primary]/60 bg-[--primary]/5 py-2 text-sm font-medium text-[--primary] hover:bg-[--primary]/10 transition"
+              >
+                Connect Phantom / Solflare
+              </button>
+            )}
+
             {/* Preset amounts */}
             <div className="grid grid-cols-3 gap-2">
               {presets.map((p) => (
