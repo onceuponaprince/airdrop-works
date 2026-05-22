@@ -242,6 +242,78 @@ export async function installApiV1Mocks(page: Page, opts: ApiMockOptions = {}) {
       })
     }
 
+    const wallet = (profile.walletAddress as string) ?? '0x' + 'a'.repeat(40)
+
+    if (path.match(/^\/api\/v1\/integrity\/0x[a-fA-F0-9]{40}\/?$/)) {
+      return jsonResponse(route, 200, {
+        walletAddress: wallet,
+        compositeScore: 72,
+        teachingValue: 70,
+        originality: 68,
+        communityImpact: 75,
+        farmingFlag: 'genuine',
+        farmingPercentage: 10,
+        contributionCount: 2,
+        scoredAt: new Date().toISOString(),
+      })
+    }
+
+    if (path.match(/^\/api\/v1\/profiles\/0x[a-fA-F0-9]{40}\/reputation\/history\/?$/)) {
+      return jsonResponse(route, 200, {
+        walletAddress: wallet,
+        count: 1,
+        limit: 50,
+        offset: 0,
+        results: [
+          {
+            id: 'c_1',
+            platform: 'twitter',
+            contentPreview: 'Thread on concentrated liquidity…',
+            compositeScore: 88,
+            farmingFlag: 'genuine',
+            scoredAt: new Date('2026-05-22T00:00:00.000Z').toISOString(),
+          },
+        ],
+      })
+    }
+
+    if (path.match(/^\/api\/v1\/profiles\/0x[a-fA-F0-9]{40}\/reputation\/export\/?$/)) {
+      return jsonResponse(route, 200, {
+        '@context': 'https://airdrop.works/schemas/reputation/v1',
+        type: 'PortableReputationExport',
+        specVersion: '1.0.0',
+        exportedAt: new Date().toISOString(),
+        walletAddress: wallet,
+        summary: {
+          walletAddress: wallet,
+          compositeScore: 72,
+          teachingValue: 70,
+          originality: 68,
+          communityImpact: 75,
+          farmingFlag: 'genuine',
+          farmingPercentage: 10,
+          contributionCount: 2,
+          scoredAt: new Date().toISOString(),
+        },
+        profile: { totalXp: 1234, rank: 42, primaryBranch: 'educator' },
+        history: [
+          {
+            id: 'c_1',
+            platform: 'twitter',
+            contentPreview: 'Thread on concentrated liquidity…',
+            compositeScore: 88,
+            farmingFlag: 'genuine',
+            scoredAt: new Date('2026-05-22T00:00:00.000Z').toISOString(),
+          },
+        ],
+        meta: { historyCount: 1, historyLimit: 50 },
+      })
+    }
+
+    if (path.endsWith('/api/v1/integrity/appeals/me/') && req.method() === 'GET') {
+      return jsonResponse(route, 200, { results: [] })
+    }
+
     if (/^\/api\/v1\/judge\/score\/?$/.test(path) && req.method() === 'POST') {
       const score =
         opts.judgeScore ??
