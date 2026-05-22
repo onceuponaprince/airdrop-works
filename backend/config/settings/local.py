@@ -29,8 +29,9 @@ _cors_extra = config(
 CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_cors_base + _cors_extra))
 CORS_ALLOW_CREDENTIALS = True
 
-# Looser throttling in dev
+# Looser throttling in dev (merge onto base.py so Phase 8 campaign scopes remain defined)
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {  # noqa: F405
+    **REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"],
     "anon": "1000/minute",
     "user": "1000/minute",
     "judge_demo": "100/minute",

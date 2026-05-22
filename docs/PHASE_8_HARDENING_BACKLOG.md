@@ -10,18 +10,18 @@
 
 ## P0 — Security & Abuse Prevention (Do First)
 
-- [x] Add DRF ScopedRateThrottle to public Telegram endpoints (`telegram_webhook` 300/min, `telegram_link` 60/min) + authenticated social ones (`social_connect`, `social_sync`, `discord_channels_update`)
-- [x] Registered all new scopes in `DEFAULT_THROTTLE_RATES` (base.py)
-- [ ] Document the new required env vars (`TELEGRAM_WEBHOOK_SECRET`, `DISCORD_CLIENT_*`, `TELEGRAM_BOT_USERNAME`, etc.) and recommended webhook secret rotation in `DEPLOYMENT.md`
+- [x] Add DRF ScopedRateThrottle to public `TelegramWebhookView` (`telegram_webhook` scope) + `TelegramLinkView` + authenticated social endpoints (see `DEFAULT_THROTTLE_RATES` in `base.py`)
+- [x] **Dev fix:** `config.settings.local` now **merges** onto `base` throttle rates instead of replacing the dict (previously dropped all non-listed scopes and broke Discord channel updates in pytest / local).
+- [x] Document the new required env vars + exact setWebhook curl in a new "Live Campaign / Social Connections (Phase 8)" subsection of DEPLOYMENT.md (commit 325be71)
 
 ## P1 — Test Coverage (Confidence & Regression Safety)
 
-- [ ] Backend: pytest coverage for `TelegramWebhookView` (happy path linked user, unlinked user, dedup, secret validation, scoring enqueue)
-- [ ] Backend: tests for `UpdateDiscordChannelsView` + metadata persistence
+- [x] Backend: pytest coverage for `TelegramWebhookView` (happy path linked user, unlinked user, dup delivery, secret validation, scoring enqueue) — see `apps/accounts/tests/test_campaign_social_views.py`
+- [x] Backend: tests for `UpdateDiscordChannelsView` + metadata persistence (same module)
 - [ ] Backend: tests for `SocialSyncService.sync_user_accounts` (Discord channel path, generic accounts)
 - [ ] Backend: tests for `MultiPlatformLeaderboardView` (aggregation, ordering, empty states)
 - [ ] Frontend: Playwright E2E for connecting Discord → configuring channels → seeing freshness; Telegram deep-link flow (mock where needed)
-- [ ] Add the new test modules to CI gate scripts if not auto-discovered
+- [x] Wired `apps/accounts/tests/test_campaign_social_views.py` into `.github/workflows/ci.yml` Phase 2 backend slice
 
 ## P2 — Observability & Health
 

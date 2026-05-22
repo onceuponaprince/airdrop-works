@@ -51,12 +51,12 @@ class SocialSyncService:
                         result = crawl_discord(channel_id=channel_id)
                         for item in result.items:
                             contribution, created = Contribution.objects.get_or_create(
-                                user=user,
                                 platform="discord",
-                                content_url=item.content_url,
+                                platform_content_id=item.platform_content_id,
                                 defaults={
+                                    "user": user,
                                     "content_text": item.content_text[:4000],
-                                    "discovered_at": item.discovered_at or timezone.now(),
+                                    "content_url": item.content_url or "",
                                 },
                             )
                             if created:

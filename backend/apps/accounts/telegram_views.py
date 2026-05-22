@@ -163,7 +163,6 @@ class TelegramWebhookView(APIView):
                 "user": conn.user,
                 "content_text": text[:4000],
                 "content_url": content_url,
-                "discovered_at": dj_timezone.now(),
             },
         )
 
