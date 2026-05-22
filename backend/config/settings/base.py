@@ -185,6 +185,13 @@ REST_FRAMEWORK = {
         "integrity_wallet": "30/minute",
         "reputation_public": "60/minute",
         "judge_marketing_demo": "10/minute",
+        "appeals_create": "10/minute",
+        "appeals_list": "30/minute",
+        "appeals_resolve": "60/minute",
+        "appeals_detail": "60/minute",
+        "console_overview": "60/minute",
+        "console_wallets": "60/minute",
+        "console_appeals": "60/minute",
     },
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
