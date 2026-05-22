@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .appeals_views import AppealCreateView, AppealResolveView, MyAppealsView
+from .appeals_views import AppealCreateView, AppealDetailView, AppealResolveView, MyAppealsView
 from .console_views import (
     ProtocolConsoleAppealsView,
     ProtocolConsoleOverviewView,
@@ -11,6 +11,7 @@ from .views import IntegrityExportView, IntegrityWalletView
 urlpatterns = [
     path("appeals/", AppealCreateView.as_view(), name="integrity_appeal_create"),
     path("appeals/me/", MyAppealsView.as_view(), name="integrity_appeals_me"),
+    path("appeals/<uuid:appeal_id>/", AppealDetailView.as_view(), name="integrity_appeal_detail"),
     path("appeals/<uuid:appeal_id>/resolve/", AppealResolveView.as_view(), name="integrity_appeal_resolve"),
     path("console/overview/", ProtocolConsoleOverviewView.as_view(), name="integrity_console_overview"),
     path("console/wallets/", ProtocolConsoleWalletsView.as_view(), name="integrity_console_wallets"),
