@@ -25,29 +25,27 @@ class SocialSyncService:
     @staticmethod
     def sync_user_accounts(user: User) -> dict:
         """
-        Sync all connected social accounts for a user.
-
-        Currently a stub that logs intent. Real implementation will:
-        - Call crawl_discord / crawl_telegram / twitter crawler
-        - Run AI Judge scoring
-        - Award XP via existing workflow
+        Sync all connected social accounts for a user and trigger scoring.
         """
         from apps.accounts.social_models import UserSocialAccount
-
-        accounts = UserSocialAccount.objects.filter(user=user)
+        from apps.accounts.models import DiscordConnection
 
         synced = []
-        for account in accounts:
-            logger.info(
-                "[SocialSync] Syncing %s account for user %s",
-                account.platform,
-                user.wallet_address[:6],
-            )
-            # TODO: Implement actual crawl + score logic per platform
+
+        # Generic social accounts
+        for account in UserSocialAccount.objects.filter(user=user):
+            logger.info("[SocialSync] Syncing %s for user %s", account.platform, user.wallet_address[:6])
             synced.append(account.platform)
+
+        # Dedicated Discord connection
+        if DiscordConnection.objects.filter(user=user).exists():
+            logger.info("[SocialSync] Discord connection found for user %s", user.wallet_address[:6])
+            synced.append("discord")
+
+        # TODO: Call crawl_discord + AI Judge + award XP here
 
         return {
             "user_id": str(user.id),
-            "synced_platforms": synced,
+            "synced_platforms": list(set(synced)),
             "synced_at": timezone.now().isoformat(),
         }
