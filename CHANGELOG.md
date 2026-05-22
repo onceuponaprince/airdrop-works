@@ -2,14 +2,22 @@
 
 All notable changes to this repository will be documented in this file.
 
-## Unreleased
+## 0.8.0 - 2026-05-22
 
 ### Added
-- Solana donations: full implementation using @solana/web3.js + connected wallet (Phantom/Solflare/Dynamic).
-- Stabilization sweep for 0.8.0: notification store backward compatibility, type safety, production build clean.
+- Solana donations: full implementation using `@solana/web3.js` + connected wallet (Phantom, Solflare, or Dynamic).
+- Rich on-chain donation receipts: amount, chain, shortened tx hash + copy button, direct explorer link (BaseScan / Solscan).
+- E2E regression test for donate flows (Base + Solana).
+- Testnet deployment guide for Base Sepolia + Solana Devnet.
+
+### Changed
+- Donation success state upgraded to full receipt card with copy + explorer actions.
+- Notification store now exports backward-compatible `push()` alias.
 
 ### Chore
-- Version bump to **0.8.0** (Release Candidate) — all previous phases complete, post-roadmap polish shipped.
+- Version bump to **0.8.0** (Release Candidate).
+- All atomic commits preserved through PR merge simulation.
+- Playwright E2E + production build verified clean.
 
 ## 0.6.0 - 2026-05-22
 
