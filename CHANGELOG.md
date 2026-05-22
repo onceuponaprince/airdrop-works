@@ -12,6 +12,17 @@ All notable changes to this repository will be documented in this file.
 
 ### Chore
 
+## 0.5.2 - 2026-05-22
+
+### Fixed
+- Pytest CI collection: `--import-mode=importlib` avoids `tests/` vs `apps/integrity/tests/` shadowing.
+- `useTwitterAnalyze` parses buffered NDJSON bodies (E2E mocks and short streams).
+- Playwright judge journeys target `/api/v1/judge/score/` and `score-account/` with correct mock ordering.
+
+### Chore
+- E2E: `NEXT_PUBLIC_E2E=1` suppresses cookie banner; wallet-connect specs skipped in CI.
+- Release **0.5.2** after [PR #19](https://github.com/onceuponaprince/airdrop-works/pull/19).
+
 ## 0.5.1 - 2026-05-21
 
 ### Added
