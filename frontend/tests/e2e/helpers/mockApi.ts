@@ -314,6 +314,28 @@ export async function installApiV1Mocks(page: Page, opts: ApiMockOptions = {}) {
       return jsonResponse(route, 200, { results: [] })
     }
 
+    // Appeal detail (staff) - match appeals/<uuid>/ but not appeals/me/
+    if (path.match(/\/api\/v1\/integrity\/appeals\/[0-9a-f-]{36}\/$/) && req.method() === 'GET') {
+      return jsonResponse(route, 200, {
+        id: 'appeal-uuid',
+        subject: 'contribution',
+        status: 'pending',
+        reason: 'Test appeal detail view.',
+        contributionId: 'c_1',
+        snapshotFarmingFlag: 'farming',
+        snapshotCompositeScore: 15,
+        resolutionNote: null,
+        resolvedAt: null,
+        createdAt: new Date().toISOString(),
+        walletAddress: wallet,
+      })
+    }
+
+    // Protocol console (staff) - return 401 for unauthenticated in E2E
+    if (path.includes('/api/v1/integrity/console/')) {
+      return jsonResponse(route, 401, { detail: 'Authentication required.' })
+    }
+
     if (/^\/api\/v1\/judge\/score\/?$/.test(path) && req.method() === 'POST') {
       const score =
         opts.judgeScore ??

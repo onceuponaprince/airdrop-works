@@ -70,4 +70,30 @@ test.describe('Portable reputation API (mocked)', () => {
     expect(status).toBe(200)
     expect(Array.isArray(data.results)).toBe(true)
   })
+
+  test('staff can retrieve appeal detail', async ({ page }) => {
+    await page.goto('/')
+    const appealId = '00000000-0000-0000-0000-000000000001'
+    const { status, data } = await page.evaluate(async (id) => {
+      const res = await fetch(`/api/v1/integrity/appeals/${id}/`)
+      return { status: res.status, data: await res.json() }
+    }, appealId)
+
+    expect(status).toBe(200)
+    expect(data).toMatchObject({
+      id: expect.any(String),
+      status: expect.stringMatching(/^(pending|upheld|rejected)$/),
+      walletAddress: expect.any(String),
+    })
+  })
+
+  test('unauthenticated console access returns 401', async ({ page }) => {
+    await page.goto('/')
+    const { status } = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/integrity/console/overview/')
+      return { status: res.status }
+    })
+
+    expect(status).toBe(401)
+  })
 })
