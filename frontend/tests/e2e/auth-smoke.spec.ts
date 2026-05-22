@@ -1,14 +1,16 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '@playwright/test'
 
-test('auth smoke: login page shows sign in or connect wallet', async ({ page, baseURL }) => {
-  await page.goto('/login');
+test('auth smoke: login page shows wallet connect affordances', async ({ page }) => {
+  await page.goto('/login')
 
-  // Look for common text/buttons used by the app's login flow
-  const connectButton = page.locator('text=Connect Wallet');
-  const signInText = page.locator('text=Sign in');
+  await expect(page).toHaveURL(/\/login$/)
+  await expect(page.getByRole('heading', { name: 'Login' })).toBeVisible()
 
-  await expect(page).toHaveURL(/\/login$/);
+  const connect = page.getByRole('button', { name: /^Connect$/ })
+  const signMessage = page.getByRole('button', { name: /Sign message to continue/i })
+  const walletUnavailable = page.getByRole('button', { name: /Wallet Unavailable/i })
 
-  // At least one of these should be visible on the login page
-  await expect(await Promise.race([connectButton.isVisible(), signInText.isVisible()])).toBeTruthy();
-});
+  await expect(
+    connect.or(signMessage).or(walletUnavailable).first()
+  ).toBeVisible()
+})

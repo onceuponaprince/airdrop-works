@@ -27,5 +27,5 @@ pnpm test:e2e:headed
 
 Notes
 
-- Journey tests under `tests/e2e/journeys/` are designed to run without the Django backend by mocking `/api/v1/*` and the streaming endpoints (`/api/judge`, `/api/twitter-analyze`).
+- Journey tests under `tests/e2e/journeys/` run without Django by mocking `/api/v1/*`. App `/judge` uses `POST /api/v1/judge/score/` and `POST /api/v1/judge/score-account/`; marketing demo still uses `/api/judge` NDJSON.
 - Wallet-provider E2E remains inherently flaky unless you fully control the provider (see `tests/e2e/helpers/mockEthereum.ts`).

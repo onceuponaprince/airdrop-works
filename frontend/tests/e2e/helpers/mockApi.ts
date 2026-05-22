@@ -2,11 +2,60 @@ import type { Page, Route } from '@playwright/test'
 
 type Json = Record<string, unknown>
 
+type JudgeScorePayload = {
+  teaching_value: number
+  originality: number
+  community_impact: number
+  composite_score: number
+  farming_flag: 'genuine' | 'farming' | 'ambiguous'
+  farming_explanation?: string
+  dimension_explanations?: Record<string, string>
+}
+
+type TweetScorePayload = {
+  index: number
+  tweetId: string
+  text: string
+  url: string
+  teachingValue: number
+  originality: number
+  communityImpact: number
+  compositeScore: number
+  farmingFlag: 'genuine' | 'farming' | 'ambiguous'
+  oneLiner: string
+}
+
+type AccountAnalysisPayload = {
+  username: string
+  displayName?: string
+  avatarUrl?: string
+  tweetCount: number
+  tweets: TweetScorePayload[]
+  aggregate: {
+    overallScore: number
+    teachingValue: number
+    originality: number
+    communityImpact: number
+    farmingPercentage: number
+    genuinePercentage: number
+    strengths: string
+    weaknesses: string
+    verdict: 'genuine' | 'farming' | 'ambiguous'
+  }
+  analyzedAt: string
+}
+
 type ApiMockOptions = {
   token?: string
   profile?: Json
   contributions?: Json
   subscription?: Json
+  judgeScore?: JudgeScorePayload
+  scoreAccount?: AccountAnalysisPayload
+}
+
+function ndjson(lines: unknown[]): string {
+  return lines.map((l) => JSON.stringify(l)).join('\n') + '\n'
 }
 
 function jsonResponse(route: Route, status: number, data: unknown) {
@@ -126,6 +175,94 @@ export async function installApiV1Mocks(page: Page, opts: ApiMockOptions = {}) {
 
     if (path.match(/\/api\/v1\/contributions\/crawl\/[^/]+\/$/) && req.method() === 'POST') {
       return jsonResponse(route, 202, { task_id: 'task_e2e_connect' })
+    }
+
+    if (path.includes('/api/v1/judge/score-account') && req.method() === 'POST') {
+      const username =
+        (() => {
+          try {
+            const body = req.postDataJSON() as { username?: string }
+            return (body?.username ?? 'demo_user').replace(/^@/, '')
+          } catch {
+            return 'demo_user'
+          }
+        })() || 'demo_user'
+
+      const tweet: TweetScorePayload = {
+        index: 0,
+        tweetId: 't_1',
+        text: 'A thoughtful technical post.',
+        url: `https://x.com/${username}/status/1`,
+        teachingValue: 80,
+        originality: 70,
+        communityImpact: 65,
+        compositeScore: 72,
+        farmingFlag: 'genuine',
+        oneLiner: 'Solid technical insight.',
+      }
+
+      const analysis: AccountAnalysisPayload =
+        opts.scoreAccount ??
+        ({
+          username,
+          displayName: username,
+          avatarUrl: '',
+          tweetCount: 1,
+          tweets: [tweet],
+          aggregate: {
+            overallScore: 72,
+            teachingValue: 70,
+            originality: 68,
+            communityImpact: 75,
+            farmingPercentage: 10,
+            genuinePercentage: 80,
+            strengths: 'Consistent educational threads.',
+            weaknesses: 'Could add more primary sources.',
+            verdict: 'genuine',
+          },
+          analyzedAt: new Date().toISOString(),
+        } satisfies AccountAnalysisPayload)
+
+      const body = ndjson([
+        {
+          type: 'tweets_fetched',
+          count: analysis.tweetCount,
+          username: analysis.username,
+          displayName: analysis.displayName,
+          avatarUrl: analysis.avatarUrl,
+        },
+        { type: 'tweet_score', score: tweet },
+        { type: 'final', analysis, credits_remaining: 95 },
+      ])
+
+      return route.fulfill({
+        status: 200,
+        headers: { 'content-type': 'application/x-ndjson; charset=utf-8' },
+        body,
+      })
+    }
+
+    if (/^\/api\/v1\/judge\/score\/?$/.test(path) && req.method() === 'POST') {
+      const score =
+        opts.judgeScore ??
+        ({
+          teaching_value: 82,
+          originality: 74,
+          community_impact: 66,
+          composite_score: 74,
+          farming_flag: 'genuine',
+          farming_explanation: 'Looks like a genuine technical contribution.',
+          dimension_explanations: {
+            teaching_value: 'Explains the why, not just the what.',
+            originality: 'Contains original synthesis.',
+            community_impact: 'Actionable for builders.',
+          },
+        } satisfies JudgeScorePayload)
+      return jsonResponse(route, 200, {
+        ...score,
+        scored_at: new Date().toISOString(),
+        credits_remaining: 99,
+      })
     }
 
     // Default: surface unexpected calls to make tests actionable.
