@@ -100,6 +100,7 @@ interface NotificationState {
 
   // Local actions (fallback for local-only notifications)
   pushLocal: (input: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => void;
+  push: (input: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => void; // alias for compatibility
   clearRead: () => void;
 
   // Internal
@@ -349,6 +350,11 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       unreadCount: state.unreadCount + 1,
       totalCount: state.totalCount + 1,
     }));
+  },
+
+  push: (input) => {
+    // Backward-compatible alias for components still calling .push()
+    get().pushLocal(input);
   },
 
   // Clear read notifications locally
