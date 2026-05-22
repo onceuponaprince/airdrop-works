@@ -13,6 +13,7 @@ import { api } from '@/lib/api';
 // If route groups change, update this list and (app)/layout.tsx together.
 const CONSUMER_NAV: { label: string; href: string }[] = [
   { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Campaign', href: '/campaign' },
   { label: 'AI Judge', href: '/judge' },
   { label: 'Quests', href: '/quests' },
   { label: 'Leaderboard', href: '/leaderboard' },
