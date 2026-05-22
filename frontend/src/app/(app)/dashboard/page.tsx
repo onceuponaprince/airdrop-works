@@ -14,6 +14,7 @@ import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
 import { ReputationCard } from '@/components/app/ReputationCard';
 import { AppealsPanel } from '@/components/app/AppealsPanel';
+import { SocialAccountsPanel } from '@/components/app/SocialAccountsPanel';
 import { truncateAddress } from '@/lib/utils';
 import type { Contribution, PaginatedResponse } from '@/types/api';
 
@@ -305,6 +306,11 @@ export default function DashboardPage() {
             );
           })}
         </div>
+      </motion.section>
+
+      {/* ── Connected Social Accounts ──────────────────────── */}
+      <motion.section variants={staggerItem}>
+        <SocialAccountsPanel />
       </motion.section>
     </motion.main>
   );
