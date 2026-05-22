@@ -1,31 +1,36 @@
 """
-Telegram connection helpers.
-
-Telegram does not use traditional OAuth2 like Twitter/Discord.
-Common patterns:
-- Bot deep linking (user starts bot with /start <payload>)
-- Mini App authentication
-- Login Widget (for web)
-
-This module provides a minimal skeleton for deep-link based connection.
+Telegram connection helpers — deep link + secure token flow.
 """
 
+from __future__ import annotations
+
+import secrets
 from django.conf import settings
+from django.core.cache import cache
 
 
-def build_telegram_deep_link_payload(user_id: str) -> str:
-    """
-    Build a payload that can be sent via Telegram deep link.
-    Example deep link: https://t.me/YourBot?start=CONNECT_<user_id>
-    """
+CACHE_PREFIX = "telegram_link:"
+CACHE_TTL = 600  # 10 minutes
+
+
+def generate_telegram_link_token(user_id: int) -> str:
+    """Generate a short-lived secure token for linking a Telegram account."""
+    token = secrets.token_urlsafe(32)
+    cache.set(f"{CACHE_PREFIX}{token}", str(user_id), CACHE_TTL)
+    return token
+
+
+def consume_telegram_link_token(token: str) -> int | None:
+    """Validate and consume the link token. Returns the Django user ID if valid."""
+    key = f"{CACHE_PREFIX}{token}"
+    user_id = cache.get(key)
+    if user_id:
+        cache.delete(key)
+        return int(user_id)
+    return None
+
+
+def build_telegram_deep_link(token: str) -> str:
+    """Build the Telegram deep link containing the secure token."""
     bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", "airdropworks_bot")
-    return f"https://t.me/{bot_username}?start=CONNECT_{user_id}"
-
-
-def verify_telegram_auth(data: dict) -> bool:
-    """
-    Placeholder for Telegram Login Widget signature verification.
-    In production, implement HMAC verification using bot token.
-    """
-    # TODO: Implement real verification
-    return True
+    return f"https://t.me/{bot_username}?start=link_{token}"

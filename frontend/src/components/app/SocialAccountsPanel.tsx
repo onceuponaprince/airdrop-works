@@ -60,13 +60,24 @@ export function SocialAccountsPanel() {
         `/auth/${platform}/start/`
       );
       const url = res.authorizeUrl || res.deepLink;
+
       if (url) {
-        window.location.href = url;
+        if (platform === 'telegram') {
+          // Open Telegram deep link in new tab
+          window.open(url, '_blank');
+          notify({
+            type: 'success',
+            title: 'Telegram opened',
+            message: 'Start the bot, then come back. Your account will appear shortly.',
+          });
+        } else {
+          window.location.href = url;
+        }
       } else {
         notify({ type: 'error', title: 'Connection error', message: 'No redirect URL returned' });
       }
     } catch (err) {
-      notify({ type: 'error', title: 'Failed to start OAuth', message: String(err) });
+      notify({ type: 'error', title: 'Failed to start connection', message: String(err) });
     }
   };
 
@@ -157,24 +168,31 @@ export function SocialAccountsPanel() {
             <ArcadeButton size="sm" onClick={() => handleRealOAuth(form.platform)}>
               Connect with {PLATFORM_META[form.platform as SocialAccount['platform']].label}
             </ArcadeButton>
-          ) : (
-            <input
-              type="text"
-              placeholder={PLATFORM_META[form.platform].placeholder}
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              className="rounded border border-[--border] bg-[--background] px-3 py-2 text-sm font-mono"
-            />
-          )}
-
-          {['telegram', 'github'].includes(form.platform) && (
+          ) : form.platform === 'telegram' ? (
             <ArcadeButton
               size="sm"
-              onClick={handleConnect}
-              disabled={connect.isPending || !form.username}
+              onClick={() => handleRealOAuth('telegram')}
+              disabled={connect.isPending}
             >
-              {connect.isPending ? 'Connecting...' : 'Connect Account'}
+              Open Telegram Bot
             </ArcadeButton>
+          ) : (
+            <>
+              <input
+                type="text"
+                placeholder={PLATFORM_META[form.platform].placeholder}
+                value={form.username}
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                className="rounded border border-[--border] bg-[--background] px-3 py-2 text-sm font-mono"
+              />
+              <ArcadeButton
+                size="sm"
+                onClick={handleConnect}
+                disabled={connect.isPending || !form.username}
+              >
+                {connect.isPending ? 'Connecting...' : 'Connect Account'}
+              </ArcadeButton>
+            </>
           )}
         </div>
 
@@ -190,7 +208,7 @@ export function SocialAccountsPanel() {
         </div>
 
         <p className="mt-2 text-[10px] text-[--muted-foreground]">
-          Twitter & Discord now use real OAuth. Telegram & GitHub still use manual username for MVP.
+          Twitter & Discord use real OAuth. Telegram opens the official bot — talk to it and your account will link automatically.
         </p>
       </div>
     </div>
