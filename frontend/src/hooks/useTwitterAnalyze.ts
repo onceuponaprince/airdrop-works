@@ -76,80 +76,75 @@ export function useTwitterAnalyze() {
         throw new Error((err as { detail?: string }).detail || `Analysis failed (${res.status})`);
       }
 
-      const reader = res.body?.getReader();
-      if (!reader) throw new Error('Streaming not available');
+      const bodyText = await res.text();
+      const lines = bodyText.split('\n').map((l) => l.trim()).filter(Boolean);
 
-      const decoder = new TextDecoder();
-      let buffer = '';
+      for (const line of lines) {
+        let msg: {
+          type: string
+          count?: number
+          username?: string
+          displayName?: string
+          avatarUrl?: string
+          score?: TweetScore
+          analysis?: AccountAnalysis
+          credits_remaining?: number
+          message?: string
+        }
+        try {
+          msg = JSON.parse(line)
+        } catch (parseErr) {
+          if (parseErr instanceof SyntaxError) continue
+          throw parseErr
+        }
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
+        if (msg.type === 'tweets_fetched') {
+          setState((s) => ({
+            ...s,
+            status: 'scoring',
+            tweetCount: msg.count ?? 0,
+            username: msg.username ?? s.username,
+            displayName: msg.displayName || msg.username || s.username,
+            avatarUrl: msg.avatarUrl || '',
+          }));
+        }
 
-        let nlIdx = buffer.indexOf('\n');
-        while (nlIdx !== -1) {
-          const line = buffer.slice(0, nlIdx).trim();
-          buffer = buffer.slice(nlIdx + 1);
-
-          if (line) {
-            try {
-              const msg = JSON.parse(line);
-
-              if (msg.type === 'tweets_fetched') {
-                setState((s) => ({
-                  ...s,
-                  status: 'scoring',
-                  tweetCount: msg.count,
-                  username: msg.username,
-                  displayName: msg.displayName || msg.username,
-                  avatarUrl: msg.avatarUrl || '',
-                }));
-              }
-
-              if (msg.type === 'tweet_score') {
-                const score = msg.score || msg;
-                const ts: TweetScore = {
-                  index: score.index,
-                  tweetId: score.tweetId,
-                  text: score.text,
-                  url: score.url,
-                  teachingValue: score.teachingValue,
-                  originality: score.originality,
-                  communityImpact: score.communityImpact,
-                  compositeScore: score.compositeScore,
-                  farmingFlag: score.farmingFlag,
-                  oneLiner: score.oneLiner,
-                };
-                setState((s) => ({
-                  ...s,
-                  tweets: [...s.tweets, ts],
-                }));
-              }
-
-              if (msg.type === 'final') {
-                setState((s) => ({
-                  ...s,
-                  status: 'complete',
-                  accountResult: msg.analysis,
-                  creditsRemaining: msg.credits_remaining ?? null,
-                }));
-                notify({
-                  type: 'success',
-                  title: 'Account analysis complete',
-                  message: `@${msg.analysis.username}: ${msg.analysis.aggregate.overallScore}/100`,
-                });
-              }
-
-              if (msg.type === 'error') {
-                throw new Error(msg.message);
-              }
-            } catch (parseErr) {
-              if (parseErr instanceof SyntaxError) continue;
-              throw parseErr;
-            }
+        if (msg.type === 'tweet_score' && msg.score) {
+          const score = msg.score
+          const ts: TweetScore = {
+            index: score.index,
+            tweetId: score.tweetId,
+            text: score.text,
+            url: score.url,
+            teachingValue: score.teachingValue,
+            originality: score.originality,
+            communityImpact: score.communityImpact,
+            compositeScore: score.compositeScore,
+            farmingFlag: score.farmingFlag,
+            oneLiner: score.oneLiner,
           }
-          nlIdx = buffer.indexOf('\n');
+          setState((s) => ({
+            ...s,
+            tweets: [...s.tweets, ts],
+          }))
+        }
+
+        if (msg.type === 'final' && msg.analysis) {
+          setState((s) => ({
+            ...s,
+            status: 'complete',
+            accountResult: msg.analysis!,
+            creditsRemaining: msg.credits_remaining ?? null,
+          }))
+          notify({
+            type: 'success',
+            title: 'Account analysis complete',
+            message: `@${msg.analysis!.username}: ${msg.analysis!.aggregate.overallScore}/100`,
+          })
+        }
+
+        if (msg.type === 'error') {
+          throw new Error(msg.message ?? 'Analysis failed')
         }
       }
     } catch (err) {

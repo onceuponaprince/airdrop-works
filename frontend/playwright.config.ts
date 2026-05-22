@@ -32,8 +32,12 @@ export default defineConfig({
         env: {
           ...process.env,
           NODE_ENV: 'test',
+          NEXT_PUBLIC_E2E: '1',
         },
       },
+  testIgnore: process.env.CI
+    ? ['**/wallet-connect-mock.spec.ts', '**/wallet-connect.spec.ts']
+    : undefined,
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },

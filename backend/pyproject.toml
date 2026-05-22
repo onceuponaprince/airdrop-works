@@ -60,7 +60,7 @@ DJANGO_SETTINGS_MODULE = "config.settings.local"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
-addopts = "--tb=short -v"
+addopts = "--tb=short -v --import-mode=importlib"
 
 [tool.coverage.run]
 source = ["apps"]

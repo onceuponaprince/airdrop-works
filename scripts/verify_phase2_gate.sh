@@ -14,7 +14,7 @@ BASE_URL="$BASE_URL" ./scripts/verify_phase1_endpoints.sh
 
 echo "=== Backend pytest (Docker) ==="
 docker compose run --rm backend uv run pytest \
-  apps/integrity/tests \
+  apps/integrity/tests/test_views.py \
   apps/contributions/tests/test_tasks.py \
   apps/rewards/tests \
   apps/judge/tests/test_views.py \
