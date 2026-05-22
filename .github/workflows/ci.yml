@@ -138,6 +138,8 @@ jobs:
           apps/quests/tests apps/judge/tests apps/integrity/tests
           apps/contributions/tests/test_tasks.py apps/contributions/tests/test_sentiment.py
           apps/accounts/tests/test_twitter_oauth.py
+          apps/integrity/tests/test_reputation_history.py
+          apps/integrity/tests/test_reputation_export.py
           apps/rewards/tests apps/ai_core/tests/test_service.py
           --cov=apps.quests --cov=apps.judge --cov=apps.integrity
           --cov-report=term-missing --cov-fail-under=20
