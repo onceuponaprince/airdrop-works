@@ -3,6 +3,8 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from . import views
 from . import twitter_views
+from . import discord_views
+from . import telegram_views
 from .social_views import (
     ConnectSocialAccountView,
     DisconnectSocialAccountView,
@@ -26,4 +28,11 @@ urlpatterns = [
     path("social/disconnect/", DisconnectSocialAccountView.as_view(), name="social_disconnect"),
     path("social/me/", MySocialAccountsView.as_view(), name="social_me"),
     path("social/sync/", SyncSocialAccountsView.as_view(), name="social_sync"),
+
+    # Discord OAuth
+    path("discord/start/", discord_views.DiscordOAuthStartView.as_view(), name="discord_oauth_start"),
+    path("discord/callback/", discord_views.DiscordOAuthCallbackView.as_view(), name="discord_oauth_callback"),
+
+    # Telegram deep link
+    path("telegram/start/", telegram_views.TelegramDeepLinkView.as_view(), name="telegram_deep_link"),
 ]
