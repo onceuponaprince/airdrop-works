@@ -1,6 +1,6 @@
 # Phase 5 prep — Portable reputation network
 
-**Baseline:** `0.5.1` (Twitter watch + Open Rubric at `0.5.0`)  
+**Baseline:** `0.5.2` (CI green + Twitter watch + Open Rubric at `0.5.0`)  
 **North star:** [`research/airdrop-direction/decisions/001-sequenced-roadmap.md`](research/airdrop-direction/decisions/001-sequenced-roadmap.md) § Phase 5
 
 ## Waves (4)
@@ -16,7 +16,10 @@
 
 ```bash
 ./scripts/verify_phase4_gate.sh
+./scripts/verify_phase5_gate.sh   # after Wave 0 lands
 ```
+
+**Verification:** [`PHASE_5_VERIFICATION.md`](PHASE_5_VERIFICATION.md)
 
 ## Out of scope (Wave 0)
 
