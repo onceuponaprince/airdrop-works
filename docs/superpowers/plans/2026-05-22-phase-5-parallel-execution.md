@@ -20,10 +20,15 @@
 - [x] `scripts/verify_phase5_endpoints.sh`, `verify_phase5_gate.sh`
 - [x] `apps/integrity/tests/test_reputation_schema.py`
 
-## Wave 1+ (not started)
+## Wave 1 tasks
 
-- Contributor history timeline (`GET /api/v1/profiles/<wallet>/reputation/history/`)
-- Portable export bundle (JSON-LD or signed JSON v0)
+- [x] `GET /api/v1/profiles/<wallet>/reputation/history/` (paginated)
+- [x] `GET /api/v1/profiles/<wallet>/reputation/export/` (`PortableReputationExport`)
+- [x] `schemas/reputation/v1/portable-export.schema.json`
+- [x] `test_reputation_history.py`, `test_reputation_export.py`
+
+## Wave 2+ (not started)
+
 - Appeals queue + resolution states
 - Protocol console read routes under `/api/v1/integrity/`
 

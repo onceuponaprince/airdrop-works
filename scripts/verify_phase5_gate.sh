@@ -15,6 +15,12 @@ echo "=== Phase 4 regression ==="
 echo "=== Reputation schema contract tests ==="
 docker compose run --rm backend uv run pytest apps/integrity/tests/test_reputation_schema.py -q --tb=line
 
+echo "=== Reputation history + export tests ==="
+docker compose run --rm backend uv run pytest \
+  apps/integrity/tests/test_reputation_history.py \
+  apps/integrity/tests/test_reputation_export.py \
+  -q --tb=line
+
 echo "=== Integrity API tests ==="
 docker compose run --rm backend uv run pytest apps/integrity/tests/test_views.py -q --tb=line
 
