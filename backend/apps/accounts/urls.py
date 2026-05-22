@@ -3,6 +3,11 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from . import views
 from . import twitter_views
+from .social_views import (
+    ConnectSocialAccountView,
+    DisconnectSocialAccountView,
+    MySocialAccountsView,
+)
 
 urlpatterns = [
     path("wallet-verify/", views.WalletVerifyView.as_view(), name="wallet_verify"),
@@ -14,4 +19,9 @@ urlpatterns = [
     path("me/", views.UserProfileView.as_view(), name="user_profile"),
     path("me/export/", views.UserDataExportView.as_view(), name="user_data_export"),
     path("me/delete/", views.UserDeleteView.as_view(), name="user_delete"),
+
+    # Multi-platform social connections (Telegram, Discord, Twitter, etc.)
+    path("social/connect/", ConnectSocialAccountView.as_view(), name="social_connect"),
+    path("social/disconnect/", DisconnectSocialAccountView.as_view(), name="social_disconnect"),
+    path("social/me/", MySocialAccountsView.as_view(), name="social_me"),
 ]
