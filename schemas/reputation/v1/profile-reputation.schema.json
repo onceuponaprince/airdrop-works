@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://airdrop.works/schemas/reputation/v1/profile-reputation.schema.json",
+  "title": "PortableProfileReputation",
+  "description": "Wallet-level portable reputation bundle returned by GET /api/v1/integrity/<wallet>/",
+  "type": "object",
+  "required": [
+    "walletAddress",
+    "compositeScore",
+    "teachingValue",
+    "originality",
+    "communityImpact",
+    "farmingFlag",
+    "farmingPercentage",
+    "contributionCount",
+    "scoredAt"
+  ],
+  "properties": {
+    "walletAddress": {
+      "type": "string",
+      "pattern": "^0x[a-fA-F0-9]{40}$"
+    },
+    "compositeScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "teachingValue": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "originality": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "communityImpact": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "farmingFlag": {
+      "type": "string",
+      "enum": ["genuine", "farming", "ambiguous"]
+    },
+    "farmingPercentage": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "contributionCount": { "type": "integer", "minimum": 0 },
+    "scoredAt": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false
+}
