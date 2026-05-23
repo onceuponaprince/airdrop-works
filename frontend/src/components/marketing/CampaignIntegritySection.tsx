@@ -4,6 +4,7 @@ import Link from "next/link"
 import { waitlistUrlWithIntent, WAITLIST_INTENT_CAMPAIGN_PILOT } from "@/lib/waitlist-intent"
 import { Shield, FileSpreadsheet, Users, Layers } from "lucide-react"
 import { AnimatedSection } from "@/components/shared/AnimatedSection"
+import { SectionHeader } from "@/components/marketing/SectionHeader"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 
@@ -44,19 +45,20 @@ export function CampaignIntegritySection() {
       className="py-24 border-y border-border bg-background"
     >
       <div className="max-w-[960px] mx-auto px-4 sm:px-6">
-        <AnimatedSection className="text-center mb-12">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">
-            For protocols &amp; growth teams
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground mb-4">
-            Campaign Integrity Pilot
-          </h2>
-          <p className="font-body text-muted-foreground max-w-[620px] mx-auto leading-relaxed">
-            Human Passport answers <em>who</em> is human. AI(r)Drop answers{" "}
-            <em>what they contributed</em> and whether it deserves reward. Run a
-            pilot on your campaign data before the snapshot — not after the
-            backlash.
-          </p>
+        <AnimatedSection className="mb-12">
+          <SectionHeader
+            align="center"
+            overline="For protocols & growth teams"
+            title="Campaign Integrity Pilot"
+            description={
+              <>
+                Human Passport answers <em>who</em> is human. AI(r)Drop answers{" "}
+                <em>what they contributed</em> and whether it deserves reward. Run a
+                pilot on your campaign data before the snapshot — not after the
+                backlash.
+              </>
+            }
+          />
         </AnimatedSection>
 
         <div className="grid sm:grid-cols-2 gap-4 mb-10">

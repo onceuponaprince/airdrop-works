@@ -2,42 +2,44 @@
 
 import { Brain, GitBranch, ScrollText, Gift, Link2, Palette } from "lucide-react"
 import { AnimatedSection, StaggerItem } from "@/components/shared/AnimatedSection"
+import { SectionHeader } from "@/components/marketing/SectionHeader"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
+import { BRANCHES, SCORE_DIMENSIONS } from "@/lib/constants"
 
 const FEATURES = [
   {
     icon: Brain,
-    color: "#10B981",
+    color: BRANCHES.educator.color,
     title: "Scores Quality, Not Likes",
     body: "Contextual AI that reads contributions for teaching value, originality, and impact. Detects engagement farming. Transparent scoring with per-dimension breakdowns. Configurable per campaign.",
   },
   {
     icon: GitBranch,
-    color: "#3B82F6",
+    color: BRANCHES.builder.color,
     title: "Five Paths to Mastery",
     body: "Educator. Builder. Creator. Scout. Diplomat. Every contribution earns XP in the branch it fits. Unlock nodes, gain multipliers, specialize in what you're best at. Inspired by Path of Exile.",
   },
   {
     icon: ScrollText,
-    color: "#A855F7",
+    color: SCORE_DIMENSIONS[1].color,
     title: "Campaigns, Not Checklists",
     body: "Projects post contribution campaigns ranked by difficulty (D through S). Accept quests that match your skills. Form parties for bonus XP. Completion is judged by the AI — not whether you clicked a checkbox.",
   },
   {
     icon: Gift,
-    color: "#F59E0B",
+    color: BRANCHES.diplomat.color,
     title: "Rewards That Feel Like Rewards",
     body: "Loot drops with rarity tiers — Common through Legendary. Chest-opening animations. Badge NFTs for your permanent collection. InnovatorTokens redeemable via the prize wheel. Every score is a chance at something satisfying.",
   },
   {
     icon: Link2,
-    color: "#06B6D4",
+    color: BRANCHES.scout.color,
     title: "Avalanche. Base. Solana.",
     body: "Smart contracts deployed across EVM chains and Solana. Rewards distribute on your preferred chain. No bridging required. ProfileNFTs and badges are cross-chain portable.",
   },
   {
     icon: Palette,
-    color: "#EC4899",
+    color: BRANCHES.creator.color,
     title: "Your Community, Your Rules",
     body: "Deploy your own AI(r)Drop instance. Custom scoring rubrics. Custom branding. Custom reward pools. The AI Judge infrastructure powers it all — you just decide what \"quality\" means for your community.",
   },
@@ -48,12 +50,7 @@ export function FeaturesSection() {
     <section id="features" className="py-24">
       <div className="max-w-[960px] mx-auto px-4 sm:px-6">
         <AnimatedSection className="mb-14">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">
-            Built Different
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">
-            Not Another Quest Platform
-          </h2>
+          <SectionHeader overline="Built Different" title="Not Another Quest Platform" />
         </AnimatedSection>
 
         <AnimatedSection stagger>

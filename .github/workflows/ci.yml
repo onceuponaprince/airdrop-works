@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  CI: "true"
+  BACKEND_URL: http://localhost:8000
+  NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+  NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: placeholder-env-id
+  NEXT_PUBLIC_PROJECT_ID: placeholder-project-id
+  NEXT_PUBLIC_CLIENT_KEY: placeholder-client-key
+  NEXT_PUBLIC_APP_ID: placeholder-app-id
+
 jobs:
   frontend:
     name: Frontend build
@@ -32,11 +42,6 @@ jobs:
 
       - name: Build frontend
         run: pnpm build
-        env:
-          BACKEND_URL: http://localhost:8000
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: placeholder-env-id
 
   frontend_e2e:
     name: Frontend E2E (Playwright)
@@ -66,11 +71,6 @@ jobs:
 
       - name: Run Playwright E2E
         run: pnpm test:e2e:ci
-        env:
-          BACKEND_URL: http://localhost:8000
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
-          NEXT_PUBLIC_DYNAMIC_ENVIRONMENT_ID: placeholder-env-id
 
       - name: Upload Playwright report (on failure)
         if: failure()

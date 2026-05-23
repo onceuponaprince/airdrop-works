@@ -189,12 +189,29 @@ def test_judge_score_throttles_authenticated_users(mock_deduct_credit, mock_scor
 @override_settings(
     CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}},
     REST_FRAMEWORK={"DEFAULT_THROTTLE_RATES": {"judge_score_account": "1/minute"}},
+    TWITTER_BEARER_TOKEN="test-bearer",
+    ANTHROPIC_API_KEY="test-anthropic",
 )
+@patch("apps.judge.views._fetch_recent_tweets")
+@patch("apps.judge.views._fetch_twitter_user")
 @patch("apps.judge.views.get_or_create_user_sub")
 @patch("apps.judge.views.deduct_credit")
-def test_judge_score_account_throttles_authenticated_users(mock_deduct_credit, mock_get_or_create_user_sub):
+def test_judge_score_account_throttles_authenticated_users(
+    mock_deduct_credit,
+    mock_get_or_create_user_sub,
+    mock_fetch_twitter_user,
+    mock_fetch_recent_tweets,
+):
     mock_get_or_create_user_sub.return_value.plan = "pro"
     mock_deduct_credit.return_value = 6
+    mock_fetch_twitter_user.return_value = {
+        "id": "123",
+        "name": "alice",
+        "profile_image_url": "https://example.com/a.png",
+    }
+    mock_fetch_recent_tweets.return_value = [
+        {"id": "1", "text": "A thoughtful technical post."},
+    ]
 
     user_model = get_user_model()
     user = user_model.objects.create_user(

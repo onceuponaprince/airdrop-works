@@ -7,6 +7,7 @@
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Zap } from "lucide-react"
+import { SCORE_DIMENSIONS } from "@/lib/constants"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { ScoreCard } from "@/components/app/ScoreCard"
@@ -138,17 +139,13 @@ export function AiJudgeDemo() {
 
             {/* Score legend */}
             <div className="grid grid-cols-3 gap-3 pt-2">
-              {[
-                { label: "Teaching Value",    color: "#10B981", desc: "Does this help someone understand something?" },
-                { label: "Originality",       color: "#A855F7", desc: "Is this a new insight or recycled alpha?" },
-                { label: "Community Impact",  color: "#06B6D4", desc: "Does this serve the community?" },
-              ].map((dim) => (
-                <div key={dim.label} className="space-y-1">
+              {SCORE_DIMENSIONS.map((dim) => (
+                <div key={dim.key} className="space-y-1">
                   <div className="flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dim.color }} />
                     <span className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{dim.label}</span>
                   </div>
-                  <p className="font-body text-[10px] text-muted-foreground/50 leading-snug">{dim.desc}</p>
+                  <p className="font-body text-[10px] text-muted-foreground/50 leading-snug">{dim.description}</p>
                 </div>
               ))}
             </div>

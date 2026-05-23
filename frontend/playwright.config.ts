@@ -38,9 +38,11 @@ export default defineConfig({
   testIgnore: process.env.CI
     ? ['**/wallet-connect-mock.spec.ts', '**/wallet-connect.spec.ts']
     : undefined,
-  projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-  ],
+  projects: process.env.CI
+    ? [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }]
+    : [
+        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+        { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+      ],
   outputDir: 'test-results',
 })

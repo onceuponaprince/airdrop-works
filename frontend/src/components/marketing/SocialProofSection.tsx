@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { AnimatedSection } from "@/components/shared/AnimatedSection"
+import { SectionHeader } from "@/components/marketing/SectionHeader"
 import { useAnimatedCounter } from "@/hooks/useAnimatedCounter"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { ExternalLink } from "lucide-react"
@@ -43,14 +44,17 @@ export function SocialProofSection() {
   return (
     <section id="community" className="py-24">
       <div className="max-w-[960px] mx-auto px-4 sm:px-6">
-        <AnimatedSection className="text-center mb-12">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">
-            The Movement
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">
-            Built for the Contributors{" "}
-            <span className="text-muted-foreground">Platforms Forgot</span>
-          </h2>
+        <AnimatedSection className="mb-12">
+          <SectionHeader
+            align="center"
+            overline="The Movement"
+            title={
+              <>
+                Built for the Contributors{" "}
+                <span className="text-muted-foreground">Platforms Forgot</span>
+              </>
+            }
+          />
         </AnimatedSection>
 
         <AnimatedSection>

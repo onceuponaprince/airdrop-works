@@ -77,7 +77,7 @@ AI(r)Drop combines **rubric + farming flag + cache + account batch** in one pipe
 
 ## Contact / next step
 
-Join the waitlist at [airdrop.works/#waitlist](https://airdrop.works/#waitlist) and note **“Campaign Integrity Pilot”**, or use the contact path on the pricing page.
+Join the waitlist at [airdrop.works/?intent=campaign_integrity_pilot#waitlist](https://airdrop.works/?intent=campaign_integrity_pilot#waitlist) — pilot signups are tagged automatically in `source`.
 
 ---
 

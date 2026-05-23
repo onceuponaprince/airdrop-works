@@ -2,7 +2,9 @@
 
 import { Wifi, Brain, TrendingUp, Gift } from "lucide-react"
 import { AnimatedSection, StaggerItem } from "@/components/shared/AnimatedSection"
+import { SectionHeader } from "@/components/marketing/SectionHeader"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
+import { BRANCHES } from "@/lib/constants"
 
 const STEPS = [
   {
@@ -10,43 +12,44 @@ const STEPS = [
     icon: Wifi,
     title: "Connect Your Accounts",
     body: "Link your Twitter, Discord, Telegram, or GitHub via OAuth. AI(r)Drop's crawlers find your contributions automatically. No copy-pasting. No manual submission. You do what you already do — the AI Judge watches.",
-    color: "#10B981",
+    color: BRANCHES.educator.color,
   },
   {
     number: "02",
     icon: Brain,
     title: "The AI Judge Scores Everything",
     body: "Every contribution is evaluated on Teaching Value, Originality, and Community Impact. The Judge uses contextual AI — it understands nuance, detects farming patterns, and distinguishes a genuine explainer from a rephrased press release.",
-    color: "#A855F7",
+    color: BRANCHES.creator.color,
   },
   {
     number: "03",
     icon: TrendingUp,
     title: "Earn XP and Level Up",
     body: "Scores convert to XP across five skill branches: Educator, Builder, Creator, Scout, Diplomat. Unlock nodes in your skill tree. Climb the leaderboard. Accept quests from projects that need your specific expertise.",
-    color: "#06B6D4",
+    color: BRANCHES.scout.color,
   },
   {
     number: "04",
     icon: Gift,
     title: "Get Rewarded — For Real",
     body: "Projects distribute airdrops through AI(r)Drop's smart contracts. Rewards go to real contributors, weighted by quality scores. Loot drops. Badge NFTs. InnovatorTokens. The people who actually build the community get what they deserve.",
-    color: "#F59E0B",
+    color: BRANCHES.diplomat.color,
   },
-]
+] as const
 
 export function SolutionSection() {
   return (
     <section id="how-it-works" className="py-24 bg-card/20">
       <div className="max-w-[960px] mx-auto px-4 sm:px-6">
         <AnimatedSection className="mb-14">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">
-            How AI(r)Drop Works
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground">
-            AI That Actually{" "}
-            <span className="text-primary">Reads</span> Your Contributions
-          </h2>
+          <SectionHeader
+            overline="How AI(r)Drop Works"
+            title={
+              <>
+                AI That Actually <span className="text-primary">Reads</span> Your Contributions
+              </>
+            }
+          />
         </AnimatedSection>
 
         <AnimatedSection stagger className="relative">

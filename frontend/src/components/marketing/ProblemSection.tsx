@@ -1,6 +1,7 @@
 "use client"
 
 import { AnimatedSection, StaggerItem } from "@/components/shared/AnimatedSection"
+import { SectionHeader } from "@/components/marketing/SectionHeader"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { XCircle } from "lucide-react"
 
@@ -16,10 +17,10 @@ const PLATFORMS = [
   {
     name: "Galxe",
     status: "Alive but hated",
-    statusColor: "text-[#F59E0B]",
+    statusColor: "text-branch-diplomat",
     problem: "Task checklists, not contribution scoring. Laggy, buggy, bot-infested. \"Like 3 tweets to earn 0.2 points.\" CT calls it a virus.",
     verdict: "BROKEN",
-    verdictColor: "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/30",
+    verdictColor: "bg-branch-diplomat/10 text-branch-diplomat border-branch-diplomat/30",
   },
 ]
 
@@ -28,21 +29,23 @@ export function ProblemSection() {
     <section id="problem" className="py-24">
       <div className="max-w-[960px] mx-auto px-4 sm:px-6">
         <AnimatedSection className="mb-14">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-3">
-            The Problem
-          </p>
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-foreground mb-8">
-            Airdrop Platforms Reward{" "}
-            <span className="text-destructive">the Wrong People</span>
-          </h2>
+          <SectionHeader
+            overline="The Problem"
+            title={
+              <>
+                Airdrop Platforms Reward{" "}
+                <span className="text-destructive">the Wrong People</span>
+              </>
+            }
+          />
 
           {/* The Maya story */}
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4 mt-8">
             {/* Genuine contributor */}
             <ArcadeCard branch="educator" className="space-y-3">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-[#10B981] mb-1">Real Contributor</p>
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-branch-educator mb-1">Real Contributor</p>
                   <p className="font-heading text-sm font-semibold text-foreground">@maya_defi</p>
                 </div>
                 <div className="text-right">

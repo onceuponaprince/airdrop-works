@@ -11,29 +11,30 @@ import time
 import httpx
 from django.conf import settings as django_settings
 from django.http import StreamingHttpResponse
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
-from rest_framework import status, generics
-from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
+from django.shortcuts import get_object_or_404
+from rest_framework import generics, status
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
+from rest_framework.views import APIView
 
 from apps.ai_core.heuristics import score_text_heuristically
 from apps.payments.services import add_credits, deduct_credit, get_or_create_user_sub
-from .models import ScoringRubric
-from .serializers import RubricSerializer
-from .persistence import persist_scored_contribution
+
 from .marketing import score_marketing_copy
+from .models import ScoringRubric
+from .persistence import persist_scored_contribution
 from .rubric_spec import (
-    SPEC_VERSION,
-    SCHEMA_REL_PATH,
     CHANGELOG_REL_PATH,
-    load_schema_json,
+    SCHEMA_REL_PATH,
+    SPEC_VERSION,
     list_catalog_rubrics,
+    load_schema_json,
     rubric_to_open_spec,
 )
+from .serializers import RubricSerializer
 from .service import score_contribution
-from django.shortcuts import get_object_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,12 @@ class JudgeScoreThrottle(ScopedRateThrottle):
     """DRF throttle scope ``judge_score`` for authenticated single-text scoring."""
 
     scope = "judge_score"
+
+
+class JudgeScoreAccountThrottle(ScopedRateThrottle):
+    """DRF throttle scope ``judge_score_account`` for account batch scoring."""
+
+    scope = "judge_score_account"
 
 
 class JudgeMarketingDemoThrottle(ScopedRateThrottle):
@@ -235,7 +242,7 @@ class JudgeScoreAccountView(APIView):
     Streams NDJSON events: tweets_fetched -> status -> tweet_score* -> final | error
     """
     permission_classes = [IsAuthenticated]
-    throttle_classes = [JudgeScoreThrottle]
+    throttle_classes = [JudgeScoreAccountThrottle]
 
     def post(self, request):
         username = (request.data.get("username") or "").strip().lstrip("@")
@@ -452,21 +459,21 @@ class RubricByKeyView(APIView):
 class RubricListCreateView(generics.ListCreateAPIView):
     """Public GET: List all rubrics (for dropdown/selection).
     Admin POST: Create new scoring rubric.
-    
-    POST body (admin only): name, teachingValueWeight, originalityWeight, 
+
+    POST body (admin only): name, teachingValueWeight, originalityWeight,
                            communityImpactWeight, isDefault
-    
+
     Weight validation: sum should be ~1.0 (warning if not, non-blocking).
     """
     serializer_class = RubricSerializer
     queryset = ScoringRubric.objects.all()
-    
+
     def get_permissions(self):
         """GET is public; POST requires admin."""
         if self.request.method == 'POST':
             return [IsAdminUser()]
         return [AllowAny()]
-    
+
     def get_queryset(self):
         """Order by isDefault first, then by name."""
         return ScoringRubric.objects.select_related("quest").order_by("-is_default", "name")
@@ -485,7 +492,7 @@ class RubricDetailView(generics.RetrieveUpdateDestroyAPIView):
         if self.request.method == "GET":
             return [AllowAny()]
         return [IsAdminUser()]
-    
+
     def destroy(self, request, *args, **kwargs):
         """Prevent deletion of default rubric."""
         instance = self.get_object()

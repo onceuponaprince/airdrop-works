@@ -59,7 +59,7 @@ Phases 4–5 are **roadmapped, not deferred**. They follow Phase 3 because they 
 - [x] CSV export v0 (`exportAccountCsv.ts` + AccountScoreCard button)
 - [x] Waitlist `signupIntent` → Supabase `source` (`?intent=campaign_integrity_pilot`)
 - [x] `/judge` copy aligned to integrity narrative
-- [ ] Full Figma landing pass
+- [x] Full Figma landing pass (SectionHeader + token-aligned sections)
 - [ ] CI green on `main` (verify after push)
 
 ---

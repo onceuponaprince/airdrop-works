@@ -66,7 +66,7 @@ class TwitterConnection(BaseModel):
     watch_enabled = models.BooleanField(default=True)
     use_selenium_fallback = models.BooleanField(
         default=False,
-        help_text="Use local browser automation fallback if API access is unavailable.",
+        help_text="When true and API poll fails, attempt Selenium scrape (dev only).",
     )
     last_synced_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
