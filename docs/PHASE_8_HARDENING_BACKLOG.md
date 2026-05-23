@@ -18,10 +18,10 @@
 
 - [x] Backend: pytest coverage for `TelegramWebhookView` (happy path linked user, unlinked user, dup delivery, secret validation, scoring enqueue) — see `apps/accounts/tests/test_campaign_social_views.py`
 - [x] Backend: tests for `UpdateDiscordChannelsView` + metadata persistence (same module)
-- [ ] Backend: tests for `SocialSyncService.sync_user_accounts` (Discord channel path, generic accounts)
-- [ ] Backend: tests for `MultiPlatformLeaderboardView` (aggregation, ordering, empty states)
+- [x] Backend: tests for `SocialSyncService.sync_user_accounts` — `apps/accounts/tests/test_social_sync_service.py` (Discord channel path mocked, duplicates, crawl errors)
+- [x] Backend: tests for `MultiPlatformLeaderboardView` — `apps/leaderboard/tests/test_multi_platform_leaderboard.py`
 - [ ] Frontend: Playwright E2E for connecting Discord → configuring channels → seeing freshness; Telegram deep-link flow (mock where needed)
-- [x] Wired `apps/accounts/tests/test_campaign_social_views.py` into `.github/workflows/ci.yml` Phase 2 backend slice
+- [x] Wired `test_campaign_social_views`, `test_social_sync_service`, `test_multi_platform_leaderboard` into `.github/workflows/ci.yml` Phase 2 slice
 
 ## P2 — Observability & Health
 
