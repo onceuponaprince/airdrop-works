@@ -19,7 +19,7 @@ from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
 from rest_framework.exceptions import ValidationError as DRFValidationError
 
 from apps.ai_core.heuristics import score_text_heuristically
-from apps.payments.services import deduct_credit, get_or_create_user_sub
+from apps.payments.services import add_credits, deduct_credit, get_or_create_user_sub
 from .models import ScoringRubric
 from .serializers import RubricSerializer
 from .persistence import persist_scored_contribution
@@ -249,8 +249,6 @@ class JudgeScoreAccountView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        remaining = deduct_credit(request.user, "score_account", ACCOUNT_SCORE_CREDIT_COST)
-
         bearer = django_settings.TWITTER_BEARER_TOKEN
         anthropic_key = django_settings.ANTHROPIC_API_KEY
 
@@ -260,15 +258,46 @@ class JudgeScoreAccountView(APIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
+        try:
+            twitter_user = _fetch_twitter_user(username, bearer)
+            tweets = _fetch_recent_tweets(twitter_user["id"], bearer, MAX_ACCOUNT_TWEETS)
+        except ValueError as exc:
+            message = str(exc)
+            response_status = (
+                status.HTTP_503_SERVICE_UNAVAILABLE
+                if "rate limit" in message.lower()
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({"detail": message}, status=response_status)
+        except Exception as exc:
+            logger.error("[JudgeScoreAccount] Twitter fetch failed: %s", exc)
+            return Response(
+                {"detail": "Could not fetch recent tweets"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        if not tweets:
+            return Response(
+                {"detail": f"@{username} has no recent original tweets"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        remaining = deduct_credit(request.user, "score_account", ACCOUNT_SCORE_CREDIT_COST)
+
         def stream():
-            try:
-                twitter_user = _fetch_twitter_user(username, bearer)
-                tweets = _fetch_recent_tweets(twitter_user["id"], bearer, MAX_ACCOUNT_TWEETS)
+            refunded = False
 
-                if not tweets:
-                    yield _ndjson_line({"type": "error", "message": f"@{username} has no recent original tweets"})
+            def refund_credit(reason: str) -> None:
+                nonlocal refunded
+                if refunded:
                     return
+                try:
+                    add_credits(request.user, ACCOUNT_SCORE_CREDIT_COST, reason)
+                    refunded = True
+                except Exception as exc:
+                    logger.warning("[JudgeScoreAccount] Credit refund failed: %s", exc)
 
+            try:
                 yield _ndjson_line({
                     "type": "tweets_fetched",
                     "count": len(tweets),
@@ -298,6 +327,7 @@ class JudgeScoreAccountView(APIView):
                 except json.JSONDecodeError:
                     json_match = re.search(r"\{[\s\S]*\}", response_text)
                     if not json_match:
+                        refund_credit("score_account_refund_parse")
                         yield _ndjson_line({"type": "error", "message": "Failed to parse scoring response"})
                         return
                     parsed = json.loads(json_match.group(0))
@@ -354,8 +384,10 @@ class JudgeScoreAccountView(APIView):
                     },
                 })
             except ValueError as e:
+                refund_credit("score_account_refund_value_error")
                 yield _ndjson_line({"type": "error", "message": str(e)})
             except Exception as e:
+                refund_credit("score_account_refund_error")
                 logger.error("[JudgeScoreAccount] Error: %s", e)
                 yield _ndjson_line({"type": "error", "message": "Account analysis failed"})
 

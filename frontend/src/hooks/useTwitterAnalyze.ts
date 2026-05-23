@@ -31,6 +31,27 @@ interface TwitterAnalyzeState {
   creditsRemaining: number | null;
 }
 
+type StreamMessage = {
+  type: string;
+  count?: number;
+  username?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  score?: TweetScore;
+  analysis?: AccountAnalysis;
+  credits_remaining?: number;
+  message?: string;
+};
+
+function parseStreamLine(line: string): StreamMessage | null {
+  try {
+    return JSON.parse(line) as StreamMessage;
+  } catch (err) {
+    if (err instanceof SyntaxError) return null;
+    throw err;
+  }
+}
+
 export function useTwitterAnalyze() {
   const notify = useNotificationStore((s) => s.push);
   const [state, setState] = useState<TwitterAnalyzeState>({
@@ -76,28 +97,14 @@ export function useTwitterAnalyze() {
         throw new Error((err as { detail?: string }).detail || `Analysis failed (${res.status})`);
       }
 
-      const bodyText = await res.text();
-      const lines = bodyText.split('\n').map((l) => l.trim()).filter(Boolean);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('Analysis stream unavailable.');
 
-      for (const line of lines) {
-        let msg: {
-          type: string
-          count?: number
-          username?: string
-          displayName?: string
-          avatarUrl?: string
-          score?: TweetScore
-          analysis?: AccountAnalysis
-          credits_remaining?: number
-          message?: string
-        }
-        try {
-          msg = JSON.parse(line)
-        } catch (parseErr) {
-          if (parseErr instanceof SyntaxError) continue
-          throw parseErr
-        }
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let sawFinal = false;
 
+      const handleMessage = (msg: StreamMessage) => {
         if (msg.type === 'tweets_fetched') {
           setState((s) => ({
             ...s,
@@ -107,10 +114,11 @@ export function useTwitterAnalyze() {
             displayName: msg.displayName || msg.username || s.username,
             avatarUrl: msg.avatarUrl || '',
           }));
+          return;
         }
 
         if (msg.type === 'tweet_score' && msg.score) {
-          const score = msg.score
+          const score = msg.score;
           const ts: TweetScore = {
             index: score.index,
             tweetId: score.tweetId,
@@ -122,31 +130,60 @@ export function useTwitterAnalyze() {
             compositeScore: score.compositeScore,
             farmingFlag: score.farmingFlag,
             oneLiner: score.oneLiner,
-          }
+          };
           setState((s) => ({
             ...s,
             tweets: [...s.tweets, ts],
-          }))
+          }));
+          return;
         }
 
         if (msg.type === 'final' && msg.analysis) {
+          sawFinal = true;
           setState((s) => ({
             ...s,
             status: 'complete',
             accountResult: msg.analysis!,
             creditsRemaining: msg.credits_remaining ?? null,
-          }))
+          }));
           notify({
             type: 'success',
             title: 'Account analysis complete',
-            message: `@${msg.analysis!.username}: ${msg.analysis!.aggregate.overallScore}/100`,
-          })
+            message: `@${msg.analysis.username}: ${msg.analysis.aggregate.overallScore}/100`,
+          });
+          return;
         }
 
         if (msg.type === 'error') {
-          throw new Error(msg.message ?? 'Analysis failed')
+          throw new Error(msg.message ?? 'Analysis failed');
         }
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done });
+
+        let newlineIndex = buffer.indexOf('\n');
+        while (newlineIndex >= 0) {
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line) {
+            const msg = parseStreamLine(line);
+            if (msg) handleMessage(msg);
+          }
+          newlineIndex = buffer.indexOf('\n');
+        }
+
+        if (done) break;
       }
+
+      const trailing = buffer.trim();
+      if (trailing) {
+        const msg = parseStreamLine(trailing);
+        if (msg) handleMessage(msg);
+      }
+
+      if (!sawFinal) throw new Error('Analysis ended before a final result was returned.');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Analysis failed';
       setState((s) => ({ ...s, status: 'error', error: message }));

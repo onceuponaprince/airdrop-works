@@ -77,15 +77,33 @@ export function useSocialAccounts() {
       });
       queryClient.invalidateQueries({ queryKey: ['social-accounts'] });
     },
+    onError: (err) => {
+      notify({
+        type: 'error',
+        title: 'Disconnect failed',
+        message: err instanceof Error ? err.message : 'Could not disconnect account',
+      });
+    },
   });
 
   const sync = useMutation({
     mutationFn: () => api.post('/auth/social/sync/'),
     onSuccess: (data) => {
+      const message =
+        typeof data === 'object' && data !== null && 'message' in data
+          ? String((data as { message?: unknown }).message ?? '')
+          : '';
       notify({
         type: 'success',
         title: 'Sync started',
-        message: (data as any)?.message || 'Scoring jobs queued for your accounts.',
+        message: message || 'Scoring jobs queued for your accounts.',
+      });
+    },
+    onError: (err) => {
+      notify({
+        type: 'error',
+        title: 'Sync failed',
+        message: err instanceof Error ? err.message : 'Could not sync accounts',
       });
     },
   });

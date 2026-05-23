@@ -1,17 +1,11 @@
-"""Custom User model — Web3-first identity via wallet address."""
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 from common.models import BaseModel
-from .social_models import UserSocialAccount  # noqa: F401 - registers the model
 
 
 class User(AbstractUser, BaseModel):
-    """
-    AI(r)Drop user. Primary identity is wallet_address.
-    Email is optional (used for waitlist notifications).
-    username is kept from AbstractUser for Django admin compatibility.
-    """
+    """Application user keyed primarily by wallet address."""
 
     wallet_address = models.CharField(
         max_length=42,
@@ -44,22 +38,18 @@ class User(AbstractUser, BaseModel):
         verbose_name = "User"
         verbose_name_plural = "Users"
 
-    def __str__(self) -> str:
-        if self.display_name:
-            return self.display_name
-        if self.wallet_address:
-            return f"{self.wallet_address[:6]}...{self.wallet_address[-4:]}"
-        return self.username or str(self.id)
-
     @property
     def short_address(self) -> str:
         if not self.wallet_address:
             return ""
         return f"{self.wallet_address[:6]}...{self.wallet_address[-4:]}"
 
+    def __str__(self):
+        return self.display_name or self.wallet_address or self.username or str(self.id)
+
 
 class TwitterConnection(BaseModel):
-    """OAuth-linked X/Twitter account for login and tweet watch."""
+    """Linked Twitter/X account for OAuth-based timeline tracking."""
 
     user = models.OneToOneField(
         User,
@@ -76,7 +66,7 @@ class TwitterConnection(BaseModel):
     watch_enabled = models.BooleanField(default=True)
     use_selenium_fallback = models.BooleanField(
         default=False,
-        help_text="When true and API poll fails, attempt Selenium scrape (dev only).",
+        help_text="Use local browser automation fallback if API access is unavailable.",
     )
     last_synced_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
@@ -85,12 +75,13 @@ class TwitterConnection(BaseModel):
     class Meta:
         db_table = "twitter_connections"
 
-    def __str__(self) -> str:
-        return f"@{self.twitter_username}"
+    def __str__(self):
+        owner = self.user.short_address or str(self.user_id)
+        return f"{owner} - Twitter @{self.twitter_username}"
 
 
 class DiscordConnection(BaseModel):
-    """OAuth-linked Discord account for message tracking (channel-scoped)."""
+    """Linked Discord account and channel tracking preferences."""
 
     user = models.OneToOneField(
         User,
@@ -98,22 +89,26 @@ class DiscordConnection(BaseModel):
         related_name="discord_connection",
     )
     discord_user_id = models.CharField(max_length=64, unique=True, db_index=True)
-    discord_username = models.CharField(max_length=32, db_index=True)
-    display_name = models.CharField(max_length=64, blank=True, default="")
+    discord_username = models.CharField(max_length=64, db_index=True)
+    display_name = models.CharField(max_length=128, blank=True, default="")
     avatar_url = models.URLField(blank=True, default="")
-    access_token = models.TextField()
+    access_token = models.TextField(blank=True, default="")
     refresh_token = models.TextField(blank=True, default="")
     token_expires_at = models.DateTimeField(null=True, blank=True)
     last_synced_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
     metadata = models.JSONField(default=dict, blank=True)
 
-    def __str__(self) -> str:
-        return f"{self.user.wallet_address[:6]}... - Discord @{self.discord_username}"
+    class Meta:
+        db_table = "discord_connections"
+
+    def __str__(self):
+        owner = self.user.short_address or str(self.user_id)
+        return f"{owner} - Discord @{self.discord_username}"
 
 
 class TelegramConnection(BaseModel):
-    """Linked Telegram account for message tracking (via bot deep link or OAuth)."""
+    """Linked Telegram account for message tracking via bot deep link."""
 
     user = models.OneToOneField(
         User,
@@ -124,10 +119,14 @@ class TelegramConnection(BaseModel):
     telegram_username = models.CharField(max_length=32, db_index=True)
     display_name = models.CharField(max_length=64, blank=True, default="")
     avatar_url = models.URLField(blank=True, default="")
-    access_token = models.TextField(blank=True, default="")  # bot token or user token
+    access_token = models.TextField(blank=True, default="")
     last_synced_at = models.DateTimeField(null=True, blank=True)
     last_error = models.TextField(blank=True, default="")
     metadata = models.JSONField(default=dict, blank=True)
 
+    class Meta:
+        db_table = "telegram_connections"
+
     def __str__(self):
-        return f"{self.user.wallet_address[:6]}... - Telegram @{self.telegram_username}"
+        owner = self.user.short_address or str(self.user_id)
+        return f"{owner} - Telegram @{self.telegram_username}"

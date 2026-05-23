@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Twitter, MessageCircle, Users, Link as LinkIcon, Unlink, RefreshCw } from 'lucide-react';
 import { useSocialAccounts, type SocialAccount } from '@/hooks/useSocialAccounts';
 import { api } from '@/lib/api';
@@ -68,7 +68,7 @@ function DiscordChannelConfig({ userHasDiscord }: { userHasDiscord: boolean }) {
   );
 }
 
-const PLATFORM_META: Record<SocialAccount['platform'], { label: string; icon: React.ReactNode; placeholder: string }> = {
+const PLATFORM_META: Record<SocialAccount['platform'], { label: string; icon: ReactNode; placeholder: string }> = {
   twitter: { label: 'Twitter / X', icon: <Twitter size={16} />, placeholder: '@yourhandle' },
   discord: { label: 'Discord', icon: <Users size={16} />, placeholder: 'Your Discord username' },
   telegram: { label: 'Telegram', icon: <MessageCircle size={16} />, placeholder: '@yourusername' },
@@ -80,7 +80,6 @@ export function SocialAccountsPanel() {
   const notify = useNotificationStore((s) => s.push);
   const [form, setForm] = useState({ platform: 'twitter' as SocialAccount['platform'], username: '', external_id: '' });
 
-  const connectedPlatforms = new Set(accounts.data?.map((a) => a.platform) ?? []);
 
   const handleConnect = () => {
     if (!form.username && !form.external_id) return;
@@ -200,7 +199,7 @@ export function SocialAccountsPanel() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <select
             value={form.platform}
-            onChange={(e) => setForm({ ...form, platform: e.target.value as any })}
+            onChange={(e) => setForm({ ...form, platform: e.target.value as SocialAccount['platform'] })}
             className="rounded border border-[--border] bg-[--background] px-3 py-2 text-sm"
           >
             {Object.keys(PLATFORM_META).map((p) => (
