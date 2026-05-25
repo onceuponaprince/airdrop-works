@@ -70,10 +70,10 @@ export default function SignupPage() {
     }
   }, [step, wallet.address, isAuthenticated, isLoggingIn, attemptLogin]);
 
-  // Redirect to judge after successful auth
+  // Redirect to app after successful auth (aligned with /login; S7 adds /onboarding for social-only)
   useEffect(() => {
     if (isAuthenticated) {
-      router.push('/judge');
+      router.push('/dashboard');
     }
   }, [isAuthenticated, router]);
 

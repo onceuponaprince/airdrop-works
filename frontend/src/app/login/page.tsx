@@ -34,6 +34,7 @@ export default function LoginPage() {
     }
   }, [canSignIn, isAuthenticated, isLoggingIn, attemptLogin]);
 
+  // Redirect to app after successful auth (S7 will route social-only users to /onboarding)
   useEffect(() => {
     if (isAuthenticated) {
       router.push('/dashboard');
@@ -134,9 +135,21 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div className="text-xs text-[--muted-foreground] border-t border-[--border] pt-4">
-          By connecting, you agree to our Terms of Service. Your wallet address
-          is your identity — no email required.
+        <div className="text-xs text-[--muted-foreground] border-t border-[--border] pt-4 space-y-2">
+          <p>
+            By connecting, you agree to our Terms of Service. Your wallet address
+            is your identity — no email required.
+          </p>
+          <p>
+            On the waitlist and approved?{' '}
+            <Link href="/signup" className="text-[--primary] hover:underline">
+              Enter via signup
+            </Link>
+            {' · '}
+            <Link href="/" className="text-[--primary] hover:underline">
+              Back to home
+            </Link>
+          </p>
         </div>
       </div>
     </main>

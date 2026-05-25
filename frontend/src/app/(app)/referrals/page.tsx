@@ -6,17 +6,6 @@ import { staggerContainer, staggerItem } from '@/lib/animations';
 import { api } from '@/lib/api';
 import { useNotificationStore } from '@/stores/useNotificationStore';
 
-interface ReferralLeaderboardRow {
-  referral_code: string;
-  referral_count: number;
-}
-
-interface WaitlistStats {
-  total_signups: number;
-  via_referral: number;
-  wallet_connected: number;
-}
-
 export default function ReferralsPage() {
   const notify = useNotificationStore((s) => s.push);
 

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { Shield, AlertCircle, CheckCircle, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Appeal, AppealStatus } from '@/hooks/useAppeals';
 
@@ -173,7 +173,7 @@ interface AppealFormProps {
   isSubmitting?: boolean;
 }
 
-export function AppealForm({ contributionId, onSubmit, onCancel, isSubmitting }: AppealFormProps) {
+export function AppealForm({ contributionId: _contributionId, onSubmit, onCancel, isSubmitting }: AppealFormProps) {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 

@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-function response(status: number, data: unknown, ok = status >= 200 && status < 300) {
+function response(status: number, data: unknown, ok = status >= 200 && status < 300): Response {
   return {
     ok,
     status,
     statusText: status === 200 ? "OK" : "Error",
     json: vi.fn().mockResolvedValue(data),
-  }
+  } as unknown as Response
 }
 
 function createStorage(initial: Record<string, string> = {}) {
@@ -47,7 +47,7 @@ describe("API client route contracts", () => {
 
   it("sends authenticated GET requests to /api/v1 routes", async () => {
     const fetchMock = vi.mocked(fetch)
-    fetchMock.mockResolvedValueOnce(response(200, { walletAddress: "0xabc" }) as Response)
+    fetchMock.mockResolvedValueOnce(response(200, { walletAddress: "0xabc" }))
 
     const { api } = await loadApi()
     api.setToken("access-token")
@@ -67,7 +67,7 @@ describe("API client route contracts", () => {
 
   it("serializes POST bodies for wallet verification", async () => {
     const fetchMock = vi.mocked(fetch)
-    fetchMock.mockResolvedValueOnce(response(200, { access: "a", refresh: "r" }) as Response)
+    fetchMock.mockResolvedValueOnce(response(200, { access: "a", refresh: "r" }))
 
     const { api } = await loadApi()
     const payload = {
@@ -95,9 +95,9 @@ describe("API client route contracts", () => {
     })
     const fetchMock = vi.mocked(fetch)
     fetchMock
-      .mockResolvedValueOnce(response(401, { detail: "expired" }, false) as Response)
-      .mockResolvedValueOnce(response(200, { access: "new-access" }) as Response)
-      .mockResolvedValueOnce(response(200, { results: [] }) as Response)
+      .mockResolvedValueOnce(response(401, { detail: "expired" }, false))
+      .mockResolvedValueOnce(response(200, { access: "new-access" }))
+      .mockResolvedValueOnce(response(200, { results: [] }))
 
     const { api } = await loadApi(storage)
 
