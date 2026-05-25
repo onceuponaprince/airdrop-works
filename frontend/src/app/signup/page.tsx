@@ -3,22 +3,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Mail, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { ArrowLeft, Mail, CheckCircle, Clock, Wallet, XCircle } from 'lucide-react';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
 import { WalletButton } from '@/components/shared/WalletButton';
+import { EmailLoginSection } from '@/components/shared/EmailLoginSection';
+import { SocialLoginButtons } from '@/components/shared/SocialLoginButtons';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
-import { useParticleWallet } from '@/hooks/useParticleWallet';
+import { useWalletLogin } from '@/hooks/useWalletLogin';
 import { checkWhitelistApproval } from '@/lib/supabase';
 import { postAuthPath } from '@/lib/onboarding';
-import { setPostAuthDestination } from '@/lib/postAuthRedirect';
+import {
+  consumePostAuthDestination,
+  consumePostAuthReturnPath,
+} from '@/lib/postAuthRedirect';
 
-type Step = 'email' | 'wallet';
+type Step = 'email' | 'auth';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { isAuthenticated, login, user, loading } = useWeb3Auth();
-  const wallet = useParticleWallet();
+  const { isAuthenticated, applySession, user, loading, error: authError } = useWeb3Auth();
+  const { signIn, isLoggingIn, error: walletLoginError, canSignIn } = useWalletLogin();
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -29,12 +34,12 @@ export default function SignupPage() {
     rank: number | null;
   } | null>(null);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [honeypot, setHoneypot] = useState('');
 
-  // Check whitelist status for the entered email
+  const approvedEmail = email.trim();
+
   const handleCheckEmail = async () => {
-    const trimmed = email.trim();
+    const trimmed = approvedEmail;
     if (!trimmed) return;
 
     setChecking(true);
@@ -43,7 +48,7 @@ export default function SignupPage() {
       const result = await checkWhitelistApproval(trimmed);
       setWhitelistStatus(result);
       if (result.approved) {
-        setStep('wallet');
+        setStep('auth');
       }
     } catch {
       setWhitelistStatus({ exists: false, approved: false, rank: null });
@@ -52,36 +57,42 @@ export default function SignupPage() {
     }
   };
 
-  // Auto-login when wallet connects on the wallet step
-  const attemptLogin = useCallback(async () => {
-    if (!wallet.address || isLoggingIn) return;
-    setIsLoggingIn(true);
+  const attemptWalletLogin = useCallback(async () => {
+    if (!canSignIn || isLoggingIn) return;
     setLoginError(null);
     try {
-      setPostAuthDestination('/dashboard');
-      await login(wallet.address, 'particle-managed', 'particle-managed');
+      await signIn();
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Authentication failed');
-    } finally {
-      setIsLoggingIn(false);
     }
-  }, [wallet.address, login, isLoggingIn]);
+  }, [canSignIn, isLoggingIn, signIn]);
 
   useEffect(() => {
-    if (step === 'wallet' && wallet.address && !isAuthenticated && !isLoggingIn) {
-      attemptLogin();
+    if (step === 'auth' && canSignIn && !isAuthenticated && !isLoggingIn) {
+      attemptWalletLogin();
     }
-  }, [step, wallet.address, isAuthenticated, isLoggingIn, attemptLogin]);
+  }, [step, canSignIn, isAuthenticated, isLoggingIn, attemptWalletLogin]);
 
-  // Redirect after profile loads; wallet signup may set /dashboard via session (S5).
   useEffect(() => {
-    if (isAuthenticated && user && !loading) {
-      router.push(postAuthPath(user));
+    if (!isAuthenticated || !user || loading) return;
+
+    const returnPath = consumePostAuthReturnPath();
+    if (returnPath) {
+      router.push(returnPath);
+      return;
     }
+
+    const stored = consumePostAuthDestination();
+    if (stored) {
+      router.push(stored);
+      return;
+    }
+
+    router.push(postAuthPath(user));
   }, [isAuthenticated, user, loading, router]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && email.trim()) {
+    if (e.key === 'Enter' && approvedEmail) {
       handleCheckEmail();
     }
   };
@@ -102,27 +113,32 @@ export default function SignupPage() {
           <p className="text-sm text-[--muted-foreground]">
             {step === 'email'
               ? 'Enter the email you used to join the waitlist.'
-              : 'Connect your wallet to create your account.'}
+              : 'Create your account with email, social, or wallet.'}
           </p>
         </div>
 
-        {/* Step indicator */}
         <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-1.5 text-xs font-mono ${step === 'email' ? 'text-[--primary]' : 'text-[--muted-foreground]'}`}>
+          <div
+            className={`flex items-center gap-1.5 text-xs font-mono ${step === 'email' ? 'text-[--primary]' : 'text-[--muted-foreground]'}`}
+          >
             <Mail size={14} />
             <span>1. Verify Email</span>
           </div>
           <div className="flex-1 h-px bg-[--border]" />
-          <div className={`flex items-center gap-1.5 text-xs font-mono ${step === 'wallet' ? 'text-[--primary]' : 'text-[--muted-foreground]'}`}>
-            <span>2. Connect Wallet</span>
+          <div
+            className={`flex items-center gap-1.5 text-xs font-mono ${step === 'auth' ? 'text-[--primary]' : 'text-[--muted-foreground]'}`}
+          >
+            <span>2. Create Account</span>
           </div>
         </div>
 
-        {/* Step 1: Email check */}
         {step === 'email' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-mono text-[--muted-foreground] uppercase tracking-widest">
+              <label
+                htmlFor="email"
+                className="text-xs font-mono text-[--muted-foreground] uppercase tracking-widest"
+              >
                 Email Address
               </label>
               <input
@@ -136,8 +152,16 @@ export default function SignupPage() {
               />
             </div>
 
-            {/* Honeypot — hidden field invisible to real users, auto-filled by bots */}
-            <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, overflow: 'hidden' }}>
+            <div
+              aria-hidden="true"
+              style={{
+                position: 'absolute',
+                left: '-9999px',
+                opacity: 0,
+                height: 0,
+                overflow: 'hidden',
+              }}
+            >
               <label htmlFor="signup-website">Website</label>
               <input
                 id="signup-website"
@@ -153,13 +177,12 @@ export default function SignupPage() {
             <ArcadeButton
               onClick={handleCheckEmail}
               loading={checking}
-              disabled={!email.trim() || checking}
+              disabled={!approvedEmail || checking}
               className="w-full"
             >
               Verify Whitelist Status
             </ArcadeButton>
 
-            {/* Result messages */}
             {whitelistStatus && !whitelistStatus.exists && (
               <ArcadeCard className="border-[--destructive]/50">
                 <div className="flex items-start gap-3">
@@ -184,8 +207,9 @@ export default function SignupPage() {
                   <div>
                     <p className="text-sm font-medium text-[--foreground]">Pending approval</p>
                     <p className="text-xs text-[--muted-foreground] mt-1">
-                      You&apos;re on the waitlist{whitelistStatus.rank ? ` (#${whitelistStatus.rank})` : ''}.
-                      We&apos;ll notify you when your access is approved.
+                      You&apos;re on the waitlist
+                      {whitelistStatus.rank ? ` (#${whitelistStatus.rank})` : ''}. We&apos;ll notify
+                      you when your access is approved.
                     </p>
                   </div>
                 </div>
@@ -194,8 +218,7 @@ export default function SignupPage() {
           </div>
         )}
 
-        {/* Step 2: Wallet connect */}
-        {step === 'wallet' && (
+        {step === 'auth' && (
           <div className="space-y-4">
             <ArcadeCard className="border-[--primary]/30">
               <div className="flex items-start gap-3">
@@ -203,30 +226,92 @@ export default function SignupPage() {
                 <div>
                   <p className="text-sm font-medium text-[--foreground]">Email approved</p>
                   <p className="text-xs text-[--muted-foreground] mt-1">
-                    {email} is whitelisted. Connect your wallet to create your account.
+                    {approvedEmail} is whitelisted. Choose how you want to sign in.
                   </p>
                 </div>
               </div>
             </ArcadeCard>
 
+            <EmailLoginSection
+              applySession={applySession}
+              initialEmail={approvedEmail}
+              lockEmail
+            />
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-[--border]" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-[--card] px-3 font-mono text-[9px] uppercase tracking-widest text-[--muted-foreground]">
+                  or social
+                </span>
+              </div>
+            </div>
+
+            <SocialLoginButtons applySession={applySession} />
+
+            <div className="relative py-1">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-[--border]" />
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-[--card] px-3 font-mono text-[9px] uppercase tracking-widest text-[--muted-foreground] flex items-center gap-1">
+                  <Wallet size={10} aria-hidden />
+                  or wallet
+                </span>
+              </div>
+            </div>
+
             <div className="flex justify-center">
               <WalletButton />
             </div>
 
-            {(isLoggingIn) && (
+            {(isLoggingIn || loading) && (
               <p className="text-sm text-[--muted-foreground] animate-pulse text-center">
-                Creating your account...
+                Creating your account…
               </p>
             )}
 
-            {loginError && (
-              <div className="rounded border border-[--destructive] bg-[--destructive]/10 p-3">
-                <p className="text-sm text-[--destructive]">{loginError}</p>
+            {(loginError || walletLoginError || authError) && (
+              <div className="rounded border border-[--destructive] bg-[--destructive]/10 p-3 space-y-3">
+                <p className="text-sm text-[--destructive]">
+                  {loginError ||
+                    walletLoginError ||
+                    authError?.message ||
+                    'Authentication failed'}
+                </p>
+                {canSignIn && (
+                  <ArcadeButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={attemptWalletLogin}
+                    disabled={isLoggingIn}
+                  >
+                    Try sign-in again
+                  </ArcadeButton>
+                )}
               </div>
             )}
 
+            {canSignIn && !isAuthenticated && !isLoggingIn && (
+              <ArcadeButton
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={attemptWalletLogin}
+              >
+                Sign message to continue
+              </ArcadeButton>
+            )}
+
             <button
-              onClick={() => { setStep('email'); setWhitelistStatus(null); }}
+              type="button"
+              onClick={() => {
+                setStep('email');
+                setWhitelistStatus(null);
+              }}
               className="w-full text-xs text-[--muted-foreground] hover:text-[--foreground] transition-colors"
             >
               ← Use a different email
@@ -234,17 +319,15 @@ export default function SignupPage() {
           </div>
         )}
 
-        {/* Dev bypass */}
         {process.env.NODE_ENV === 'development' && step === 'email' && (
           <div className="border-t border-[--border] pt-4 space-y-2">
-            <p className="text-xs text-[--muted-foreground]">
-              Dev mode: skip whitelist check
-            </p>
+            <p className="text-xs text-[--muted-foreground]">Dev mode: skip whitelist check</p>
             <button
-              onClick={() => setStep('wallet')}
+              type="button"
+              onClick={() => setStep('auth')}
               className="px-4 py-2 rounded border border-[--primary] text-[--primary] text-sm font-medium hover:bg-[--primary] hover:text-[--primary-foreground] transition-colors"
             >
-              Skip to Wallet Connect
+              Skip to account setup
             </button>
           </div>
         )}

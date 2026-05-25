@@ -11,9 +11,17 @@ import {
 
 type EmailLoginSectionProps = {
   applySession: (access: string, refresh: string) => void
+  /** Pre-fill email (e.g. approved waitlist address on /signup). */
+  initialEmail?: string
+  /** When true, email cannot be edited — use parent UI to change address. */
+  lockEmail?: boolean
 }
 
-export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
+export function EmailLoginSection({
+  applySession,
+  initialEmail = "",
+  lockEmail = false,
+}: EmailLoginSectionProps) {
   const {
     sendOtp,
     verifyOtpAndLogin,
@@ -23,7 +31,7 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
     mergePending,
     clearMergePending,
   } = useEmailAuth(applySession)
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(initialEmail)
   const [otp, setOtp] = useState("")
   const [otpSent, setOtpSent] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
@@ -106,7 +114,9 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-sm border border-border bg-background px-3 py-2.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-ring"
+            readOnly={lockEmail}
+            aria-readonly={lockEmail || undefined}
+            className="w-full rounded-sm border border-border bg-background px-3 py-2.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-80"
             required
           />
           <ArcadeButton
@@ -144,16 +154,18 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
           >
             Verify and continue
           </ArcadeButton>
-          <button
-            type="button"
-            onClick={() => {
-              setOtpSent(false)
-              setOtp("")
-            }}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Use a different email
-          </button>
+          {!lockEmail && (
+            <button
+              type="button"
+              onClick={() => {
+                setOtpSent(false)
+                setOtp("")
+              }}
+              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Use a different email
+            </button>
+          )}
         </form>
       ) : null}
 
