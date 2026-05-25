@@ -14,8 +14,15 @@ type EmailLoginSectionProps = {
 }
 
 export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
-  const { sendOtp, verifyOtpAndLogin, isSubmitting, error, setError } =
-    useEmailAuth(applySession)
+  const {
+    sendOtp,
+    verifyOtpAndLogin,
+    isSubmitting,
+    error,
+    setError,
+    mergePending,
+    clearMergePending,
+  } = useEmailAuth(applySession)
   const [email, setEmail] = useState("")
   const [otp, setOtp] = useState("")
   const [otpSent, setOtpSent] = useState(false)
@@ -27,6 +34,7 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
     event.preventDefault()
     setLocalError(null)
     setError(null)
+    clearMergePending()
     try {
       await sendOtp(email)
       setOtpSent(true)
@@ -39,8 +47,10 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
     event.preventDefault()
     setLocalError(null)
     setError(null)
+    clearMergePending()
     try {
       const response = await verifyOtpAndLogin(email, otp)
+      if (!response) return
       setPostAuthDestination(
         resolvePostAuthDestination({
           authMethod: "email",
@@ -67,7 +77,28 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
         </div>
       </div>
 
-      {!otpSent ? (
+      {mergePending && (
+        <div
+          className="rounded-sm border border-primary/40 bg-primary/10 px-3 py-3 space-y-1"
+          role="status"
+        >
+          <p className="text-sm text-primary font-body font-medium">
+            Check your email to link accounts
+          </p>
+          <p className="text-xs text-muted-foreground font-body">
+            {mergePending.detail}
+            {mergePending.email ? (
+              <>
+                {" "}
+                We sent a confirmation link to{" "}
+                <span className="text-foreground font-medium">{mergePending.email}</span>.
+              </>
+            ) : null}
+          </p>
+        </div>
+      )}
+
+      {!mergePending && !otpSent ? (
         <form onSubmit={handleSendOtp} className="space-y-3">
           <input
             type="email"
@@ -89,7 +120,7 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
             Send verification code
           </ArcadeButton>
         </form>
-      ) : (
+      ) : !mergePending ? (
         <form onSubmit={handleVerify} className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Code sent to <span className="text-foreground font-medium">{email}</span>
@@ -124,7 +155,7 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
             Use a different email
           </button>
         </form>
-      )}
+      ) : null}
 
       {displayError && (
         <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-sm px-3 py-2">

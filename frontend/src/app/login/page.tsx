@@ -21,6 +21,11 @@ import {
   setPostAuthReturnPath,
   setPostAuthDestination,
 } from '@/lib/postAuthRedirect';
+import {
+  consumeMergeConfirmedCallback,
+  mergeErrorMessage,
+  parseLoginMergeParams,
+} from '@/lib/loginMergeParams';
 import { ACCOUNT_SCORE_LOGIN_MESSAGE_KEY } from '@/lib/canShowAccountScore';
 
 const LOGIN_MESSAGES: Record<string, string> = {
@@ -36,9 +41,33 @@ function LoginPageInner() {
   const { signIn, isLoggingIn, error: walletLoginError, canSignIn } = useWalletLogin();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [devLoggingIn, setDevLoggingIn] = useState(false);
+  const [mergePendingBanner, setMergePendingBanner] = useState(false);
+  const [mergePendingEmail, setMergePendingEmail] = useState<string | null>(null);
+  const [mergeError, setMergeError] = useState<string | null>(null);
 
   const loginHint =
     LOGIN_MESSAGES[searchParams.get('message') ?? ''] ?? null;
+
+  useEffect(() => {
+    if (consumeMergeConfirmedCallback(applySession)) {
+      return;
+    }
+
+    const mergeParams = parseLoginMergeParams(searchParams);
+    if (!mergeParams) return;
+
+    if (mergeParams.status === 'pending') {
+      setMergePendingBanner(true);
+      setMergePendingEmail(mergeParams.email ?? null);
+      setMergeError(null);
+    } else if (mergeParams.status === 'error') {
+      setMergeError(mergeErrorMessage(mergeParams.reason));
+      setMergePendingBanner(false);
+      setMergePendingEmail(null);
+    }
+
+    router.replace('/login');
+  }, [searchParams, applySession, router]);
 
   useEffect(() => {
     const next = searchParams.get('next');
@@ -124,6 +153,29 @@ function LoginPageInner() {
             {loginHint && (
               <p className="text-sm text-primary/90 font-body border border-primary/25 bg-primary/5 rounded-[var(--radius)] px-3 py-2">
                 {loginHint}
+              </p>
+            )}
+            {mergePendingBanner && (
+              <div
+                className="text-sm text-primary/90 font-body border border-primary/25 bg-primary/5 rounded-[var(--radius)] px-3 py-2 space-y-1"
+                role="status"
+              >
+                <p className="font-medium">Check your email to link accounts</p>
+                <p className="text-xs text-muted-foreground">
+                  We sent a confirmation link
+                  {mergePendingEmail ? (
+                    <>
+                      {' '}
+                      to <span className="text-foreground">{mergePendingEmail}</span>
+                    </>
+                  ) : null}
+                  . Open it to finish linking your identities.
+                </p>
+              </div>
+            )}
+            {mergeError && (
+              <p className="text-sm text-destructive font-body border border-destructive/30 bg-destructive/10 rounded-[var(--radius)] px-3 py-2">
+                {mergeError}
               </p>
             )}
           </div>
