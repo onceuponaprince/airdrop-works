@@ -3,14 +3,21 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Wallet } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
 import { EmailLoginSection } from '@/components/shared/EmailLoginSection';
 import { SocialLoginButtons } from '@/components/shared/SocialLoginButtons';
+import { ArcadeButton } from '@/components/themed/ArcadeButton';
+import { ArcadeCard } from '@/components/themed/ArcadeCard';
+import { CrtOverlay } from '@/components/themed/CrtOverlay';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
 import { useWalletLogin } from '@/hooks/useWalletLogin';
 import { postAuthPath } from '@/lib/onboarding';
+import {
+  consumePostAuthDestination,
+  setPostAuthDestination,
+} from '@/lib/postAuthRedirect';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,18 +43,24 @@ export default function LoginPage() {
     }
   }, [canSignIn, isAuthenticated, isLoggingIn, attemptLogin]);
 
-  // Redirect after profile loads so social-only users land on /onboarding.
+  // Post-auth: session override (S5) then profile-aware path (S7).
   useEffect(() => {
-    if (isAuthenticated && user && !loading) {
-      router.push(postAuthPath(user));
+    if (!isAuthenticated || !user || loading) return;
+
+    const stored = consumePostAuthDestination();
+    if (stored) {
+      router.push(stored);
+      return;
     }
+
+    router.push(postAuthPath(user));
   }, [isAuthenticated, user, loading, router]);
 
-  // Dev bypass: allow login without wallet in development
   const handleDevLogin = async () => {
     setDevLoggingIn(true);
     setLoginError(null);
     try {
+      setPostAuthDestination('/dashboard');
       await login('0x0000000000000000000000000000000000000000', 'dev-bypass', 'dev-bypass');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Dev login failed');
@@ -57,114 +70,140 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[--background] text-[--foreground] px-4 py-24">
-      <div className="max-w-md mx-auto rounded-lg border border-[--border] bg-[--card] p-6 space-y-6 relative">
+    <main className="relative min-h-screen bg-background text-foreground px-4 py-24 overflow-hidden">
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{ background: 'var(--gradient-hero)' }}
+      />
+      <CrtOverlay className="absolute inset-0 pointer-events-none opacity-40" />
+
+      <div className="relative z-10 max-w-md mx-auto">
         <Link
           href="/"
-          className="absolute top-4 right-4 p-2 rounded hover:bg-[--secondary] text-[--muted-foreground] hover:text-[--foreground] transition-colors"
-          aria-label="Back to home"
+          className="inline-flex items-center gap-1.5 mb-4 font-mono text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={14} />
+          Back to home
         </Link>
-        <div className="space-y-2">
-          <h1 className="font-display text-2xl text-[--primary]">Login</h1>
-          <p className="text-sm text-[--muted-foreground]">
-            Sign in with email or connect your wallet to access the app.
-          </p>
-        </div>
 
-        <EmailLoginSection applySession={applySession} />
-
-        <SocialLoginButtons applySession={applySession} />
-
-        <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-[--border]" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-[--card] px-2 text-[--muted-foreground]">or wallet</span>
-          </div>
-        </div>
-
-        <div className="flex justify-start">
-          <WalletButton />
-        </div>
-
-        {(isLoggingIn || loading) && (
-          <p className="text-sm text-[--muted-foreground] animate-pulse">
-            Authenticating with backend...
-          </p>
-        )}
-
-        {(loginError || walletLoginError || authError) && (
-          <div className="rounded border border-[--destructive] bg-[--destructive]/10 p-3 space-y-3">
-            <p className="text-sm text-[--destructive]">
-              {loginError || walletLoginError || authError?.message || 'Authentication failed'}
+        <ArcadeCard glow className="space-y-6 relative">
+          <div className="space-y-2 text-center sm:text-left">
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              Player login
             </p>
-            <div className="flex flex-wrap gap-2">
-              {canSignIn && (
-                <button
-                  type="button"
-                  onClick={attemptLogin}
-                  disabled={isLoggingIn}
-                  className="px-3 py-1.5 rounded border border-[--primary] text-[--primary] text-xs font-semibold hover:bg-[--primary]/10 disabled:opacity-60"
-                >
-                  Try sign-in again
-                </button>
-              )}
-              {wallet.available && (
-                <button
-                  type="button"
-                  onClick={() => wallet.retryConnect?.() ?? wallet.openConnectModal()}
-                  className="px-3 py-1.5 rounded border border-[--border] text-xs font-semibold hover:bg-[--secondary]"
-                >
-                  Reconnect wallet
-                </button>
-              )}
+            <h1 className="font-display text-2xl text-primary glow-green">Log in</h1>
+            <p className="text-sm text-muted-foreground font-body">
+              Email, social, or wallet — pick your path into the app.
+            </p>
+          </div>
+
+          <EmailLoginSection applySession={applySession} />
+
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-card px-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                or social
+              </span>
             </div>
           </div>
-        )}
 
-        {canSignIn && !isAuthenticated && !isLoggingIn && (
-          <button
-            type="button"
-            onClick={attemptLogin}
-            className="w-full px-4 py-2 rounded border border-[--primary] text-[--primary] text-sm font-medium hover:bg-[--primary]/10 transition-colors"
-          >
-            Sign message to continue
-          </button>
-        )}
+          <SocialLoginButtons applySession={applySession} />
 
-        {process.env.NODE_ENV === 'development' && !wallet.available && (
-          <div className="border-t border-[--border] pt-4 space-y-2">
-            <p className="text-xs text-[--muted-foreground]">
-              Particle wallet not configured. Use dev login to bypass wallet auth:
-            </p>
-            <button
-              onClick={handleDevLogin}
-              disabled={devLoggingIn || isLoggingIn}
-              className="px-4 py-2 rounded border border-[--primary] text-[--primary] text-sm font-medium hover:bg-[--primary] hover:text-[--primary-foreground] transition-colors disabled:opacity-50"
-            >
-              {devLoggingIn ? 'Logging in...' : 'Dev Login (no wallet)'}
-            </button>
+          <div className="relative py-1">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-card px-3 font-mono text-[9px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
+                <Wallet size={10} aria-hidden />
+                or wallet
+              </span>
+            </div>
           </div>
-        )}
 
-        <div className="text-xs text-[--muted-foreground] border-t border-[--border] pt-4 space-y-2">
-          <p>
-            By signing in, you agree to our Terms of Service.
-          </p>
-          <p>
-            On the waitlist and approved?{' '}
-            <Link href="/signup" className="text-[--primary] hover:underline">
-              Enter via signup
-            </Link>
-            {' · '}
-            <Link href="/" className="text-[--primary] hover:underline">
-              Back to home
-            </Link>
-          </p>
-        </div>
+          <div className="flex justify-center sm:justify-start">
+            <WalletButton />
+          </div>
+
+          {(isLoggingIn || loading) && (
+            <p className="text-sm text-muted-foreground animate-pulse text-center font-mono text-xs">
+              Authenticating with backend…
+            </p>
+          )}
+
+          {(loginError || walletLoginError || authError) && (
+            <div className="rounded-sm border border-destructive/50 bg-destructive/10 p-3 space-y-3">
+              <p className="text-sm text-destructive">
+                {loginError || walletLoginError || authError?.message || 'Authentication failed'}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {canSignIn && (
+                  <ArcadeButton
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={attemptLogin}
+                    disabled={isLoggingIn}
+                  >
+                    Try sign-in again
+                  </ArcadeButton>
+                )}
+                {wallet.available && (
+                  <ArcadeButton
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => wallet.retryConnect?.() ?? wallet.openConnectModal()}
+                  >
+                    Reconnect wallet
+                  </ArcadeButton>
+                )}
+              </div>
+            </div>
+          )}
+
+          {canSignIn && !isAuthenticated && !isLoggingIn && (
+            <ArcadeButton
+              type="button"
+              variant="secondary"
+              className="w-full"
+              onClick={attemptLogin}
+            >
+              Sign message to continue
+            </ArcadeButton>
+          )}
+
+          {process.env.NODE_ENV === 'development' && !wallet.available && (
+            <div className="border-t border-border pt-4 space-y-2">
+              <p className="text-xs text-muted-foreground font-mono">
+                Particle wallet not configured — dev bypass:
+              </p>
+              <ArcadeButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleDevLogin}
+                loading={devLoggingIn || isLoggingIn}
+                disabled={devLoggingIn || isLoggingIn}
+              >
+                Dev login (no wallet)
+              </ArcadeButton>
+            </div>
+          )}
+
+          <div className="text-xs text-muted-foreground border-t border-border pt-4 space-y-2 font-body">
+            <p>By signing in, you agree to our Terms of Service.</p>
+            <p>
+              On the waitlist and approved?{' '}
+              <Link href="/signup" className="text-primary hover:underline">
+                Enter via signup
+              </Link>
+            </p>
+          </div>
+        </ArcadeCard>
       </div>
     </main>
   );

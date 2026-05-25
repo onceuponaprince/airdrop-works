@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import type { ReactNode } from "react"
 
 const pushMock = vi.fn()
 const replaceMock = vi.fn()
@@ -35,6 +36,7 @@ vi.mock("@/hooks/useWeb3Auth", () => ({
     isAuthenticated: false,
     loading: false,
     error: null,
+    user: null,
     login: loginMock,
     applySession: vi.fn(),
     logout: vi.fn(),
@@ -58,6 +60,18 @@ vi.mock("@/hooks/useWalletLogin", () => ({
     error: null,
     canSignIn: false,
   }),
+}))
+
+vi.mock("@/components/shared/EmailLoginSection", () => ({
+  EmailLoginSection: () => <div data-testid="email-login-section" />,
+}))
+
+vi.mock("@/components/shared/SocialLoginButtons", () => ({
+  SocialLoginButtons: () => <div data-testid="social-login-buttons" />,
+}))
+
+vi.mock("@/components/themed/CrtOverlay", () => ({
+  CrtOverlay: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }))
 
 vi.mock("@/lib/api", () => ({
@@ -93,7 +107,9 @@ describe("wallet login flow", () => {
   it("renders the login page with a dev login fallback when Particle is unavailable", async () => {
     render(<LoginPage />)
 
-    expect(screen.getByRole("heading", { name: "Login" })).toBeTruthy()
+    expect(screen.getByRole("heading", { name: /log in/i })).toBeTruthy()
+    expect(screen.getByTestId("email-login-section")).toBeTruthy()
+    expect(screen.getByTestId("social-login-buttons")).toBeTruthy()
     expect(screen.getByRole("button", { name: /dev login/i })).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: /dev login/i }))

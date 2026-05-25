@@ -11,6 +11,7 @@ import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
 import { checkWhitelistApproval } from '@/lib/supabase';
 import { postAuthPath } from '@/lib/onboarding';
+import { setPostAuthDestination } from '@/lib/postAuthRedirect';
 
 type Step = 'email' | 'wallet';
 
@@ -57,6 +58,7 @@ export default function SignupPage() {
     setIsLoggingIn(true);
     setLoginError(null);
     try {
+      setPostAuthDestination('/dashboard');
       await login(wallet.address, 'particle-managed', 'particle-managed');
     } catch (err) {
       setLoginError(err instanceof Error ? err.message : 'Authentication failed');
@@ -71,7 +73,7 @@ export default function SignupPage() {
     }
   }, [step, wallet.address, isAuthenticated, isLoggingIn, attemptLogin]);
 
-  // Redirect after profile loads (wallet → dashboard; social-only → /onboarding).
+  // Redirect after profile loads; wallet signup may set /dashboard via session (S5).
   useEffect(() => {
     if (isAuthenticated && user && !loading) {
       router.push(postAuthPath(user));
@@ -246,6 +248,13 @@ export default function SignupPage() {
             </button>
           </div>
         )}
+
+        <p className="text-xs text-[--muted-foreground] text-center pt-2">
+          Already have an account?{' '}
+          <Link href="/login" className="text-[--primary] hover:underline">
+            Log in
+          </Link>
+        </p>
       </div>
     </main>
   );

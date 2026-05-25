@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
+import { setPostAuthDestination } from "@/lib/postAuthRedirect"
 
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ?? process.env.BACKEND_URL ?? "http://localhost:8001"
@@ -70,6 +71,9 @@ export function useSocialLogin(applySession: (access: string, refresh: string) =
           const payload = await res.json()
           if (payload.status === "complete" && payload.access && payload.refresh) {
             if (pollRef.current) window.clearInterval(pollRef.current)
+            if (payload.created) {
+              setPostAuthDestination("/onboarding")
+            }
             applySession(payload.access, payload.refresh)
             setLoadingProvider(null)
           }
@@ -106,7 +110,7 @@ export function useSocialLogin(applySession: (access: string, refresh: string) =
   return { loginWith, loadingProvider, error, setError }
 }
 
-/** Parse ?twitter=login&access=... style OAuth callbacks on /login. */
+/** Parse ?twitter=login&access=...&created=1 style OAuth callbacks on /login. */
 export function consumeSocialLoginCallback(
   applySession: (access: string, refresh: string) => void,
 ): boolean {
@@ -117,6 +121,9 @@ export function consumeSocialLoginCallback(
   const refresh = params.get("refresh")
   if (!provider || !access) return false
 
+  if (params.get("created") === "1") {
+    setPostAuthDestination("/onboarding")
+  }
   applySession(access, refresh || "")
   const cleanUrl = window.location.pathname
   window.history.replaceState({}, "", cleanUrl)

@@ -5,6 +5,7 @@ import { useAccount, useChainId, useSignMessage } from "wagmi"
 import { buildSiweMessage } from "@/lib/siwe"
 import { useWeb3Auth } from "@/hooks/useWeb3Auth"
 import { events } from "@/lib/analytics"
+import { setPostAuthDestination } from "@/lib/postAuthRedirect"
 
 /**
  * Connect wallet → sign SIWE message → exchange for Django JWT.
@@ -44,6 +45,7 @@ export function useWalletLogin() {
       }
 
       await login(address, message, signature)
+      setPostAuthDestination("/dashboard")
       events.walletAuthSuccess(address)
     } catch (err) {
       const message = err instanceof Error ? err.message : "Authentication failed"
