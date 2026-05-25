@@ -6,6 +6,7 @@ import { Check, Zap, Crown, Users } from 'lucide-react';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
 import { events } from '@/lib/analytics';
+import { useUserCheckout } from '@/hooks/useUserCheckout';
 
 const PLANS = [
   {
@@ -40,8 +41,8 @@ const PLANS = [
       'Score breakdown + insights',
       'Priority support',
     ],
-    cta: 'Join Waitlist for Early Access',
-    href: '/#waitlist',
+    cta: 'Upgrade to Pro',
+    checkoutPlan: 'pro' as const,
     variant: 'primary' as const,
     popular: true,
   },
@@ -59,8 +60,8 @@ const PLANS = [
       'Bulk scoring',
       'Dedicated support',
     ],
-    cta: 'Join Waitlist for Early Access',
-    href: '/#waitlist',
+    cta: 'Upgrade to Team',
+    checkoutPlan: 'team' as const,
     variant: 'secondary' as const,
     popular: false,
   },
@@ -69,9 +70,11 @@ const PLANS = [
 const CREDIT_PACKS = [
   { key: '50', credits: 50, price: '$9' },
   { key: '200', credits: 200, price: '$29' },
-];
+] as const;
 
 export default function PricingPage() {
+  const { startCheckout, pending, error } = useUserCheckout();
+
   return (
     <section className="py-24 px-4">
       <div className="max-w-5xl mx-auto">
@@ -85,6 +88,12 @@ export default function PricingPage() {
             Score contributions with AI-powered precision. Start free, scale when you&apos;re ready.
           </p>
         </motion.div>
+
+        {error ? (
+          <p className="mb-6 text-center text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
 
         {/* Plan cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-20">
@@ -123,15 +132,29 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href={'href' in plan && plan.href ? plan.href : '/#waitlist'}
-                  className="w-full"
-                  onClick={() => events.pricingPlanClick(plan.key)}
-                >
-                  <ArcadeButton variant={plan.variant} className="w-full">
-                    {plan.cta}
+                {'checkoutPlan' in plan && plan.checkoutPlan ? (
+                  <ArcadeButton
+                    variant={plan.variant}
+                    className="w-full"
+                    disabled={pending}
+                    onClick={() => {
+                      events.pricingPlanClick(plan.key);
+                      void startCheckout({ plan: plan.checkoutPlan });
+                    }}
+                  >
+                    {pending ? 'Starting checkout...' : plan.cta}
                   </ArcadeButton>
-                </Link>
+                ) : (
+                  <Link
+                    href={plan.href ?? '/#waitlist'}
+                    className="w-full"
+                    onClick={() => events.pricingPlanClick(plan.key)}
+                  >
+                    <ArcadeButton variant={plan.variant} className="w-full">
+                      {plan.cta}
+                    </ArcadeButton>
+                  </Link>
+                )}
               </ArcadeCard>
             </motion.div>
           ))}
@@ -155,15 +178,18 @@ export default function PricingPage() {
                   {pack.credits} credits
                 </p>
                 <p className="text-2xl font-bold text-primary mb-4">{pack.price}</p>
-                <Link
-                  href="/#waitlist"
+                <ArcadeButton
+                  variant="secondary"
+                  size="sm"
                   className="w-full"
-                  onClick={() => events.pricingPlanClick(`pack_${pack.key}`)}
+                  disabled={pending}
+                  onClick={() => {
+                    events.pricingPlanClick(`pack_${pack.key}`);
+                    void startCheckout({ credit_pack: pack.key });
+                  }}
                 >
-                  <ArcadeButton variant="secondary" size="sm" className="w-full">
-                    Join Waitlist to Buy
-                  </ArcadeButton>
-                </Link>
+                  {pending ? 'Starting checkout...' : 'Buy credits'}
+                </ArcadeButton>
               </ArcadeCard>
             ))}
           </div>
