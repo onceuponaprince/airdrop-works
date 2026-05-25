@@ -19,7 +19,7 @@ def build_discord_authorize_url(state: str, redirect_uri: str) -> str:
     if not client_id:
         raise ValueError("DISCORD_CLIENT_ID not configured")
 
-    scope = "identify guilds"
+    scope = "identify email guilds"
     return (
         f"{DISCORD_AUTHORIZE_URL}"
         f"?client_id={client_id}"

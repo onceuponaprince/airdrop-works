@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.social_login_helpers import (
     frontend_redirect,
+    merge_pending_redirect,
     redirect_with_jwt,
     resolve_social_user,
 )
@@ -148,6 +149,24 @@ class DiscordOAuthCallbackView(APIView):
                 _frontend_redirect("/sources?discord=error&reason=no_user")
             )
 
+        discord_email = str(discord_user.get("email") or "").strip()
+
+        session["provider"] = "discord"
+        expires_at = None
+        if expires_in:
+            expires_at = datetime.now(tz=UTC) + timedelta(seconds=expires_in)
+
+        provider_payload = {
+            "provider": "discord",
+            "discord_user_id": discord_user_id,
+            "discord_username": username,
+            "display_name": display_name,
+            "avatar_url": _discord_avatar_url(discord_user),
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_expires_at": expires_at,
+            "metadata": {"oauth": True},
+        }
         user, _created = resolve_social_user(
             session,
             connection_model=DiscordConnection,
@@ -157,11 +176,17 @@ class DiscordOAuthCallbackView(APIView):
             username_prefix="dc",
             display_name=display_name,
             avatar_url=_discord_avatar_url(discord_user),
+            email=discord_email,
+            provider_payload=provider_payload,
         )
 
-        expires_at = None
-        if expires_in:
-            expires_at = datetime.now(tz=UTC) + timedelta(seconds=expires_in)
+        if session.get("mode") == "login" and session.get("merge_required"):
+            return HttpResponseRedirect(merge_pending_redirect(session))
+
+        if user is None:
+            return HttpResponseRedirect(
+                _frontend_redirect("/sources?discord=error&reason=no_user")
+            )
 
         DiscordConnection.objects.update_or_create(
             discord_user_id=discord_user_id,
@@ -179,7 +204,6 @@ class DiscordOAuthCallbackView(APIView):
         )
 
         if session.get("mode") == "login":
-            session["provider"] = "discord"
             return HttpResponseRedirect(redirect_with_jwt(session, user, default_path="/login"))
 
         redirect_after = session.get("redirect_uri") or _frontend_redirect(

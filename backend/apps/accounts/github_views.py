@@ -13,7 +13,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.social_login_helpers import frontend_redirect, redirect_with_jwt, resolve_social_user
+from apps.accounts.social_login_helpers import frontend_redirect, merge_pending_redirect, redirect_with_jwt, resolve_social_user
 from apps.accounts.social_models import UserSocialAccount
 
 from .github_oauth import (
@@ -136,6 +136,14 @@ class GitHubOAuthCallbackView(APIView):
             )
 
         session["provider"] = "github"
+        provider_payload = {
+            "provider": "github",
+            "external_id": github_user_id,
+            "username": username,
+            "display_name": display_name[:128],
+            "avatar_url": avatar_url,
+            "access_token": access_token,
+        }
         user, _created = resolve_social_user(
             session,
             connection_model=UserSocialAccount,
@@ -147,7 +155,16 @@ class GitHubOAuthCallbackView(APIView):
             avatar_url=avatar_url,
             connection_extra_filter={"platform": "github"},
             email=github_email,
+            provider_payload=provider_payload,
         )
+
+        if session.get("mode") == "login" and session.get("merge_required"):
+            return HttpResponseRedirect(merge_pending_redirect(session))
+
+        if user is None:
+            return HttpResponseRedirect(
+                _frontend_redirect("/sources?github=error&reason=no_user")
+            )
 
         UserSocialAccount.objects.update_or_create(
             user=user,
@@ -163,11 +180,6 @@ class GitHubOAuthCallbackView(APIView):
 
         if session.get("mode") == "login":
             session["provider"] = "github"
-            if session.get("merge_required"):
-                email = session.get("merge_email", "")
-                return HttpResponseRedirect(
-                    _frontend_redirect(f"/login?merge=pending&email={email}")
-                )
             return HttpResponseRedirect(redirect_with_jwt(session, user, default_path="/login"))
 
         redirect_after = session.get("redirect_uri") or _frontend_redirect(

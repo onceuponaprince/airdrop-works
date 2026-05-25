@@ -164,6 +164,72 @@ def _reassign_one_to_one(model, source: User, target: User) -> None:
 
 
 @transaction.atomic
+def apply_provider_payload(*, target: User, provider_payload: dict[str, Any]) -> None:
+    """Link a deferred social connection to the merge target after email confirm."""
+    if not provider_payload:
+        return
+
+    provider = provider_payload.get("provider")
+    if provider == "github":
+        UserSocialAccount.objects.update_or_create(
+            user=target,
+            platform="github",
+            external_id=str(provider_payload["external_id"]),
+            defaults={
+                "username": str(provider_payload.get("username", ""))[:64],
+                "display_name": str(provider_payload.get("display_name", ""))[:128],
+                "avatar_url": str(provider_payload.get("avatar_url", "")),
+                "access_token": str(provider_payload.get("access_token", "")),
+            },
+        )
+        return
+
+    if provider == "twitter":
+        TwitterConnection.objects.update_or_create(
+            twitter_user_id=str(provider_payload["twitter_user_id"]),
+            defaults={
+                "user": target,
+                "twitter_username": str(provider_payload.get("twitter_username", ""))[:64],
+                "display_name": str(provider_payload.get("display_name", ""))[:128],
+                "avatar_url": str(provider_payload.get("avatar_url", "")),
+                "access_token": str(provider_payload.get("access_token", "")),
+                "refresh_token": str(provider_payload.get("refresh_token", "")),
+                "token_expires_at": provider_payload.get("token_expires_at"),
+                "watch_enabled": bool(provider_payload.get("watch_enabled", True)),
+                "last_error": "",
+            },
+        )
+        return
+
+    if provider == "discord":
+        DiscordConnection.objects.update_or_create(
+            discord_user_id=str(provider_payload["discord_user_id"]),
+            defaults={
+                "user": target,
+                "discord_username": str(provider_payload.get("discord_username", ""))[:64],
+                "display_name": str(provider_payload.get("display_name", ""))[:128],
+                "avatar_url": str(provider_payload.get("avatar_url", "")),
+                "access_token": str(provider_payload.get("access_token", "")),
+                "refresh_token": str(provider_payload.get("refresh_token", "")),
+                "token_expires_at": provider_payload.get("token_expires_at"),
+                "last_error": "",
+                "metadata": provider_payload.get("metadata") or {"oauth": True},
+            },
+        )
+        return
+
+    if provider == "telegram":
+        TelegramConnection.objects.update_or_create(
+            telegram_user_id=str(provider_payload["telegram_user_id"]),
+            defaults={
+                "user": target,
+                "telegram_username": str(provider_payload.get("telegram_username", ""))[:64],
+                "display_name": str(provider_payload.get("display_name", ""))[:128],
+                "avatar_url": str(provider_payload.get("avatar_url", "")),
+            },
+        )
+
+
 def execute_merge(*, target: User, source: User | None = None, email: str | None = None) -> User:
     """Merge source into target. Target retains wallet and gains social links."""
     target = User.objects.select_for_update().get(pk=target.pk)

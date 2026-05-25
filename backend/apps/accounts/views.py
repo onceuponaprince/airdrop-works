@@ -33,6 +33,7 @@ from common.exceptions import WalletVerificationError
 from .models import User
 from .merge_service import (
     MergeRequired,
+    apply_provider_payload,
     consume_merge_token,
     execute_merge,
     find_user_by_email,
@@ -298,6 +299,9 @@ class IdentityMergeConfirmView(APIView):
             source=source,
             email=payload.get("email"),
         )
+        provider_payload = payload.get("provider_payload") or {}
+        if provider_payload:
+            apply_provider_payload(target=merged_user, provider_payload=provider_payload)
         get_or_create_user_sub(merged_user)
         tokens = get_tokens_for_user(merged_user)
         logger.info("[Merge] Confirmed merge into user %s", merged_user.id)
