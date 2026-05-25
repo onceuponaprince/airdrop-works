@@ -9,12 +9,13 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { AuthTokens, Profile } from '@/types/api';
+import type { AuthUser } from '@/lib/onboarding';
+import type { AuthTokens } from '@/types/api';
 
 interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
-  user: Profile | null;
+  user: AuthUser | null;
   loading: boolean;
   error: Error | null;
 }
@@ -31,12 +32,12 @@ export function useWeb3Auth(): AuthState & {
   const [error, setError] = useState<Error | null>(null);
   const [isAuthActionLoading, setIsAuthActionLoading] = useState(false);
 
-  const { data: user, isLoading: userLoading } = useQuery<Profile | null>({
+  const { data: user, isLoading: userLoading } = useQuery<AuthUser | null>({
     queryKey: ['auth', 'profile'],
     queryFn: async () => {
       if (!token) return null;
       api.setToken(token);
-      return api.get<Profile>('/auth/me/');
+      return api.get<AuthUser>('/auth/me/');
     },
     enabled: token !== null,
   });

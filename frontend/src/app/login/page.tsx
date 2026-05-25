@@ -10,10 +10,11 @@ import { SocialLoginButtons } from '@/components/shared/SocialLoginButtons';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
 import { useWalletLogin } from '@/hooks/useWalletLogin';
+import { postAuthPath } from '@/lib/onboarding';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, loading, error: authError, applySession, login } = useWeb3Auth();
+  const { isAuthenticated, loading, error: authError, applySession, login, user } = useWeb3Auth();
   const wallet = useParticleWallet();
   const { signIn, isLoggingIn, error: walletLoginError, canSignIn } = useWalletLogin();
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -35,12 +36,12 @@ export default function LoginPage() {
     }
   }, [canSignIn, isAuthenticated, isLoggingIn, attemptLogin]);
 
-  // Redirect to app after successful auth (S7 will route social-only users to /onboarding)
+  // Redirect after profile loads so social-only users land on /onboarding.
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
+    if (isAuthenticated && user && !loading) {
+      router.push(postAuthPath(user));
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user, loading, router]);
 
   // Dev bypass: allow login without wallet in development
   const handleDevLogin = async () => {

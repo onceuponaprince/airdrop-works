@@ -105,6 +105,11 @@ class WalletVerifyView(APIView):
 
         get_or_create_user_sub(user)
 
+        profile, _ = Profile.objects.get_or_create(user=user)
+        if not profile.onboarding_completed:
+            profile.onboarding_completed = True
+            profile.save(update_fields=["onboarding_completed", "updated_at"])
+
         tokens = get_tokens_for_user(user)
         logger.info("[Auth] Wallet login: %s (new=%s)", wallet_address, created)
 

@@ -10,12 +10,13 @@ import { WalletButton } from '@/components/shared/WalletButton';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
 import { checkWhitelistApproval } from '@/lib/supabase';
+import { postAuthPath } from '@/lib/onboarding';
 
 type Step = 'email' | 'wallet';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { isAuthenticated, login } = useWeb3Auth();
+  const { isAuthenticated, login, user, loading } = useWeb3Auth();
   const wallet = useParticleWallet();
 
   const [step, setStep] = useState<Step>('email');
@@ -70,12 +71,12 @@ export default function SignupPage() {
     }
   }, [step, wallet.address, isAuthenticated, isLoggingIn, attemptLogin]);
 
-  // Redirect to app after successful auth (aligned with /login; S7 adds /onboarding for social-only)
+  // Redirect after profile loads (wallet → dashboard; social-only → /onboarding).
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
+    if (isAuthenticated && user && !loading) {
+      router.push(postAuthPath(user));
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, user, loading, router]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && email.trim()) {

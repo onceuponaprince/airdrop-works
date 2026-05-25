@@ -15,6 +15,8 @@ class ProfileSerializer(serializers.ModelSerializer):
     scoutXp = serializers.IntegerField(source="scout_xp", read_only=True)
     diplomatXp = serializers.IntegerField(source="diplomat_xp", read_only=True)
     skillTreeState = serializers.JSONField(source="skill_tree_state", read_only=True)
+    preferredBranch = serializers.CharField(source="preferred_branch", read_only=True)
+    onboardingCompleted = serializers.BooleanField(source="onboarding_completed", read_only=True)
     createdAt = serializers.DateTimeField(source="created_at", read_only=True)
 
     class Meta:
@@ -22,5 +24,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = [
             "id", "walletAddress", "displayName", "totalXp", "educatorXp",
             "builderXp", "creatorXp", "scoutXp", "diplomatXp",
-            "skillTreeState", "rank", "primaryBranch", "createdAt",
+            "skillTreeState", "rank", "primaryBranch", "preferredBranch",
+            "onboardingCompleted", "createdAt",
         ]
