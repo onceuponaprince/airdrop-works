@@ -2,6 +2,17 @@
 
 All notable changes to this repository will be documented in this file.
 
+## 0.9.0 - 2026-05-25
+
+### Added
+- **S5** Login UI polish and landing→app bridge (`postAuthRedirect`, dev login fallback, arcade styling).
+- **S6** Email-confirm identity merge via Resend (merge service, confirm endpoint, merge email flow).
+- **S7** Social-only user onboarding (workspace setup, profile onboarding fields, AuthGuard routing).
+- **S8** Auth QA matrix documentation and extended auth-flow / onboarding / redirect tests.
+
+### Chore
+- Version bump to **0.9.0** for login stack S5–S8 release.
+
 ## 0.8.1 - 2026-05-22
 
 ### Added
