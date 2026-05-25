@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { fireEvent, render, screen, waitFor } from "@testing-library/react"
-import type { ReactNode } from "react"
 
 const pushMock = vi.fn()
 const replaceMock = vi.fn()
@@ -45,6 +44,7 @@ vi.mock("next/navigation", () => ({
     push: pushMock,
     replace: replaceMock,
   }),
+  usePathname: () => "/dashboard",
 }))
 
 vi.mock("@/hooks/useWeb3Auth", () => ({
@@ -129,7 +129,7 @@ describe("wallet login flow", () => {
   it("renders the login page with a dev login fallback when Particle is unavailable", async () => {
     render(<LoginPage />)
 
-    expect(screen.getByRole("heading", { name: "Login" })).toBeTruthy()
+    expect(screen.getByRole("heading", { name: /log in/i })).toBeTruthy()
     expect(screen.getByRole("button", { name: /dev login/i })).toBeTruthy()
 
     fireEvent.click(screen.getByRole("button", { name: /dev login/i }))
@@ -158,6 +158,10 @@ describe("wallet login flow", () => {
 
   it("lets authenticated app content render when auth_token exists", async () => {
     localStorage.setItem("auth_token", "token-123")
+    apiGetMock.mockResolvedValue({
+      walletAddress: "0x0000000000000000000000000000000000000001",
+      onboardingCompleted: true,
+    })
 
     render(
       <AuthGuard>
