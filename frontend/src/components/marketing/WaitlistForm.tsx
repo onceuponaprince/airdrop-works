@@ -9,6 +9,7 @@ import { StepTwitter } from "@/components/marketing/steps/StepTwitter"
 import { StepSubmit } from "@/components/marketing/steps/StepSubmit"
 import type { AccountAnalysis } from "@/types/api"
 import { events } from "@/lib/analytics"
+import { markWaitlistJoined } from "@/lib/canShowAccountScore"
 import { parseWaitlistIntent } from "@/lib/waitlist-intent"
 
 const STORAGE_KEY = "airdrop_quest_state"
@@ -174,6 +175,7 @@ function WaitlistFormInner() {
           signupIntent={signupIntent}
           onBack={() => goBackTo("twitter")}
           onSuccess={() => {
+            markWaitlistJoined()
             clearPersistedState()
             completeStep("submit", "submit")
           }}

@@ -4,10 +4,13 @@ import { motion, type Variants } from "framer-motion"
 import Link from "next/link"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { MarketingAuthActions } from "@/components/marketing/MarketingAuthActions"
+import { HeroMarquee } from "@/components/marketing/HeroMarquee"
 import { CrtOverlay } from "@/components/themed/CrtOverlay"
+import { useAccountScoreVisibility } from "@/hooks/useAccountScoreVisibility"
 import { staggerContainer, staggerItem } from "@/styles/theme"
 
 export function HeroSection() {
+  const { visible: accountScoreVisible } = useAccountScoreVisibility()
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
 
@@ -30,6 +33,9 @@ export function HeroSection() {
           backgroundSize: "32px 32px",
         }}
       />
+
+      {/* Ambient crypto Twitter avatar marquee — behind copy/CTAs */}
+      <HeroMarquee />
 
       <div className="relative z-10 max-w-[960px] mx-auto px-4 sm:px-6 text-center">
         <motion.div
@@ -106,12 +112,15 @@ export function HeroSection() {
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 pt-2">
-              <button
-                onClick={() => scrollTo("twitter-analyzer")}
-                className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
-              >
-                Prefer accounts? Score an account
-              </button>
+              {accountScoreVisible && (
+                <button
+                  type="button"
+                  onClick={() => scrollTo("twitter-analyzer")}
+                  className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+                >
+                  Prefer accounts? Score an account
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => scrollTo("campaign-integrity-pilot")}

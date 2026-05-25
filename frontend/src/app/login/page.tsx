@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Wallet } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
@@ -16,16 +16,36 @@ import { useWalletLogin } from '@/hooks/useWalletLogin';
 import { postAuthPath } from '@/lib/onboarding';
 import {
   consumePostAuthDestination,
+  consumePostAuthReturnPath,
+  isSafeReturnPath,
+  setPostAuthReturnPath,
   setPostAuthDestination,
 } from '@/lib/postAuthRedirect';
+import { ACCOUNT_SCORE_LOGIN_MESSAGE_KEY } from '@/lib/canShowAccountScore';
 
-export default function LoginPage() {
+const LOGIN_MESSAGES: Record<string, string> = {
+  [ACCOUNT_SCORE_LOGIN_MESSAGE_KEY]:
+    'Sign in to see your full account score results.',
+};
+
+function LoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, loading, error: authError, applySession, login, user } = useWeb3Auth();
   const wallet = useParticleWallet();
   const { signIn, isLoggingIn, error: walletLoginError, canSignIn } = useWalletLogin();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [devLoggingIn, setDevLoggingIn] = useState(false);
+
+  const loginHint =
+    LOGIN_MESSAGES[searchParams.get('message') ?? ''] ?? null;
+
+  useEffect(() => {
+    const next = searchParams.get('next');
+    if (next && isSafeReturnPath(next)) {
+      setPostAuthReturnPath(next);
+    }
+  }, [searchParams]);
 
   const attemptLogin = useCallback(async () => {
     if (!canSignIn || isLoggingIn) return;
@@ -46,6 +66,12 @@ export default function LoginPage() {
   // Post-auth: session override (S5) then profile-aware path (S7).
   useEffect(() => {
     if (!isAuthenticated || !user || loading) return;
+
+    const returnPath = consumePostAuthReturnPath();
+    if (returnPath) {
+      router.push(returnPath);
+      return;
+    }
 
     const stored = consumePostAuthDestination();
     if (stored) {
@@ -95,6 +121,11 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground font-body">
               Email, social, or wallet — pick your path into the app.
             </p>
+            {loginHint && (
+              <p className="text-sm text-primary/90 font-body border border-primary/25 bg-primary/5 rounded-[var(--radius)] px-3 py-2">
+                {loginHint}
+              </p>
+            )}
           </div>
 
           <EmailLoginSection applySession={applySession} />
@@ -206,5 +237,13 @@ export default function LoginPage() {
         </ArcadeCard>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }
