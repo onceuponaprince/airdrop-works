@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
 import { EmailLoginSection } from '@/components/shared/EmailLoginSection';
+import { SocialLoginButtons } from '@/components/shared/SocialLoginButtons';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
 import { useWalletLogin } from '@/hooks/useWalletLogin';
@@ -72,6 +73,8 @@ export default function LoginPage() {
         </div>
 
         <EmailLoginSection applySession={applySession} />
+
+        <SocialLoginButtons applySession={applySession} />
 
         <div className="relative py-2">
           <div className="absolute inset-0 flex items-center">

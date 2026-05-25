@@ -4,20 +4,21 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
-from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.cache import cache
 from django.http import HttpResponseRedirect
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.models import TwitterConnection, User
-from apps.accounts.serializers import UserSerializer
-from apps.accounts.views import get_tokens_for_user
+from apps.accounts.models import TwitterConnection
+from apps.accounts.social_login_helpers import (
+    frontend_redirect,
+    redirect_with_jwt,
+    resolve_social_user,
+)
 from apps.contributions.models import CrawlSourceConfig
 from apps.contributions.tasks import sync_twitter_connection_task
 
@@ -42,8 +43,7 @@ def _callback_url() -> str:
 
 
 def _frontend_redirect(path: str = "/sources") -> str:
-    base = str(settings.FRONTEND_URL or "http://localhost:3000").rstrip("/")
-    return f"{base}{path}"
+    return frontend_redirect(path)
 
 
 class TwitterOAuthStartView(APIView):
@@ -53,9 +53,12 @@ class TwitterOAuthStartView(APIView):
 
     def get(self, request):
         mode = request.query_params.get("mode", "link")
-        redirect_after = request.query_params.get("redirect_uri") or _frontend_redirect(
-            "/sources?twitter=connected"
-        )
+        if mode == "login":
+            redirect_after = request.query_params.get("redirect_uri") or _frontend_redirect("/login")
+        else:
+            redirect_after = request.query_params.get("redirect_uri") or _frontend_redirect(
+                "/sources?twitter=connected"
+            )
 
         user_id = None
         if request.user.is_authenticated:
@@ -126,7 +129,7 @@ class TwitterOAuthCallbackView(APIView):
         except ValueError as exc:
             logger.error("[TwitterOAuth] callback failed: %s", exc)
             return HttpResponseRedirect(
-                _frontend_redirect(f"/sources?twitter=error&reason=token_exchange")
+                _frontend_redirect("/sources?twitter=error&reason=token_exchange")
             )
 
         twitter_user_id = str(twitter_user.get("id", "")).strip()
@@ -134,7 +137,16 @@ class TwitterOAuthCallbackView(APIView):
         if not twitter_user_id or not username:
             return HttpResponseRedirect(_frontend_redirect("/sources?twitter=error&reason=no_user"))
 
-        user = self._resolve_user(session, twitter_user_id, username, twitter_user)
+        user, _created = resolve_social_user(
+            session,
+            connection_model=TwitterConnection,
+            platform_id_field="twitter_user_id",
+            platform_user_id=twitter_user_id,
+            username=username,
+            username_prefix="tw",
+            display_name=str(twitter_user.get("name") or username),
+            avatar_url=str(twitter_user.get("profile_image_url") or ""),
+        )
         expires_at = None
         if expires_in:
             expires_at = datetime.now(tz=UTC) + timedelta(seconds=expires_in)
@@ -163,32 +175,10 @@ class TwitterOAuthCallbackView(APIView):
 
         redirect_after = session.get("redirect_uri") or _frontend_redirect("/sources?twitter=connected")
         if session.get("mode") == "login":
-            tokens = get_tokens_for_user(user)
-            params = urlencode(
-                {
-                    "twitter": "login",
-                    "access": tokens["access"],
-                    "refresh": tokens["refresh"],
-                }
-            )
-            return HttpResponseRedirect(f"{redirect_after.split('?')[0]}?{params}")
+            session["provider"] = "twitter"
+            return HttpResponseRedirect(redirect_with_jwt(session, user, default_path="/login"))
 
         return HttpResponseRedirect(redirect_after)
-
-    def _resolve_user(self, session: dict, twitter_user_id: str, username: str, profile: dict) -> User:
-        user_id = session.get("user_id")
-        if user_id:
-            return User.objects.get(id=user_id)
-
-        existing = TwitterConnection.objects.filter(twitter_user_id=twitter_user_id).first()
-        if existing:
-            return existing.user
-
-        return User.objects.create(
-            username=f"tw_{username}"[:150],
-            display_name=str(profile.get("name") or username)[:64],
-            avatar_url=str(profile.get("profile_image_url") or ""),
-        )
 
 
 class TwitterConnectionStatusView(APIView):

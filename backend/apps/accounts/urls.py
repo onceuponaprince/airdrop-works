@@ -37,6 +37,7 @@ urlpatterns = [
 
     # Telegram deep link + linking (called by bot) + production webhook receiver
     path("telegram/start/", telegram_views.TelegramDeepLinkView.as_view(), name="telegram_deep_link"),
+    path("telegram/login/poll/", telegram_views.TelegramLoginPollView.as_view(), name="telegram_login_poll"),
     path("telegram/link/", telegram_views.TelegramLinkView.as_view(), name="telegram_link"),
     path("telegram/webhook/", telegram_views.TelegramWebhookView.as_view(), name="telegram_webhook"),
 ]
