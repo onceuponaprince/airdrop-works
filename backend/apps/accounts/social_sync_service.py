@@ -27,17 +27,18 @@ class SocialSyncService:
         """
         Sync connected social accounts and run AI Judge scoring on recent activity.
         """
-        from apps.accounts.social_models import UserSocialAccount
         from apps.accounts.models import DiscordConnection
+        from apps.accounts.social_models import UserSocialAccount
+        from apps.ai_core.workflow import run_scoring_pipeline
         from apps.contributions.crawlers import crawl_discord
         from apps.contributions.models import Contribution
-        from apps.ai_core.workflow import run_scoring_pipeline
 
         synced_platforms: set[str] = set()
 
         # 1. Generic social accounts (manual entry for now)
         for account in UserSocialAccount.objects.filter(user=user):
-            logger.info("[SocialSync] Generic sync for %s (user=%s)", account.platform, user.wallet_address[:6])
+            user_label = user.wallet_address[:6] if user.wallet_address else str(user.id)
+            logger.info("[SocialSync] Generic sync for %s (user=%s)", account.platform, user_label)
             synced_platforms.add(account.platform)
 
         # 2. Real Discord crawling + scoring
@@ -61,7 +62,8 @@ class SocialSyncService:
                             )
                             if created:
                                 run_scoring_pipeline(str(contribution.id))
-                                logger.info("[SocialSync] Scored new Discord message for user %s", user.wallet_address[:6])
+                                user_label = user.wallet_address[:6] if user.wallet_address else str(user.id)
+                                logger.info("[SocialSync] Scored new Discord message for user %s", user_label)
 
                         synced_platforms.add("discord")
                     except Exception as exc:

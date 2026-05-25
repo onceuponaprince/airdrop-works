@@ -1,5 +1,6 @@
-from django.db import models
 from django.conf import settings
+from django.db import models
+
 from common.models import BaseModel
 
 
@@ -38,4 +39,5 @@ class UserSocialAccount(BaseModel):
         ]
 
     def __str__(self):
-        return f"{self.user.wallet_address[:6]}... - {self.platform} (@{self.username})"
+        owner = self.user.short_address or str(self.user_id)
+        return f"{owner} - {self.platform} (@{self.username})"

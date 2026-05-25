@@ -21,7 +21,7 @@ class AccountDataRightsTests(APITestCase):
 
         self.tenant = Tenant.objects.create(slug="export-tenant", name="Export Tenant")
         TenantMembership.objects.create(tenant=self.tenant, user=self.user, role="owner", is_active=True)
-        Profile.objects.create(user=self.user, total_xp=100, educator_xp=80)
+        Profile.objects.filter(user=self.user).update(total_xp=100, educator_xp=80)
         Contribution.objects.create(
             user=self.user,
             platform="twitter",
