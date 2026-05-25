@@ -31,7 +31,24 @@ from apps.spore.models import (
 from common.exceptions import WalletVerificationError
 
 from .models import User
-from .serializers import UserSerializer, UserUpdateSerializer, WalletVerifySerializer
+from .merge_service import (
+    MergeRequired,
+    consume_merge_token,
+    execute_merge,
+    find_user_by_email,
+    initiate_email_merge,
+    maybe_block_email_login,
+    requires_email_merge_confirmation,
+)
+from .serializers import (
+    EmailVerifySerializer,
+    IdentityMergeConfirmSerializer,
+    IdentityMergeInitiateSerializer,
+    UserSerializer,
+    UserUpdateSerializer,
+    WalletVerifySerializer,
+)
+from .supabase_auth import SupabaseAuthError, fetch_supabase_user
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +104,11 @@ class WalletVerifyView(APIView):
             )
 
         get_or_create_user_sub(user)
+
+        profile, _ = Profile.objects.get_or_create(user=user)
+        if not profile.onboarding_completed:
+            profile.onboarding_completed = True
+            profile.save(update_fields=["onboarding_completed", "updated_at"])
 
         tokens = get_tokens_for_user(user)
         logger.info("[Auth] Wallet login: %s (new=%s)", wallet_address, created)
@@ -146,6 +168,145 @@ class WalletVerifyView(APIView):
             or ""
         )
         return hmac.compare_digest(str(supplied_secret), str(expected_secret))
+
+
+class EmailVerifyView(APIView):
+    """Email login: verify Supabase OTP session token, upsert user, return JWTs."""
+
+    permission_classes = [AllowAny]
+    throttle_scope = "email_verify"
+
+    def post(self, request):
+        serializer = EmailVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        access_token = serializer.validated_data["access_token"]
+
+        try:
+            supabase_user = fetch_supabase_user(access_token)
+        except SupabaseAuthError as exc:
+            logger.info("[Auth] Email verify rejected: %s", exc)
+            return Response({"detail": str(exc)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        email = supabase_user["email"]
+
+        incoming_user = request.user if request.user.is_authenticated else None
+        try:
+            maybe_block_email_login(email=email, incoming_user=incoming_user)
+        except MergeRequired:
+            return Response(
+                {
+                    "mergeRequired": True,
+                    "detail": "Confirmation email sent. Check your inbox to link this account.",
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        user = find_user_by_email(email)
+        created = False
+        if not user:
+            user = User.objects.create_user(
+                username=User.generate_username(),
+                email=email,
+            )
+            created = True
+
+        get_or_create_user_sub(user)
+
+        tokens = get_tokens_for_user(user)
+        logger.info("[Auth] Email login: %s (new=%s)", email, created)
+
+        return Response({
+            **tokens,
+            "user": UserSerializer(user).data,
+            "created": created,
+        })
+
+
+class IdentityMergeInitiateView(APIView):
+    """Explicitly initiate email-confirm merge for the authenticated session user."""
+
+    permission_classes = [IsAuthenticated]
+    throttle_scope = "email_verify"
+
+    def post(self, request):
+        serializer = IdentityMergeInitiateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            supabase_user = fetch_supabase_user(serializer.validated_data["access_token"])
+        except SupabaseAuthError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        email = supabase_user["email"]
+        target = find_user_by_email(email)
+        if not target or not requires_email_merge_confirmation(
+            target,
+            incoming_user=request.user,
+        ):
+            return Response(
+                {"detail": "No wallet account requires merge confirmation for this email."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        initiate_email_merge(
+            email=email,
+            target_user=target,
+            source_user=request.user,
+        )
+        return Response(
+            {
+                "mergeRequired": True,
+                "detail": "Confirmation email sent. Check your inbox to link this account.",
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class IdentityMergeConfirmView(APIView):
+    """Confirm a pending identity merge via single-use token."""
+
+    permission_classes = [AllowAny]
+    throttle_scope = "email_verify"
+
+    def post(self, request):
+        serializer = IdentityMergeConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.validated_data["token"].strip()
+
+        payload = consume_merge_token(token)
+        if not payload:
+            return Response(
+                {"detail": "Invalid or expired merge token."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            target = User.objects.get(pk=payload["target_user_id"], is_active=True)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Merge target account not found."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        source = None
+        source_id = payload.get("source_user_id")
+        if source_id:
+            source = User.objects.filter(pk=source_id, is_active=True).first()
+
+        merged_user = execute_merge(
+            target=target,
+            source=source,
+            email=payload.get("email"),
+        )
+        get_or_create_user_sub(merged_user)
+        tokens = get_tokens_for_user(merged_user)
+        logger.info("[Merge] Confirmed merge into user %s", merged_user.id)
+
+        return Response({
+            **tokens,
+            "user": UserSerializer(merged_user).data,
+            "merged": True,
+        })
 
 
 class UserProfileView(APIView):

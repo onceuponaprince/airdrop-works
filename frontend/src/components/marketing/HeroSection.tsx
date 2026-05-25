@@ -3,6 +3,7 @@
 import { motion, type Variants } from "framer-motion"
 import Link from "next/link"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
+import { MarketingAuthActions } from "@/components/marketing/MarketingAuthActions"
 import { CrtOverlay } from "@/components/themed/CrtOverlay"
 import { staggerContainer, staggerItem } from "@/styles/theme"
 
@@ -124,6 +125,7 @@ export function HeroSection() {
               >
                 Pricing
               </Link>
+              <MarketingAuthActions layout="inline" />
             </div>
           </motion.div>
 

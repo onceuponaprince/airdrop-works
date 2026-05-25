@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { QuestChain, type QuestStep } from "@/components/marketing/QuestChain"
 import { StepWallet } from "@/components/marketing/steps/StepWallet"
 import { StepEmail } from "@/components/marketing/steps/StepEmail"
@@ -8,7 +9,7 @@ import { StepTwitter } from "@/components/marketing/steps/StepTwitter"
 import { StepSubmit } from "@/components/marketing/steps/StepSubmit"
 import type { AccountAnalysis } from "@/types/api"
 import { events } from "@/lib/analytics"
-import { parseWaitlistIntent, type WaitlistSignupIntent } from "@/lib/waitlist-intent"
+import { parseWaitlistIntent } from "@/lib/waitlist-intent"
 
 const STORAGE_KEY = "airdrop_quest_state"
 const ADMIN_BYPASS_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_BYPASS ?? ""
@@ -53,26 +54,33 @@ function clearPersistedState() {
  * OAuth redirect (user leaves the page and comes back).
  */
 export function WaitlistForm() {
+  return (
+    <Suspense fallback={null}>
+      <WaitlistFormInner />
+    </Suspense>
+  )
+}
+
+function WaitlistFormInner() {
+  const searchParams = useSearchParams()
+  const signupIntent = parseWaitlistIntent(searchParams.get("intent"))
   const saved = loadPersistedState()
-  const [hydrated] = useState(() => typeof window !== "undefined")
+  // Mount-detection pattern. Must start `false` so the client's first render
+  // matches the server's null return below — otherwise React throws hydration
+  // error #418 ("expected HTML, got empty"). See:
+  // https://react.dev/reference/react-dom/client/hydrateRoot
+  const [hydrated, setHydrated] = useState(false)
+  useEffect(() => {
+    // Single-shot mount flip; intentional setState-in-effect for SSR-safe gating.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setHydrated(true)
+  }, [])
   const [currentStep, setCurrentStep] = useState<QuestStep>(saved?.currentStep ?? "wallet")
   const [completedSteps, setCompletedSteps] = useState<QuestStep[]>(saved?.completedSteps ?? [])
   const [walletAddress, setWalletAddress] = useState<string | null>(saved?.walletAddress ?? null)
   const [email, setEmail] = useState<string | null>(saved?.email ?? null)
   const [twitterHandle, setTwitterHandle] = useState<string | null>(saved?.twitterHandle ?? null)
   const [twitterScoreData, setTwitterScoreData] = useState<AccountAnalysis | null>(null)
-  const [signupIntent, setSignupIntent] = useState<WaitlistSignupIntent | undefined>(
-    undefined
-  )
-
-  useEffect(() => {
-    if (!hydrated) return
-    const intent = parseWaitlistIntent(
-      new URLSearchParams(window.location.search).get("intent")
-    )
-    setSignupIntent(intent)
-  }, [hydrated])
-
   // Hidden admin bypass — type the password anywhere on step 1 to skip to step 3.
   // Password is set via NEXT_PUBLIC_ADMIN_BYPASS env var.
   const [bypassBuffer, setBypassBuffer] = useState("")

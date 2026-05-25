@@ -21,51 +21,65 @@ export function useNotifications({
   enabled = true,
   pollInterval = 60000, // 1 minute polling as fallback
 }: UseNotificationsOptions) {
-  const store = useNotificationStore();
+  const items = useNotificationStore((s) => s.items);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const totalCount = useNotificationStore((s) => s.totalCount);
+  const isLoading = useNotificationStore((s) => s.isLoading);
+  const error = useNotificationStore((s) => s.error);
+  const wsConnected = useNotificationStore((s) => s.wsConnected);
+  const connectWebSocket = useNotificationStore((s) => s.connectWebSocket);
+  const disconnectWebSocket = useNotificationStore((s) => s.disconnectWebSocket);
+  const fetchNotifications = useNotificationStore((s) => s.fetchNotifications);
+  const syncUnreadCount = useNotificationStore((s) => s.syncUnreadCount);
+  const markRead = useNotificationStore((s) => s.markRead);
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
+  const deleteNotification = useNotificationStore((s) => s.deleteNotification);
+  const pushLocal = useNotificationStore((s) => s.pushLocal);
+  const clearRead = useNotificationStore((s) => s.clearRead);
 
   // Connect WebSocket when token available
   useEffect(() => {
     if (!enabled || !token) {
-      store.disconnectWebSocket();
+      disconnectWebSocket();
       return;
     }
 
-    const cleanup = store.connectWebSocket(token);
+    const cleanup = connectWebSocket(token);
 
     // Initial fetch
-    store.fetchNotifications();
+    fetchNotifications();
 
     return cleanup;
-  }, [token, enabled, store.connectWebSocket, store.disconnectWebSocket, store.fetchNotifications]);
+  }, [token, enabled, connectWebSocket, disconnectWebSocket, fetchNotifications]);
 
   // Periodic sync as fallback (in case WebSocket misses something)
   useEffect(() => {
     if (!enabled) return;
 
     const interval = setInterval(() => {
-      store.syncUnreadCount();
+      syncUnreadCount();
     }, pollInterval);
 
     return () => clearInterval(interval);
-  }, [enabled, pollInterval, store.syncUnreadCount]);
+  }, [enabled, pollInterval, syncUnreadCount]);
 
   // Convenience refresh function
   const refresh = useCallback(() => {
-    store.fetchNotifications();
-  }, [store.fetchNotifications]);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   return {
-    notifications: store.items,
-    unreadCount: store.unreadCount,
-    totalCount: store.totalCount,
-    isLoading: store.isLoading,
-    error: store.error,
-    wsConnected: store.wsConnected,
-    markRead: store.markRead,
-    markAllRead: store.markAllRead,
-    deleteNotification: store.deleteNotification,
+    notifications: items,
+    unreadCount,
+    totalCount,
+    isLoading,
+    error,
+    wsConnected,
+    markRead,
+    markAllRead,
+    deleteNotification,
     refresh,
-    pushLocal: store.pushLocal,
-    clearRead: store.clearRead,
+    pushLocal,
+    clearRead,
   };
 }

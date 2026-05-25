@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
+import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { ArcadeCard } from "@/components/themed/ArcadeCard"
@@ -126,6 +127,21 @@ export function StepSubmit({
             </div>
           </ArcadeCard>
         )}
+
+        <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+          <Link
+            href="/signup"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-sm border border-primary/40 text-primary font-mono text-xs uppercase tracking-widest hover:bg-primary/10 transition-colors"
+          >
+            Approved? Enter app
+          </Link>
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-sm border border-border text-muted-foreground font-mono text-xs uppercase tracking-widest hover:text-foreground hover:border-primary/40 transition-colors"
+          >
+            Log in
+          </Link>
+        </div>
       </motion.div>
     )
   }

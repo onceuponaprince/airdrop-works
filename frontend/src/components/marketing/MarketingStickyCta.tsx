@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
+import { MarketingAuthActions } from "@/components/marketing/MarketingAuthActions"
+import { useWeb3Auth } from "@/hooks/useWeb3Auth"
 import { cn } from "@/lib/utils"
 
 /** Mobile sticky bar: Demo | Waitlist — hidden when waitlist is in view. */
 export function MarketingStickyCta() {
   const [visible, setVisible] = useState(false)
   const [waitlistInView, setWaitlistInView] = useState(false)
+  const { isAuthenticated } = useWeb3Auth()
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 400)
@@ -40,18 +43,23 @@ export function MarketingStickyCta() {
         "safe-area-pb"
       )}
     >
-      <div className="flex gap-2 max-w-[480px] mx-auto">
-        <ArcadeButton
-          size="sm"
-          variant="secondary"
-          className="flex-1"
-          onClick={() => scrollTo("ai-judge-demo")}
-        >
-          Try Demo
-        </ArcadeButton>
-        <ArcadeButton size="sm" className="flex-1" onClick={() => scrollTo("waitlist")}>
-          Join Waitlist
-        </ArcadeButton>
+      <div className="flex gap-2 max-w-[480px] mx-auto items-center">
+        <MarketingAuthActions layout="sticky" fullWidth />
+        {!isAuthenticated && (
+          <>
+            <ArcadeButton
+              size="sm"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => scrollTo("ai-judge-demo")}
+            >
+              Try Demo
+            </ArcadeButton>
+            <ArcadeButton size="sm" className="flex-1" onClick={() => scrollTo("waitlist")}>
+              Join Waitlist
+            </ArcadeButton>
+          </>
+        )}
       </div>
     </div>
   )

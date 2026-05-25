@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "pnpm exec eslint .",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
     "test": "vitest",
@@ -82,7 +82,7 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --fix",
+      "pnpm exec eslint --fix",
       "prettier --write"
     ],
     "*.{json,md,css}": [

@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { parseEther } from 'viem';
 import { useSendTransaction } from 'wagmi';
 import { Connection, PublicKey, SystemProgram, Transaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { getInjectedSolanaProvider } from '@/lib/solana-wallet';
 
 export type DonateChain = 'base' | 'solana';
 
@@ -55,8 +56,7 @@ export function useDonate() {
     setState({ status: 'pending', txHash: null, error: null });
 
     try {
-      // Support Phantom, Solflare, and other injected providers
-      const provider = (window as any).solana || (window as any).phantom?.solana;
+      const provider = getInjectedSolanaProvider();
 
       if (!provider) {
         throw new Error('No Solana wallet detected. Please install Phantom or Solflare.');
@@ -74,6 +74,9 @@ export function useDonate() {
       const connection = new Connection(SOLANA_RPC_URL, 'confirmed');
 
       const publicKey = provider.publicKey || (await provider.connect()).publicKey;
+      if (!publicKey) {
+        throw new Error('Could not resolve Solana wallet public key. Please reconnect your wallet and try again.');
+      }
       const fromPubkey = new PublicKey(publicKey.toString());
       const toPubkey = new PublicKey(DONATION_ADDRESS_SOLANA);
 

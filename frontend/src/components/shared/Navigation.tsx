@@ -5,6 +5,7 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { Menu, X } from "lucide-react"
 import { Logo } from "@/components/shared/Logo"
+import { MarketingAuthActions } from "@/components/marketing/MarketingAuthActions"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { cn } from "@/lib/utils"
 import { mobileNavSlide } from "@/styles/theme"
@@ -61,7 +62,7 @@ export function Navigation() {
             ))}
           </nav>
 
-          {/* Desktop actions — primary: demo + waitlist; donate/login secondary */}
+          {/* Desktop actions — demo + waitlist primary; login/app bridge + donate secondary */}
           <div className="hidden md:flex items-center gap-3">
             <Link
               href="/donate"
@@ -70,6 +71,7 @@ export function Navigation() {
             >
               Support
             </Link>
+            <MarketingAuthActions layout="nav" />
             <ArcadeButton
               size="sm"
               variant="secondary"
@@ -142,6 +144,7 @@ export function Navigation() {
               </nav>
 
               <div className="mt-6 flex flex-col gap-2">
+                <MarketingAuthActions layout="nav" fullWidth className="w-full" />
                 <ArcadeButton
                   size="md"
                   variant="secondary"

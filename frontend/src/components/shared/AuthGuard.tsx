@@ -1,14 +1,14 @@
 /**
  * Client-side auth gate for the (app) route group.
  * Redirects to /login when no auth_token is found in localStorage.
- * Replaces the previous edge-middleware approach so the app works
- * with Next.js rewrites proxy on Vercel (no middleware needed).
+ * Redirects social-only users with incomplete onboarding to /onboarding.
  */
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
+import { needsOnboarding, type AuthUser } from '@/lib/onboarding';
 
 function getAuthStorage(): Storage | null {
   try {
@@ -21,7 +21,9 @@ function getAuthStorage(): Storage | null {
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [status, setStatus] = useState<'checking' | 'ok' | 'denied'>('checking');
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,8 +38,11 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
       api.setToken(token);
       try {
-        await api.get('/auth/me/');
-        if (!cancelled) setStatus('ok');
+        const profile = await api.get<AuthUser>('/auth/me/');
+        if (!cancelled) {
+          setUser(profile);
+          setStatus('ok');
+        }
       } catch {
         storage?.removeItem('auth_token');
         storage?.removeItem('refresh_token');
@@ -57,6 +62,21 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       router.replace('/login');
     }
   }, [status, router]);
+
+  useEffect(() => {
+    if (status !== 'ok' || !user) return;
+
+    const onOnboardingPage = pathname === '/onboarding';
+
+    if (needsOnboarding(user) && !onOnboardingPage) {
+      router.replace('/onboarding');
+      return;
+    }
+
+    if (!needsOnboarding(user) && onOnboardingPage) {
+      router.replace('/dashboard');
+    }
+  }, [status, user, pathname, router]);
 
   if (status !== 'ok') {
     return (

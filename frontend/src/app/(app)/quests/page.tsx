@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { staggerContainer, staggerItem } from '@/lib/animations';
@@ -58,6 +58,17 @@ export default function QuestsPage() {
   });
 
   const questList = useMemo(() => quests.data ?? [], [quests.data]);
+  const [now] = useState(() => Date.now());
+
+  const questStatus = useCallback(
+    (quest: Quest): 'available' | 'in_progress' | 'completed' => {
+      const ended = quest.endDate && new Date(quest.endDate).getTime() < now;
+      if (ended) return 'completed';
+      if (inProgressIds[quest.id]) return 'in_progress';
+      return 'available';
+    },
+    [now, inProgressIds],
+  );
 
   return (
     <motion.main className="flex-1 space-y-8 overflow-y-auto p-6" initial="initial" animate="animate" variants={staggerContainer}>
@@ -86,13 +97,7 @@ export default function QuestsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {questList.map((quest) => {
-              const now = Date.now();
-              const ended = quest.endDate && new Date(quest.endDate).getTime() < now;
-              const status: 'available' | 'in_progress' | 'completed' = ended
-                ? 'completed'
-                : inProgressIds[quest.id]
-                  ? 'in_progress'
-                  : 'available';
+              const status = questStatus(quest);
               return (
                 <QuestCard
                   key={quest.id}

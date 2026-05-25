@@ -114,6 +114,14 @@ python manage.py createsuperuser
 - **[RUNBOOK.md](RUNBOOK.md)** — Operational runbook
 - **[contracts/DEPLOYMENT.md](contracts/DEPLOYMENT.md)** — Smart contract deployment
 
+### Testing & release validation
+
+- **[docs/qa-and-user-flow.md](docs/qa-and-user-flow.md)** — Canonical waitlist user flow + manual QA / release-validation checklist (operator runbook)
+- **[docs/QA_GUIDE.md](docs/QA_GUIDE.md)** — Technical seed-data setup for app surfaces (Django, JWT, fake wallets)
+- **[docs/AIRDROP_WORKS_QA_ONBOARDING.md](docs/AIRDROP_WORKS_QA_ONBOARDING.md)** — Human-facing tester onboarding for the logged-in product
+- **[docs/qa-fixtures/](docs/qa-fixtures/)** — JSON fixtures + test identities for the integrity/allocate admin path
+- **[docs/qa-findings/](docs/qa-findings/)** — Per-session QA findings logs
+
 ## Environment Variables
 
 All variables live in a single root `.env` file. See `.env.example` for the full list. Minimum required:

@@ -5,6 +5,14 @@ from common.models import BaseModel
 
 BRANCH_XP_FIELDS = ["educator_xp", "builder_xp", "creator_xp", "scout_xp", "diplomat_xp"]
 
+BRANCH_CHOICES = [
+    ("educator", "Educator"),
+    ("builder", "Builder"),
+    ("creator", "Creator"),
+    ("scout", "Scout"),
+    ("diplomat", "Diplomat"),
+]
+
 
 class Profile(BaseModel):
     user = models.OneToOneField(
@@ -23,6 +31,17 @@ class Profile(BaseModel):
         help_text="Map of node_id → ISO timestamp of when unlocked.",
     )
     rank = models.IntegerField(null=True, blank=True, db_index=True)
+    preferred_branch = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        choices=BRANCH_CHOICES,
+        help_text="User-selected branch during onboarding (used until XP accrues).",
+    )
+    onboarding_completed = models.BooleanField(
+        default=False,
+        help_text="True once the user finishes or skips social-only onboarding.",
+    )
 
     class Meta:
         db_table = "profiles"
@@ -40,4 +59,6 @@ class Profile(BaseModel):
             "scout": self.scout_xp,
             "diplomat": self.diplomat_xp,
         }
+        if max(branches.values()) == 0 and self.preferred_branch:
+            return self.preferred_branch
         return max(branches, key=branches.get)

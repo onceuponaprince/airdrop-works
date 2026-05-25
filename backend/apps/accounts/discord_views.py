@@ -1,4 +1,4 @@
-"""Discord OAuth linking and channel preferences."""
+"""Discord OAuth linking and primary login."""
 
 from __future__ import annotations
 
@@ -14,12 +14,18 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.accounts.social_login_helpers import (
+    frontend_redirect,
+    redirect_with_jwt,
+    resolve_social_user,
+)
+
 from .discord_oauth import (
     build_discord_authorize_url,
     exchange_discord_code_for_tokens,
     fetch_discord_user,
 )
-from .models import DiscordConnection, User
+from .models import DiscordConnection
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +41,7 @@ def _callback_url() -> str:
 
 
 def _frontend_redirect(path: str = "/sources") -> str:
-    base = str(settings.FRONTEND_URL or "http://localhost:3000").rstrip("/")
-    return f"{base}{path}"
+    return frontend_redirect(path)
 
 
 def _discord_avatar_url(user_data: dict) -> str:
@@ -49,14 +54,28 @@ def _discord_avatar_url(user_data: dict) -> str:
 
 
 class DiscordOAuthStartView(APIView):
-    """Begin Discord OAuth linking for the signed-in user."""
+    """Begin Discord OAuth — link (JWT) or login (public)."""
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        redirect_after = request.query_params.get("redirect_uri") or _frontend_redirect(
-            "/sources?discord=connected"
-        )
+        mode = request.query_params.get("mode", "link")
+        if mode == "login":
+            redirect_after = request.query_params.get("redirect_uri") or _frontend_redirect("/login")
+        else:
+            redirect_after = request.query_params.get("redirect_uri") or _frontend_redirect(
+                "/sources?discord=connected"
+            )
+
+        user_id = None
+        if request.user.is_authenticated:
+            user_id = str(request.user.id)
+        elif mode != "login":
+            return Response(
+                {"detail": "Sign in first or use mode=login"},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
         state = secrets.token_urlsafe(32)
         callback = _callback_url()
 
@@ -70,10 +89,14 @@ class DiscordOAuthStartView(APIView):
 
         cache.set(
             f"{CACHE_PREFIX}{state}",
-            {"user_id": str(request.user.id), "redirect_uri": redirect_after},
+            {
+                "user_id": user_id,
+                "redirect_uri": redirect_after,
+                "mode": mode,
+            },
             CACHE_TTL,
         )
-        return Response({"authorizeUrl": authorize_url, "state": state})
+        return Response({"authorizeUrl": authorize_url, "state": state, "mode": mode})
 
 
 class DiscordOAuthCallbackView(APIView):
@@ -103,7 +126,6 @@ class DiscordOAuthCallbackView(APIView):
             )
 
         try:
-            user = User.objects.get(id=session["user_id"])
             token_payload = exchange_discord_code_for_tokens(
                 code=code,
                 redirect_uri=_callback_url(),
@@ -112,7 +134,7 @@ class DiscordOAuthCallbackView(APIView):
             refresh_token = token_payload.get("refresh_token", "")
             expires_in = int(token_payload.get("expires_in") or 0)
             discord_user = fetch_discord_user(access_token)
-        except (User.DoesNotExist, ValueError) as exc:
+        except ValueError as exc:
             logger.error("[DiscordOAuth] callback failed: %s", exc)
             return HttpResponseRedirect(
                 _frontend_redirect("/sources?discord=error&reason=token_exchange")
@@ -125,6 +147,17 @@ class DiscordOAuthCallbackView(APIView):
             return HttpResponseRedirect(
                 _frontend_redirect("/sources?discord=error&reason=no_user")
             )
+
+        user, _created = resolve_social_user(
+            session,
+            connection_model=DiscordConnection,
+            platform_id_field="discord_user_id",
+            platform_user_id=discord_user_id,
+            username=username,
+            username_prefix="dc",
+            display_name=display_name,
+            avatar_url=_discord_avatar_url(discord_user),
+        )
 
         expires_at = None
         if expires_in:
@@ -144,6 +177,10 @@ class DiscordOAuthCallbackView(APIView):
                 "metadata": {"oauth": True},
             },
         )
+
+        if session.get("mode") == "login":
+            session["provider"] = "discord"
+            return HttpResponseRedirect(redirect_with_jwt(session, user, default_path="/login"))
 
         redirect_after = session.get("redirect_uri") or _frontend_redirect(
             "/sources?discord=connected"

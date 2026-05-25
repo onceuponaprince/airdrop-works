@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { useDonate, type DonateChain } from '@/hooks/useDonate';
 import { events } from '@/lib/analytics';
+import { getInjectedSolanaProvider } from '@/lib/solana-wallet';
 
 const BASE_PRESETS = [
   { label: '0.01 ETH', value: '0.01' },
@@ -140,7 +141,7 @@ export default function DonatePage() {
               ) : (
                 <button
                   onClick={async () => {
-                    const provider = (window as any).solana || (window as any).phantom?.solana;
+                    const provider = getInjectedSolanaProvider();
                     if (provider) {
                       try {
                         const resp = await provider.connect();

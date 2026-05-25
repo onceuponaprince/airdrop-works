@@ -9,18 +9,20 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { AuthTokens, Profile } from '@/types/api';
+import type { AuthUser } from '@/lib/onboarding';
+import type { AuthTokens } from '@/types/api';
 
 interface AuthState {
   isAuthenticated: boolean;
   token: string | null;
-  user: Profile | null;
+  user: AuthUser | null;
   loading: boolean;
   error: Error | null;
 }
 
 export function useWeb3Auth(): AuthState & {
   login: (walletAddress: string, message: string, signature: string) => Promise<void>;
+  applySession: (access: string, refresh: string) => void;
   logout: () => void;
 } {
   const [token, setToken] = useState<string | null>(() => {
@@ -30,15 +32,23 @@ export function useWeb3Auth(): AuthState & {
   const [error, setError] = useState<Error | null>(null);
   const [isAuthActionLoading, setIsAuthActionLoading] = useState(false);
 
-  const { data: user, isLoading: userLoading } = useQuery<Profile | null>({
+  const { data: user, isLoading: userLoading } = useQuery<AuthUser | null>({
     queryKey: ['auth', 'profile'],
     queryFn: async () => {
       if (!token) return null;
       api.setToken(token);
-      return api.get<Profile>('/auth/me/');
+      return api.get<AuthUser>('/auth/me/');
     },
     enabled: token !== null,
   });
+
+  const applySession = (access: string, refresh: string) => {
+    localStorage.setItem('auth_token', access);
+    localStorage.setItem('refresh_token', refresh);
+    api.setToken(access);
+    setToken(access);
+    setError(null);
+  };
 
   const login = async (walletAddress: string, message: string, signature: string) => {
     try {
@@ -84,5 +94,5 @@ export function useWeb3Auth(): AuthState & {
     [token, user, userLoading, isAuthActionLoading, error]
   );
 
-  return { ...state, login, logout };
+  return { ...state, login, applySession, logout };
 }

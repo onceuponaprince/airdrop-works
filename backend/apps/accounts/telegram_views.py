@@ -5,34 +5,68 @@ Telegram connection views — deep link + secure token linking + production webh
 from __future__ import annotations
 
 from django.utils import timezone
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.accounts.models import TelegramConnection
+from apps.accounts.models import TelegramConnection, User
+from apps.accounts.social_login_helpers import resolve_social_user
+from apps.accounts.views import get_tokens_for_user
+from apps.payments.services import get_or_create_user_sub
+
 from .telegram_oauth import (
-    generate_telegram_link_token,
-    consume_telegram_link_token,
     build_telegram_deep_link,
+    complete_telegram_login_poll,
+    consume_telegram_link_token,
+    generate_telegram_link_token,
+    get_telegram_login_poll,
 )
 
 
 class TelegramDeepLinkView(APIView):
     """
     Returns a secure deep link the user can click.
-    The link contains a short-lived token instead of the raw user ID.
+    Link mode requires auth; login mode is public and returns pollKey for JWT polling.
     """
-    permission_classes = [IsAuthenticated]
+
+    permission_classes = [AllowAny]
 
     def get(self, request):
-        token = generate_telegram_link_token(request.user.id)
-        deep_link = build_telegram_deep_link(token)
+        mode = request.query_params.get("mode", "link")
+
+        if mode == "login":
+            token, poll_key = generate_telegram_link_token(None, mode="login")
+        else:
+            if not request.user.is_authenticated:
+                return Response({"detail": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED)
+            token, poll_key = generate_telegram_link_token(request.user.id, mode="link")
 
         return Response({
-            "deepLink": deep_link,
-            "instructions": "Click the link to open Telegram and start the bot. Your account will be linked automatically.",
+            "deepLink": build_telegram_deep_link(token),
+            "pollKey": poll_key,
+            "mode": mode,
+            "instructions": "Open Telegram and start the bot to complete linking.",
             "expiresInMinutes": 10,
         })
+
+
+class TelegramLoginPollView(APIView):
+    """Poll for Telegram login completion after the user starts the bot."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        poll_key = request.query_params.get("poll_key", "").strip()
+        if not poll_key:
+            return Response({"detail": "poll_key is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        payload = get_telegram_login_poll(poll_key)
+        if not payload:
+            return Response({"status": "expired"}, status=status.HTTP_404_NOT_FOUND)
+        if payload.get("status") == "complete":
+            return Response(payload)
+        return Response({"status": "pending"})
 
 
 class TelegramLinkView(APIView):
@@ -48,7 +82,8 @@ class TelegramLinkView(APIView):
         "avatar_url": "https://..."
     }
     """
-    permission_classes = [AllowAny]  # Bot calls this without user session
+
+    permission_classes = [AllowAny]
     throttle_scope = "telegram_link"
 
     def post(self, request):
@@ -61,20 +96,38 @@ class TelegramLinkView(APIView):
         if not token or not tg_user_id:
             return Response({"detail": "link_token and telegram_user_id are required"}, status=400)
 
-        user_id = consume_telegram_link_token(token)
-        if not user_id:
+        session = consume_telegram_link_token(token)
+        if not session:
             return Response({"detail": "Invalid or expired link token"}, status=400)
 
-        from apps.accounts.models import User
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({"detail": "User not found"}, status=404)
+        mode = session.get("mode", "link")
+        tg_user_id = str(tg_user_id)
+
+        if mode == "login":
+            user, created = resolve_social_user(
+                session,
+                connection_model=TelegramConnection,
+                platform_id_field="telegram_user_id",
+                platform_user_id=tg_user_id,
+                username=username or tg_user_id,
+                username_prefix="tg",
+                display_name=display_name or username,
+                avatar_url=avatar_url,
+            )
+        else:
+            user_id = session.get("user_id")
+            if not user_id:
+                return Response({"detail": "Invalid link session"}, status=400)
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return Response({"detail": "User not found"}, status=404)
+            created = False
 
         TelegramConnection.objects.update_or_create(
-            user=user,
+            telegram_user_id=tg_user_id,
             defaults={
-                "telegram_user_id": str(tg_user_id),
+                "user": user,
                 "telegram_username": username,
                 "display_name": display_name,
                 "avatar_url": avatar_url,
@@ -82,8 +135,16 @@ class TelegramLinkView(APIView):
             },
         )
 
+        if mode == "login":
+            poll_key = session.get("poll_key")
+            if poll_key:
+                tokens = get_tokens_for_user(user)
+                get_or_create_user_sub(user)
+                complete_telegram_login_poll(poll_key, tokens["access"], tokens["refresh"])
+
         return Response({
             "status": "linked",
+            "created": created,
             "message": "Telegram account connected successfully.",
         })
 
@@ -108,22 +169,21 @@ class TelegramWebhookView(APIView):
 
     This + the deep-link flow gives a complete "connect Telegram → post anywhere the bot can see → earn points" experience.
     """
+
     permission_classes = [AllowAny]
-    throttle_scope = "telegram_webhook"  # bounded via DEFAULT_THROTTLE_RATES in settings
+    throttle_scope = "telegram_webhook"
 
     def post(self, request):
-        from django.conf import settings
-        from django.utils import timezone as dj_timezone
         import time
 
-        # Secret validation (defense in depth)
+        from django.conf import settings
+
         received_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
         expected_secret = getattr(settings, "TELEGRAM_WEBHOOK_SECRET", "")
         if expected_secret and received_secret != expected_secret:
             return Response({"ok": True})
 
         update = request.data or {}
-        # Primary sources of user-generated content the bot can observe
         message = update.get("message") or update.get("channel_post")
         if not isinstance(message, dict):
             return Response({"ok": True})
@@ -153,8 +213,8 @@ class TelegramWebhookView(APIView):
 
         platform_content_id = f"tg:{chat_id or 'dm'}:{msg_id}" if msg_id else f"tg:{tg_user_id}:{int(time.time())}"
 
-        from apps.contributions.models import Contribution
         from apps.ai_core.tasks import score_contribution_task
+        from apps.contributions.models import Contribution
 
         contribution, created = Contribution.objects.get_or_create(
             platform="telegram",
@@ -168,7 +228,7 @@ class TelegramWebhookView(APIView):
 
         if created:
             score_contribution_task.delay(str(contribution.id))
-            conn.last_synced_at = dj_timezone.now()
+            conn.last_synced_at = timezone.now()
             conn.last_error = ""
             conn.save(update_fields=["last_synced_at", "last_error", "updated_at"])
 
