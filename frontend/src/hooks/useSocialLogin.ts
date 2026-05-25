@@ -6,7 +6,7 @@ import { api } from "@/lib/api"
 const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ?? process.env.BACKEND_URL ?? "http://localhost:8001"
 
-type SocialProvider = "twitter" | "discord" | "telegram"
+type SocialProvider = "twitter" | "discord" | "telegram" | "github"
 
 function loginRedirectUri() {
   return typeof window !== "undefined"
@@ -14,7 +14,7 @@ function loginRedirectUri() {
     : "http://localhost:3000/login"
 }
 
-async function startOAuth(provider: "twitter" | "discord") {
+async function startOAuth(provider: "twitter" | "discord" | "github") {
   const params = new URLSearchParams({
     mode: "login",
     redirect_uri: loginRedirectUri(),
@@ -112,7 +112,7 @@ export function consumeSocialLoginCallback(
 ): boolean {
   if (typeof window === "undefined") return false
   const params = new URLSearchParams(window.location.search)
-  const provider = ["twitter", "discord"].find((p) => params.get(p) === "login")
+  const provider = ["twitter", "discord", "github"].find((p) => params.get(p) === "login")
   const access = params.get("access")
   const refresh = params.get("refresh")
   if (!provider || !access) return false

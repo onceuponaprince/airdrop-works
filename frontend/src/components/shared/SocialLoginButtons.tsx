@@ -10,6 +10,7 @@ type SocialLoginButtonsProps = {
 const PROVIDERS = [
   { id: "twitter" as const, label: "Continue with X" },
   { id: "discord" as const, label: "Continue with Discord" },
+  { id: "github" as const, label: "Continue with GitHub" },
   { id: "telegram" as const, label: "Continue with Telegram" },
 ]
 

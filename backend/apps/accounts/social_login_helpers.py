@@ -44,6 +44,7 @@ def resolve_social_user(
     username_prefix: str,
     display_name: str = "",
     avatar_url: str = "",
+    connection_extra_filter: dict | None = None,
 ) -> tuple[User, bool]:
     """
     Link mode: attach to session user_id.
@@ -56,6 +57,8 @@ def resolve_social_user(
         return user, False
 
     lookup = {platform_id_field: platform_user_id}
+    if connection_extra_filter:
+        lookup.update(connection_extra_filter)
     existing = connection_model.objects.filter(**lookup).select_related("user").first()
     if existing:
         return existing.user, False
