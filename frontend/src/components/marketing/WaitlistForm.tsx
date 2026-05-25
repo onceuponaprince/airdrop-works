@@ -46,8 +46,8 @@ function clearPersistedState() {
 
 /**
  * Waitlist signup orchestrator — a 4-step quest chain:
- *   1. Connect wallet (mandatory)
- *   2. Verify email (6-digit OTP)
+ *   1. Verify email (6-digit OTP)
+ *   2. Connect wallet (optional — skip allowed)
  *   3. Connect Twitter (optional — OAuth 2.0 PKCE, skip allowed)
  *   4. Claim your score (submit to Supabase)
  *
@@ -76,7 +76,7 @@ function WaitlistFormInner() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setHydrated(true)
   }, [])
-  const [currentStep, setCurrentStep] = useState<QuestStep>(saved?.currentStep ?? "wallet")
+  const [currentStep, setCurrentStep] = useState<QuestStep>(saved?.currentStep ?? "email")
   const [completedSteps, setCompletedSteps] = useState<QuestStep[]>(saved?.completedSteps ?? [])
   const [walletAddress, setWalletAddress] = useState<string | null>(saved?.walletAddress ?? null)
   const [email, setEmail] = useState<string | null>(saved?.email ?? null)
@@ -94,7 +94,7 @@ function WaitlistFormInner() {
       if (next === ADMIN_BYPASS_PASSWORD) {
         setWalletAddress("0xADMIN")
         setEmail("admin@airdrop.works")
-        setCompletedSteps(["wallet", "email"])
+        setCompletedSteps(["email", "wallet"])
         setCurrentStep("twitter")
         setBypassBuffer("")
       }
@@ -123,7 +123,7 @@ function WaitlistFormInner() {
   const goBackTo = (step: QuestStep) => {
     // Remove the target step (and anything after it) from completedSteps
     // so the user can redo it
-    const stepOrder: QuestStep[] = ["wallet", "email", "twitter", "submit"]
+    const stepOrder: QuestStep[] = ["email", "wallet", "twitter", "submit"]
     const targetIdx = stepOrder.indexOf(step)
     setCompletedSteps(prev => prev.filter(s => stepOrder.indexOf(s) < targetIdx))
     setCurrentStep(step)
@@ -134,23 +134,23 @@ function WaitlistFormInner() {
 
   return (
     <QuestChain currentStep={currentStep} completedSteps={completedSteps}>
-      {currentStep === "wallet" && (
-        <StepWallet
-          onComplete={(address) => {
-            setWalletAddress(address)
-            completeStep("wallet", "email")
+      {currentStep === "email" && (
+        <StepEmail
+          onComplete={(verifiedEmail) => {
+            setEmail(verifiedEmail)
+            completeStep("email", "wallet")
           }}
         />
       )}
 
-      {currentStep === "email" && (
-        <StepEmail
-          walletFirstFlow
-          onComplete={(verifiedEmail) => {
-            setEmail(verifiedEmail)
-            completeStep("email", "twitter")
+      {currentStep === "wallet" && (
+        <StepWallet
+          onComplete={(address) => {
+            setWalletAddress(address)
+            completeStep("wallet", "twitter")
           }}
-          onBack={() => goBackTo("wallet")}
+          onSkip={() => completeStep("wallet", "twitter")}
+          onBack={() => goBackTo("email")}
         />
       )}
 
@@ -166,9 +166,9 @@ function WaitlistFormInner() {
         />
       )}
 
-      {currentStep === "submit" && walletAddress && email && (
+      {currentStep === "submit" && email && (
         <StepSubmit
-          walletAddress={walletAddress}
+          walletAddress={walletAddress ?? undefined}
           email={email}
           twitterHandle={twitterHandle ?? undefined}
           twitterScoreData={twitterScoreData ?? undefined}

@@ -17,7 +17,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
-    "test:e2e:ci": "E2E_PORT=3001 playwright test --reporter=list"
+    "test:e2e:ci": "E2E_PORT=3011 CI=1 playwright test --reporter=list"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

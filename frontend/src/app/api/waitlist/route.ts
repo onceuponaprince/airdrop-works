@@ -6,6 +6,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { Resend } from "resend"
 import { checkWaitlistIpRateLimit } from "@/lib/waitlist-ip-rate-limit"
 import {
+  buildFakeWaitlistSuccess,
+  isBotSubmission,
+} from "@/lib/waitlist-bot-guard"
+import {
   insertWaitlistEntry,
   buildReferralUrl,
   WAITLIST_WALLET_CONFLICT,
@@ -51,6 +55,7 @@ export async function POST(req: NextRequest) {
     primaryBranch?: string
     referralCode?: string
     honeypot?: string
+    formStartedAt?: number
     twitterHandle?: string
     twitterScoreData?: Record<string, unknown>
     signupIntent?: string
@@ -61,16 +66,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
   }
 
-  // Honeypot check — the hidden "website" field is invisible to real users.
-  // If it has a value, a bot filled it in. Return a fake success so the bot
-  // thinks it worked, but don't insert anything into Supabase.
-  if (body.honeypot) {
-    return NextResponse.json({
-      rank: Math.floor(Math.random() * 500) + 100,
-      referralCode: "bot-" + Math.random().toString(36).slice(2, 8),
-      referralUrl: "https://airdrop.works",
-      alreadyExists: false,
+  const siteBase =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://airdrop.works"
+
+  // Bot trap: honeypot, timing, or suspicious UA → fake 200, no Supabase insert.
+  if (
+    isBotSubmission({
+      honeypot: body.honeypot,
+      formStartedAt: body.formStartedAt,
+      userAgent: req.headers.get("user-agent"),
     })
+  ) {
+    return NextResponse.json(buildFakeWaitlistSuccess(siteBase))
   }
 
   const email = body.email?.toLowerCase().trim()
@@ -126,8 +133,6 @@ export async function POST(req: NextRequest) {
   }
 
   const referralUrl = buildReferralUrl(result.referralCode)
-  const siteBase =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "https://airdrop.works"
   const walletForEmail = walletForEntry ?? null
 
   if (!result.alreadyExists) {

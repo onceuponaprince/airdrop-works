@@ -12,6 +12,7 @@ interface WaitlistFormData {
   primaryBranch?:    Branch
   referralCode?:     string   // from ?ref= query param
   honeypot?:         string   // hidden field — if filled, request is from a bot
+  formStartedAt?:    number   // ms timestamp when submit step mounted (timing trap)
   twitterHandle?:    string
   twitterScoreData?: Record<string, unknown>
   /** Segmentation tag — stored in Supabase `source` (e.g. campaign_integrity_pilot) */
@@ -59,6 +60,7 @@ export function useWaitlist() {
           primaryBranch:    data.primaryBranch || undefined,
           referralCode:     refCode,
           honeypot:         data.honeypot || undefined,
+          formStartedAt:    data.formStartedAt,
           twitterHandle:    data.twitterHandle || undefined,
           twitterScoreData: data.twitterScoreData || undefined,
           signupIntent:     data.signupIntent || undefined,

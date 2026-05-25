@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
@@ -17,7 +17,7 @@ import {
 import type { AccountAnalysis } from "@/types/api"
 
 interface StepSubmitProps {
-  walletAddress: string
+  walletAddress?: string
   email: string
   twitterHandle?: string
   twitterScoreData?: AccountAnalysis
@@ -39,6 +39,7 @@ export function StepSubmit({
   const inboundReferralCode = useReferral()
   const [honeypot, setHoneypot] = useState("")
   const [copied, setCopied] = useState(false)
+  const formStartedAt = useRef(Date.now())
 
   // Notify parent when submission succeeds so it can clear persisted state
   useEffect(() => {
@@ -63,9 +64,10 @@ export function StepSubmit({
 
     submit({
       email,
-      walletAddress,
+      walletAddress: walletAddress || undefined,
       referralCode: inboundReferralCode || undefined,
       honeypot: honeypot || undefined,
+      formStartedAt: formStartedAt.current,
       twitterHandle,
       twitterScoreData: scoreDataForDb,
       signupIntent,
@@ -97,7 +99,9 @@ export function StepSubmit({
               : "We'll ping you when scoring goes live. Check your email."}
           </p>
           <p className="font-mono text-[10px] text-primary">
-            Wallet linked → beta access reserved.
+            {walletAddress
+              ? "Wallet linked → beta access reserved."
+              : "Link your wallet later for beta priority access."}
           </p>
         </ArcadeCard>
 
@@ -161,12 +165,14 @@ export function StepSubmit({
       </p>
 
       <div className="space-y-2 text-xs">
-        <div className="flex justify-between items-center py-2 border-b border-border">
-          <span className="font-mono text-muted-foreground uppercase tracking-widest">Wallet</span>
-          <code className="font-mono text-primary">
-            {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
-          </code>
-        </div>
+        {walletAddress && (
+          <div className="flex justify-between items-center py-2 border-b border-border">
+            <span className="font-mono text-muted-foreground uppercase tracking-widest">Wallet</span>
+            <code className="font-mono text-primary">
+              {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+            </code>
+          </div>
+        )}
         <div className="flex justify-between items-center py-2 border-b border-border">
           <span className="font-mono text-muted-foreground uppercase tracking-widest">Email</span>
           <span className="font-body text-foreground">{email}</span>
