@@ -5,7 +5,9 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from .allocation_service import classify_wallets
 from .console_service import build_console_appeals, build_console_overview, build_console_wallets
+from .policy_presets import DEFAULT_PRESET_KEY, get_preset
 
 
 class ConsoleOverviewThrottle(ScopedRateThrottle):
@@ -38,6 +40,17 @@ class ProtocolConsoleWalletsView(APIView):
             offset = int(request.query_params.get("offset", 0))
         except ValueError:
             return Response({"detail": "limit and offset must be integers."}, status=400)
+
+        preset = (request.query_params.get("preset") or "").strip() or None
+        if preset and get_preset(preset) is None:
+            return Response({"detail": f"Unknown preset: {preset}"}, status=400)
+
+        if preset:
+            rows = classify_wallets(None, preset)
+            total = len(rows)
+            page = rows[offset : offset + limit]
+            return Response({"count": total, "limit": limit, "offset": offset, "preset": preset, "results": page})
+
         return Response(build_console_wallets(limit=limit, offset=offset))
 
 

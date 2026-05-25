@@ -36,7 +36,7 @@ if os.environ.get("DJANGO_ENV") == "production" or _settings_mod.endswith(
 ):
     _load_backend_env_file(BASE_DIR / ".env.production")
 
-from decouple import config
+from decouple import config  # noqa: E402
 
 SECRET_KEY = config("SECRET_KEY", default="insecure-dev-key-change-in-production")
 
@@ -134,6 +134,16 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 AUTH_USER_MODEL = "accounts.User"
+
+QA_WALLET_LOGIN_ENABLED = config("QA_WALLET_LOGIN_ENABLED", default=False, cast=bool)
+QA_WALLET_LOGIN_SECRET = config("QA_WALLET_LOGIN_SECRET", default="")
+QA_WALLET_LOGIN_WALLETS = config(
+    "QA_WALLET_LOGIN_WALLETS",
+    default="",
+    cast=lambda v: [s.strip().lower() for s in v.split(",") if s.strip()],
+)
+
+ENFORCE_SIWE = config("ENFORCE_SIWE", default=False, cast=bool)
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

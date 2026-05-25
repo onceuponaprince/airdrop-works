@@ -7,14 +7,19 @@ from .models import DiscordConnection, TelegramConnection, TwitterConnection
 from .social_models import UserSocialAccount
 
 
-def _account_row(platform, username, display_name, connected_at, last_synced_at=None):
-    return {
+def _account_row(platform, username, display_name, connected_at, last_synced_at=None, *, last_error=None):
+    """Build one row for /auth/social/me/ (ISO timestamps serialized by DRF renderer)."""
+    row = {
         "platform": platform,
         "username": username or "",
         "display_name": display_name or username or "",
         "connected_at": connected_at,
         "last_synced_at": last_synced_at,
     }
+    message = (last_error or "").strip()
+    if message:
+        row["last_error"] = message[:500]
+    return row
 
 
 class ConnectSocialAccountView(APIView):
@@ -104,6 +109,7 @@ class MySocialAccountsView(APIView):
                 twitter.display_name,
                 twitter.created_at,
                 twitter.last_synced_at,
+                last_error=twitter.last_error,
             ))
             seen_platforms.add("twitter")
 
@@ -115,6 +121,7 @@ class MySocialAccountsView(APIView):
                 discord.display_name,
                 discord.created_at,
                 discord.last_synced_at,
+                last_error=discord.last_error,
             ))
             seen_platforms.add("discord")
 
@@ -126,6 +133,7 @@ class MySocialAccountsView(APIView):
                 telegram.display_name,
                 telegram.created_at,
                 telegram.last_synced_at,
+                last_error=telegram.last_error,
             ))
             seen_platforms.add("telegram")
 

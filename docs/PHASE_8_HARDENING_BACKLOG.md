@@ -16,16 +16,19 @@
 
 ## P1 — Test Coverage (Confidence & Regression Safety)
 
-- [x] Backend: pytest coverage for `TelegramWebhookView` (happy path linked user, unlinked user, dup delivery, secret validation, scoring enqueue) — see `apps/accounts/tests/test_campaign_social_views.py`
-- [x] Backend: tests for `UpdateDiscordChannelsView` + metadata persistence (same module)
+- [x] Backend: pytest coverage for `TelegramWebhookView` (linked user, unlinked, dup delivery, wrong/missing secret when configured, channel_post + caption-only, bare updates → no-op; scoring enqueue) — `apps/accounts/tests/test_campaign_social_views.py`
+- [x] Backend: tests for `UpdateDiscordChannelsView` + metadata persistence/merge (`oauth`/`guild_id` preserved) — same module
 - [x] Backend: tests for `SocialSyncService.sync_user_accounts` — `apps/accounts/tests/test_social_sync_service.py` (Discord channel path mocked, duplicates, crawl errors)
 - [x] Backend: tests for `MultiPlatformLeaderboardView` — `apps/leaderboard/tests/test_multi_platform_leaderboard.py`
-- [ ] Frontend: Playwright E2E for connecting Discord → configuring channels → seeing freshness; Telegram deep-link flow (mock where needed)
-- [x] Wired `test_campaign_social_views`, `test_social_sync_service`, `test_multi_platform_leaderboard` into `.github/workflows/ci.yml` Phase 2 slice
+- [x] Frontend: Playwright E2E — Discord channel save + mocked connected row/fresh sync line; Telegram deep-link from dashboard with `window.open` stub + mocked `/auth/telegram/start/` (`tests/e2e/journeys/social-connections.spec.ts`). Shared mocks extended in `tests/e2e/helpers/mockApi.ts`.
+- [x] Frontend: Playwright **`/sources` Twitter panel** (`tests/e2e/journeys/twitter-watch.spec.ts`) — disconnected + connected UI via `twitterMe` mock; verifies **Sync now** → `POST /auth/twitter/sync/` and **Watch enabled** checkbox → `PATCH /auth/twitter/me/` (`mockApi` merges PATCH into `twitterMe` state).
+- [x] Frontend: Playwright **`/sources` crawl form** (`tests/e2e/journeys/crawl-sources.spec.ts`) — empty crawl list shell; Reddit / Discord **`POST /contributions/crawl/<platform>/`** payloads; surfaced card + **`PATCH` pause** + **`POST .../sources/<id>/crawl/`** (“Run now”). `mockApi` fixes contributions routing so crawl endpoints are not swallowed by the list mock; adds **`GET /leaderboard/multi-platform/`** stub.
+- [x] Wired social/campaign test modules into `.github/workflows/ci.yml` Phase 2 slice (incl. `test_my_social_accounts.py`)
 
 ## P2 — Observability & Health
 
-- [ ] Expose richer connection health in `MySocialAccountsView` / `SocialAccountsPanel` (last_error, consecutive failures, “webhook last received”, freshness badges already partially there)
+- [x] Expose **`last_error`** on OAuth-backed rows in `MySocialAccountsView` + show in `SocialAccountsPanel` (truncated + title tooltip); manual `UserSocialAccount` rows unchanged. Tests: `test_my_social_accounts.py`.
+
 - [ ] Add a simple “Last webhook ping” or “Last successful ingest” timestamp on `TelegramConnection`
 - [ ] Celery task failure handling + alerting hooks for social sync / scoring jobs (or at least good logging + dead-letter patterns)
 - [ ] Admin dashboard visibility (already added Discord/TelegramConnection admins — enhance with “Trigger resync” action)
@@ -67,6 +70,6 @@
 - Update this file + `PHASE_8_CAMPAIGN_EXPANSION_PLAN.md` after each slice.
 - After hardening round, resume Wave 6 (GitHub + Reddit personal feeds).
 
-**Current focus (as of 2026-05-22):** P0 rate limiting on webhook + P1 test coverage for the two newest endpoints (Telegram webhook + Discord channels).
+**Current focus (as of 2026-05-23):** P2 observability (`TelegramConnection` ingest ping, Celery/alerting hooks) ahead of Wave 6.
 
-Next after hardening: GitHub/Reddit expansion (user priority 1).
+Next after hardening: GitHub/Reddit expansion (user priority).

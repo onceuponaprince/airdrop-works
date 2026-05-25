@@ -26,6 +26,7 @@ const CONSUMER_NAV: { label: string; href: string }[] = [
 ];
 
 const STAFF_NAV: { label: string; href: string }[] = [
+  { label: 'Integrity Console', href: '/console' },
   { label: 'Observability', href: '/observability' },
   { label: 'SPORE Lab', href: '/spore-lab' },
   { label: 'Onboarding', href: '/onboarding' },

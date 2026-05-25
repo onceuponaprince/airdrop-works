@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -13,7 +13,7 @@ import { useAppeals } from '@/hooks/useAppeals';
 import { ArcadeButton } from '@/components/themed/ArcadeButton';
 import { ArcadeCard } from '@/components/themed/ArcadeCard';
 import { ReputationCard } from '@/components/app/ReputationCard';
-import { AppealsPanel } from '@/components/app/AppealsPanel';
+import { AppealsPanel, AppealForm } from '@/components/app/AppealsPanel';
 import { SocialAccountsPanel } from '@/components/app/SocialAccountsPanel';
 import { CampaignLeaderboard } from '@/components/app/CampaignLeaderboard';
 import { StartEarningChecklist } from '@/components/app/StartEarningChecklist';
@@ -81,7 +81,8 @@ export default function DashboardPage() {
   // Reputation and Appeals integration
   const walletAddress = p?.walletAddress ?? null;
   const { bundle, isLoadingBundle, loadBundle } = useReputation(walletAddress);
-  const { appeals, isLoading: appealsLoading, refresh: refreshAppeals } = useAppeals();
+  const { appeals, isLoading: appealsLoading, refresh: refreshAppeals, fileAppeal, isSubmitting: appealSubmitting } = useAppeals();
+  const [appealingId, setAppealingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (walletAddress) {
@@ -244,12 +245,16 @@ export default function DashboardPage() {
             {contributions.data!.results.map((c) => (
               <div
                 key={c.id}
-                className="rounded-lg border border-[--border] bg-[--card] p-4 flex items-center justify-between gap-4"
+                className="rounded-lg border border-[--border] bg-[--card] p-4 space-y-3"
               >
+                <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate text-[--foreground]">{c.contentText}</p>
                   <p className="text-xs text-[--muted-foreground] mt-1">
                     {c.platform} · {c.scoredAt ? new Date(c.scoredAt).toLocaleDateString() : 'pending'}
+                    {c.farmingFlag ? (
+                      <span className="ml-2 capitalize">· {c.farmingFlag}</span>
+                    ) : null}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -260,6 +265,31 @@ export default function DashboardPage() {
                     +{c.xpAwarded} XP
                   </p>
                 </div>
+                </div>
+                {(c.farmingFlag === 'farming' || c.farmingFlag === 'ambiguous') && (
+                  <div>
+                    {appealingId === c.id ? (
+                      <AppealForm
+                        contributionId={c.id}
+                        isSubmitting={appealSubmitting}
+                        onCancel={() => setAppealingId(null)}
+                        onSubmit={async (reason) => {
+                          await fileAppeal({ contributionId: c.id, reason });
+                          setAppealingId(null);
+                          await refreshAppeals();
+                        }}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setAppealingId(c.id)}
+                        className="text-xs text-[--primary] hover:underline"
+                      >
+                        Dispute farming flag
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -280,6 +310,10 @@ export default function DashboardPage() {
             <AppealsPanel
               appeals={appeals}
               isLoading={appealsLoading}
+              onFileAppeal={async (contributionId, reason) => {
+                await fileAppeal({ contributionId, reason });
+                await refreshAppeals();
+              }}
               className="h-full"
             />
           </div>

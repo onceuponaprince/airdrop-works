@@ -1,0 +1,404 @@
+{
+  "info": {
+    "name": "AI(r)Drop Route Smoke Tests",
+    "description": "Postman/Newman smoke tests for public, authenticated, and admin AI(r)Drop API routes.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/health/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('health returns 200 or 503 with status payload', function () {",
+              "  pm.expect([200, 503]).to.include(pm.response.code);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.keys(['status', 'db', 'redis']);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wallet verify QA admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-QA-Auth-Secret",
+            "value": "{{qa_auth_secret}}"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/auth/wallet-verify/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "wallet-verify"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"wallet_address\": \"{{qa_admin_wallet}}\",\n  \"message\": \"dev-bypass\",\n  \"signature\": \"dev-bypass\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('wallet verify returns JWTs and user', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.access).to.be.a('string').and.not.empty;",
+              "  pm.expect(body.refresh).to.be.a('string').and.not.empty;",
+              "  pm.expect(body.user.walletAddress.toLowerCase()).to.eql(pm.environment.get('qa_admin_wallet').toLowerCase());",
+              "  pm.expect(body.user.isStaff).to.eql(true);",
+              "  pm.environment.set('access_token', body.access);",
+              "  pm.environment.set('refresh_token', body.refresh);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth me",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/auth/me/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('auth me returns serialized profile', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.property('walletAddress');",
+              "  pm.expect(body).to.have.property('isStaff');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Judge demo",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/judge/demo/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "judge",
+            "demo"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"This guide explains how contributors can submit useful proof of work and help a campaign community.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('judge demo returns score or clear unavailable error', function () {",
+              "  pm.expect([200, 503]).to.include(pm.response.code);",
+              "  const body = pm.response.json();",
+              "  if (pm.response.code === 200) { pm.expect(body).to.have.property('composite_score'); }",
+              "  if (pm.response.code === 503) { pm.expect(body).to.have.property('detail'); }",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quests list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/quests/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "quests"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('quests list is paginated', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.have.property('results').that.is.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leaderboard global",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/leaderboard/global/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "leaderboard",
+            "global"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('leaderboard list is paginated', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.have.property('results').that.is.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rubric CRUD list",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/judge/rubric/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "judge",
+            "rubric"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('rubric CRUD list serializes results', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.have.property('results').that.is.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Social accounts me",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/auth/social/me/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "social",
+            "me"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('social accounts route returns array', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contributions mine",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/contributions/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "contributions"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('contributions list is paginated', function () {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json()).to.have.property('results').that.is.an('array');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin overview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{access_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{api_base_url}}/api/v1/core/admin/overview/",
+          "host": [
+            "{{api_base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "core",
+            "admin",
+            "overview"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('admin overview returns metrics for QA admin', function () {",
+              "  pm.response.to.have.status(200);",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.property('users');",
+              "  pm.expect(body).to.have.property('scoredContributions');",
+              "  pm.expect(body).to.have.property('trackedPlatforms');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

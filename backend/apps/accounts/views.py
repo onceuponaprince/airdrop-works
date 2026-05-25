@@ -5,6 +5,7 @@ GDPR-style data export, and hard deletion. Spore, payments, and rewards models
 are aggregated in the export payload for a single downloadable snapshot.
 """
 
+import hmac
 import logging
 
 from django.db import transaction
@@ -65,16 +66,25 @@ class WalletVerifyView(APIView):
         signature = serializer.validated_data["signature"]
 
         try:
-            self._verify_signature(wallet_address, message, signature)
+            qa_bypass = self._verify_signature(request, wallet_address, message, signature)
         except WalletVerificationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user, created = User.objects.get_or_create(
-            wallet_address=wallet_address,
-            defaults={
-                "username": f"user_{wallet_address[:8]}",
-            },
-        )
+        if qa_bypass:
+            user = User.objects.filter(wallet_address=wallet_address, is_active=True).first()
+            if not user:
+                return Response(
+                    {"detail": "QA wallet is allowed but has not been seeded"},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+            created = False
+        else:
+            user, created = User.objects.get_or_create(
+                wallet_address=wallet_address,
+                defaults={
+                    "username": f"user_{wallet_address[:8]}",
+                },
+            )
 
         get_or_create_user_sub(user)
 
@@ -87,18 +97,23 @@ class WalletVerifyView(APIView):
             "created": created,
         })
 
-    def _verify_signature(self, wallet_address: str, message: str, signature: str):
-        """Verify SIWE via ``siwe``; ensure message address matches ``wallet_address``.
+    def _verify_signature(self, request, wallet_address: str, message: str, signature: str) -> bool:
+        """Verify SIWE or a tightly gated QA wallet bypass.
 
-        When ``DEBUG`` and not ``ENFORCE_SIWE``, verification is skipped so local
-        dev can proceed without full SIWE setup. Any failure raises
-        ``WalletVerificationError`` for a 401 response.
+        Local dev still skips SIWE when ``DEBUG`` and ``ENFORCE_SIWE`` is false.
+        Deployed fake-wallet QA requires all of: explicit enable flag, allowlisted
+        wallet, configured secret, and matching request secret. Returns ``True``
+        only when the QA bypass was used.
         """
         from django.conf import settings
 
+        if self._is_qa_wallet_bypass(request, wallet_address):
+            logger.warning("[Auth] QA wallet login bypass used for %s", wallet_address)
+            return True
+
         # Skip in dev if no verification configured
         if settings.DEBUG and not getattr(settings, "ENFORCE_SIWE", False):
-            return
+            return False
 
         try:
             from siwe import SiweMessage
@@ -108,6 +123,29 @@ class WalletVerifyView(APIView):
                 raise WalletVerificationError("Wallet address mismatch")
         except Exception as e:
             raise WalletVerificationError(f"Signature verification failed: {e}") from e
+        return False
+
+    def _is_qa_wallet_bypass(self, request, wallet_address: str) -> bool:
+        from django.conf import settings
+
+        if not getattr(settings, "QA_WALLET_LOGIN_ENABLED", False):
+            return False
+
+        allowed_wallets = set(getattr(settings, "QA_WALLET_LOGIN_WALLETS", []))
+        if wallet_address not in allowed_wallets:
+            return False
+
+        expected_secret = getattr(settings, "QA_WALLET_LOGIN_SECRET", "")
+        if not expected_secret:
+            return False
+
+        supplied_secret = (
+            request.headers.get("X-QA-Auth-Secret")
+            or request.data.get("qa_bypass_secret")
+            or request.data.get("qaBypassSecret")
+            or ""
+        )
+        return hmac.compare_digest(str(supplied_secret), str(expected_secret))
 
 
 class UserProfileView(APIView):

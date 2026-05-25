@@ -85,6 +85,18 @@ Phases 4–5 are **roadmapped, not deferred**. They follow Phase 3 because they 
 
 **Episode 2 research (start with Phase 2):** Platform BD (quest-platform embed) vs direct protocol outbound.
 
+**Phase 2 progress (2026-05-23):**
+
+- [x] Allocation policy presets (`airdrop_strict`, `grants_balanced`, `allowlist_genuine_only`)
+- [x] Tier + weight + rationale on staff export (`?preset=`)
+- [x] `POST /integrity/allocate/` batch classification
+- [x] Integrity Console UI at `/console` (staff)
+- [x] Contributor appeals from dashboard (farming-flagged contributions)
+- [x] `docs/integrity-api.md` pilot API reference
+- [ ] Protocol API keys / batch scoring without staff JWT
+- [ ] Passport/Trusta read-only identity signal stub
+- [ ] 1–2 paid pilots or signed LOIs (GTM exit)
+
 ---
 
 ## Phase 3 — Marketing judge

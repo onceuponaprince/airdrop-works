@@ -11,6 +11,8 @@ export interface SocialAccount {
   display_name?: string;
   connected_at: string;
   last_synced_at?: string;
+  /** Present when OAuth connection last reported a crawler/auth error */
+  last_error?: string;
 }
 
 const PLATFORM_LABELS: Record<SocialAccount['platform'], string> = {

@@ -1,8 +1,19 @@
-import { test, expect } from '@playwright/test'
+import { expect, test } from '@playwright/test'
+
 import { installApiV1Mocks, setAuthToken } from '../helpers/mockApi'
 
-test.describe('Twitter watch panel', () => {
-  test('sources page shows link X when disconnected', async ({ page }) => {
+const connectedTwitter = {
+  connected: true,
+  twitterUsername: 'demo_user',
+  displayName: 'Demo User',
+  watchEnabled: true,
+  useSeleniumFallback: false,
+  lastSyncedAt: new Date().toISOString(),
+  lastError: '',
+}
+
+test.describe('Twitter watch panel (/sources)', () => {
+  test('shows link X when disconnected', async ({ page }) => {
     await setAuthToken(page, 'e2e-token')
     await installApiV1Mocks(page, { token: 'e2e-token' })
 
@@ -13,25 +24,9 @@ test.describe('Twitter watch panel', () => {
     await expect(page.getByRole('button', { name: 'Login with X' })).toBeVisible()
   })
 
-  test('sources page shows connected state and live feed section', async ({ page }) => {
+  test('shows connected username, websocket line, and empty feed placeholder', async ({ page }) => {
     await setAuthToken(page, 'e2e-token')
-    await installApiV1Mocks(page, { token: 'e2e-token' })
-
-    await page.route('**/api/v1/auth/twitter/me/', async (route) => {
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          connected: true,
-          twitterUsername: 'demo_user',
-          displayName: 'Demo User',
-          watchEnabled: true,
-          useSeleniumFallback: false,
-          lastSyncedAt: new Date().toISOString(),
-          lastError: '',
-        }),
-      })
-    })
+    await installApiV1Mocks(page, { token: 'e2e-token', twitterMe: connectedTwitter })
 
     await page.goto('/sources')
 
@@ -39,5 +34,35 @@ test.describe('Twitter watch panel', () => {
     await expect(page.getByRole('button', { name: 'Sync now' })).toBeVisible()
     await expect(page.getByText(/WebSocket:/)).toBeVisible()
     await expect(page.getByText('Waiting for new tweets…')).toBeVisible()
+  })
+
+  test('Sync now POSTs /auth/twitter/sync/', async ({ page }) => {
+    await setAuthToken(page, 'e2e-token')
+    await installApiV1Mocks(page, { token: 'e2e-token', twitterMe: connectedTwitter })
+
+    await page.goto('/sources')
+    await expect(page.getByText('@demo_user')).toBeVisible()
+
+    const posted = page.waitForRequest((r) =>
+      r.url().includes('/api/v1/auth/twitter/sync/')
+      && r.method() === 'POST',
+    )
+    await page.getByRole('button', { name: 'Sync now' }).click()
+    await posted
+  })
+
+  test('toggling watch enabled PATCHes /auth/twitter/me/', async ({ page }) => {
+    await setAuthToken(page, 'e2e-token')
+    await installApiV1Mocks(page, { token: 'e2e-token', twitterMe: connectedTwitter })
+
+    await page.goto('/sources')
+
+    const patch = page.waitForRequest((r) =>
+      r.url().includes('/api/v1/auth/twitter/me/')
+      && r.method() === 'PATCH',
+    )
+    await page.getByRole('checkbox', { name: /Watch enabled/ }).click()
+    const req = await patch
+    expect(req.postDataJSON()).toMatchObject({ watchEnabled: false })
   })
 })

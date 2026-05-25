@@ -6,9 +6,12 @@ from .console_views import (
     ProtocolConsoleOverviewView,
     ProtocolConsoleWalletsView,
 )
+from .allocation_views import IntegrityAllocateView, IntegrityPolicyListView
 from .views import IntegrityExportView, IntegrityWalletView
 
 urlpatterns = [
+    path("policies/", IntegrityPolicyListView.as_view(), name="integrity_policies"),
+    path("allocate/", IntegrityAllocateView.as_view(), name="integrity_allocate"),
     path("appeals/", AppealCreateView.as_view(), name="integrity_appeal_create"),
     path("appeals/me/", MyAppealsView.as_view(), name="integrity_appeals_me"),
     path("appeals/<uuid:appeal_id>/", AppealDetailView.as_view(), name="integrity_appeal_detail"),

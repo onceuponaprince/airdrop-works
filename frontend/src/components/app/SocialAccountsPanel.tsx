@@ -172,6 +172,14 @@ export function SocialAccountsPanel() {
                         <> · Last synced {formatRelative(acc.last_synced_at)}</>
                       )}
                     </div>
+                    {acc.last_error?.trim() ? (
+                      <div
+                        className="text-[10px] text-[--destructive] truncate max-w-[min(100%,16rem)] mt-0.5"
+                        title={acc.last_error}
+                      >
+                        {acc.last_error}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 

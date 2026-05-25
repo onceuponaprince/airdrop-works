@@ -141,6 +141,7 @@ jobs:
           apps/accounts/tests/test_campaign_social_views.py
           apps/accounts/tests/test_social_sync_service.py
           apps/leaderboard/tests/test_multi_platform_leaderboard.py
+          apps/accounts/tests/test_my_social_accounts.py
           apps/integrity/tests/test_reputation_history.py
           apps/integrity/tests/test_reputation_export.py
           apps/integrity/tests/test_appeals.py

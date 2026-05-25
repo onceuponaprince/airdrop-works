@@ -138,6 +138,88 @@ class TestTelegramWebhookView:
         assert Contribution.objects.filter(platform_content_id="tg:-100123:7").count() == 1
         mock_delay.assert_not_called()
 
+    def test_missing_secret_header_when_configured_skips_ingest(self, user, settings):
+        settings.TELEGRAM_WEBHOOK_SECRET = "expected"
+        TelegramConnection.objects.create(
+            user=user,
+            telegram_user_id="777888999",
+            telegram_username="m",
+        )
+        client = APIClient()
+        payload = _telegram_update_payload(tg_user_id=777888999)
+
+        mock_delay = MagicMock()
+        with patch("apps.ai_core.tasks.score_contribution_task.delay", mock_delay):
+            response = client.post(reverse("telegram_webhook"), payload, format="json")
+
+        assert response.status_code == 200
+        assert Contribution.objects.count() == 0
+        mock_delay.assert_not_called()
+
+    def test_channel_post_creates_contribution(self, user, settings):
+        settings.TELEGRAM_WEBHOOK_SECRET = ""
+        tg_uid = "111222333"
+        TelegramConnection.objects.create(
+            user=user,
+            telegram_user_id=tg_uid,
+            telegram_username="poster",
+        )
+        payload = {
+            "update_id": 99,
+            "channel_post": {
+                "message_id": 505,
+                "from": {"id": int(tg_uid), "is_bot": False, "first_name": "Poster"},
+                "chat": {"id": -100999888, "type": "channel", "username": "samplechan"},
+                "date": 1,
+                "text": "channel news",
+            },
+        }
+        client = APIClient()
+        mock_delay = MagicMock()
+        with patch("apps.ai_core.tasks.score_contribution_task.delay", mock_delay):
+            response = client.post(reverse("telegram_webhook"), payload, format="json")
+
+        assert response.status_code == 200
+        c = Contribution.objects.get(platform_content_id="tg:-100999888:505")
+        assert "channel news" in c.content_text
+        assert "t.me/samplechan/505" in (c.content_url or "")
+        mock_delay.assert_called_once_with(str(c.id))
+
+    def test_photo_caption_used_when_no_text(self, user, settings):
+        settings.TELEGRAM_WEBHOOK_SECRET = ""
+        tg_uid = "444555666"
+        TelegramConnection.objects.create(
+            user=user,
+            telegram_user_id=tg_uid,
+            telegram_username="cam",
+        )
+        payload = {
+            "update_id": 3,
+            "message": {
+                "message_id": 12,
+                "from": {"id": int(tg_uid)},
+                "chat": {"id": -100555},
+                "photo": [{}],
+                "caption": "  pic says hi  ",
+            },
+        }
+        client = APIClient()
+        mock_delay = MagicMock()
+        with patch("apps.ai_core.tasks.score_contribution_task.delay", mock_delay):
+            client.post(reverse("telegram_webhook"), payload, format="json")
+
+        c = Contribution.objects.get(platform_content_id="tg:-100555:12")
+        assert "pic says hi" in c.content_text
+
+    def test_non_message_updates_ok_no_contribution(self, settings):
+        settings.TELEGRAM_WEBHOOK_SECRET = ""
+        mock_delay = MagicMock()
+        with patch("apps.ai_core.tasks.score_contribution_task.delay", mock_delay):
+            response = APIClient().post(reverse("telegram_webhook"), {"update_id": 1}, format="json")
+        assert response.status_code == 200
+        assert Contribution.objects.count() == 0
+        mock_delay.assert_not_called()
+
 
 @pytest.mark.django_db
 class TestUpdateDiscordChannelsView:
@@ -175,6 +257,28 @@ class TestUpdateDiscordChannelsView:
 
         conn = DiscordConnection.objects.get(user=user)
         assert conn.metadata.get("tracked_channels") == ["111", "222"]
+        assert conn.metadata.get("oauth") is True
+
+    def test_updates_tracked_while_preserving_other_metadata_keys(self, user):
+        DiscordConnection.objects.create(
+            user=user,
+            discord_user_id="9003",
+            discord_username="meta",
+            access_token="z",
+            metadata={"oauth": True, "guild_id": "abc", "tracked_channels": ["old"]},
+        )
+        client = APIClient()
+        client.force_authenticate(user=user)
+        response = client.post(
+            reverse("discord_update_channels"),
+            {"channel_ids": ["777"]},
+            format="json",
+        )
+        assert response.status_code == 200
+        conn = DiscordConnection.objects.get(user=user)
+        assert conn.metadata["tracked_channels"] == ["777"]
+        assert conn.metadata["guild_id"] == "abc"
+        assert conn.metadata["oauth"] is True
 
     def test_rejects_non_list_channel_ids(self, user):
         DiscordConnection.objects.create(

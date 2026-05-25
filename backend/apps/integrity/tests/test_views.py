@@ -95,10 +95,22 @@ class IntegrityExportViewTests(TestCase):
 
     def test_staff_json_export(self):
         self.client.force_authenticate(user=self.admin)
-        response = self.client.get(reverse("integrity_export"), {"format": "json"})
+        response = self.client.get(reverse("integrity_export"), {"output": "json"})
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(response.json()["count"], 1)
 
     def test_anonymous_export_forbidden(self):
         response = self.client.get(reverse("integrity_export"))
         self.assertEqual(response.status_code, 401)
+
+    def test_staff_csv_export_with_preset(self):
+        self.client.force_authenticate(user=self.admin)
+        response = self.client.get(
+            reverse("integrity_export"),
+            {"output": "csv", "preset": "grants_balanced"},
+        )
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertIn("text/csv", response["Content-Type"])
+        header = response.content.decode().splitlines()[0]
+        self.assertIn("tier", header)
+        self.assertIn("allocationWeight", header)
