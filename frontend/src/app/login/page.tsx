@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
+import { EmailLoginSection } from '@/components/shared/EmailLoginSection';
 import { useWeb3Auth } from '@/hooks/useWeb3Auth';
 import { useParticleWallet } from '@/hooks/useParticleWallet';
 import { useWalletLogin } from '@/hooks/useWalletLogin';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, loading, error: authError } = useWeb3Auth();
-  const { login } = useWeb3Auth();
+  const { isAuthenticated, loading, error: authError, applySession, login } = useWeb3Auth();
   const wallet = useParticleWallet();
   const { signIn, isLoggingIn, error: walletLoginError, canSignIn } = useWalletLogin();
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -67,8 +67,19 @@ export default function LoginPage() {
         <div className="space-y-2">
           <h1 className="font-display text-2xl text-[--primary]">Login</h1>
           <p className="text-sm text-[--muted-foreground]">
-            Connect your wallet to authenticate and access the app dashboard.
+            Sign in with email or connect your wallet to access the app.
           </p>
+        </div>
+
+        <EmailLoginSection applySession={applySession} />
+
+        <div className="relative py-2">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-[--border]" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-[--card] px-2 text-[--muted-foreground]">or wallet</span>
+          </div>
         </div>
 
         <div className="flex justify-start">
@@ -137,8 +148,7 @@ export default function LoginPage() {
 
         <div className="text-xs text-[--muted-foreground] border-t border-[--border] pt-4 space-y-2">
           <p>
-            By connecting, you agree to our Terms of Service. Your wallet address
-            is your identity — no email required.
+            By signing in, you agree to our Terms of Service.
           </p>
           <p>
             On the waitlist and approved?{' '}

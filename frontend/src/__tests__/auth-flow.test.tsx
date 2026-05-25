@@ -36,6 +36,8 @@ vi.mock("@/hooks/useWeb3Auth", () => ({
     loading: false,
     error: null,
     login: loginMock,
+    applySession: vi.fn(),
+    logout: vi.fn(),
   }),
 }))
 

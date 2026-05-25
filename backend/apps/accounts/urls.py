@@ -14,6 +14,7 @@ from .social_views import (
 
 urlpatterns = [
     path("wallet-verify/", views.WalletVerifyView.as_view(), name="wallet_verify"),
+    path("email/verify/", views.EmailVerifyView.as_view(), name="email_verify"),
     path("twitter/start/", twitter_views.TwitterOAuthStartView.as_view(), name="twitter_oauth_start"),
     path("twitter/callback/", twitter_views.TwitterOAuthCallbackView.as_view(), name="twitter_oauth_callback"),
     path("twitter/me/", twitter_views.TwitterConnectionStatusView.as_view(), name="twitter_connection"),

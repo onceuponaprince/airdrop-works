@@ -31,7 +31,8 @@ from apps.spore.models import (
 from common.exceptions import WalletVerificationError
 
 from .models import User
-from .serializers import UserSerializer, UserUpdateSerializer, WalletVerifySerializer
+from .serializers import EmailVerifySerializer, UserSerializer, UserUpdateSerializer, WalletVerifySerializer
+from .supabase_auth import SupabaseAuthError, fetch_supabase_user
 
 logger = logging.getLogger(__name__)
 
@@ -146,6 +147,45 @@ class WalletVerifyView(APIView):
             or ""
         )
         return hmac.compare_digest(str(supplied_secret), str(expected_secret))
+
+
+class EmailVerifyView(APIView):
+    """Email login: verify Supabase OTP session token, upsert user, return JWTs."""
+
+    permission_classes = [AllowAny]
+    throttle_scope = "email_verify"
+
+    def post(self, request):
+        serializer = EmailVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        access_token = serializer.validated_data["access_token"]
+
+        try:
+            supabase_user = fetch_supabase_user(access_token)
+        except SupabaseAuthError as exc:
+            logger.info("[Auth] Email verify rejected: %s", exc)
+            return Response({"detail": str(exc)}, status=status.HTTP_401_UNAUTHORIZED)
+
+        email = supabase_user["email"]
+        user = User.objects.filter(email=email, is_active=True).first()
+        created = False
+        if not user:
+            user = User.objects.create_user(
+                username=User.generate_username(),
+                email=email,
+            )
+            created = True
+
+        get_or_create_user_sub(user)
+
+        tokens = get_tokens_for_user(user)
+        logger.info("[Auth] Email login: %s (new=%s)", email, created)
+
+        return Response({
+            **tokens,
+            "user": UserSerializer(user).data,
+            "created": created,
+        })
 
 
 class UserProfileView(APIView):

@@ -21,6 +21,7 @@ interface AuthState {
 
 export function useWeb3Auth(): AuthState & {
   login: (walletAddress: string, message: string, signature: string) => Promise<void>;
+  applySession: (access: string, refresh: string) => void;
   logout: () => void;
 } {
   const [token, setToken] = useState<string | null>(() => {
@@ -39,6 +40,14 @@ export function useWeb3Auth(): AuthState & {
     },
     enabled: token !== null,
   });
+
+  const applySession = (access: string, refresh: string) => {
+    localStorage.setItem('auth_token', access);
+    localStorage.setItem('refresh_token', refresh);
+    api.setToken(access);
+    setToken(access);
+    setError(null);
+  };
 
   const login = async (walletAddress: string, message: string, signature: string) => {
     try {
@@ -84,5 +93,5 @@ export function useWeb3Auth(): AuthState & {
     [token, user, userLoading, isAuthActionLoading, error]
   );
 
-  return { ...state, login, logout };
+  return { ...state, login, applySession, logout };
 }

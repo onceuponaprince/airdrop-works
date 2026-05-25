@@ -213,6 +213,7 @@ REST_FRAMEWORK = {
         "social_connect": "30/minute",
         "social_sync": "20/minute",
         "discord_channels_update": "30/minute",
+        "email_verify": "20/minute",
     },
     "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
@@ -386,6 +387,14 @@ STRIPE_PRICE_CREDIT_50 = config("STRIPE_PRICE_CREDIT_50", default="")
 STRIPE_PRICE_CREDIT_200 = config("STRIPE_PRICE_CREDIT_200", default="")
 STRIPE_SUCCESS_URL = config("STRIPE_SUCCESS_URL", default="http://localhost:3000/settings?billing=success")
 STRIPE_CANCEL_URL = config("STRIPE_CANCEL_URL", default="http://localhost:3000/settings?billing=cancelled")
+
+# ── Supabase (email OTP bridge for primary auth) ─────────────────────────────
+
+SUPABASE_URL = config("SUPABASE_URL", default="") or config("NEXT_PUBLIC_SUPABASE_URL", default="")
+SUPABASE_SERVICE_ROLE_KEY = config("SUPABASE_SERVICE_ROLE_KEY", default="")
+SUPABASE_ANON_KEY = config("SUPABASE_ANON_KEY", default="") or config(
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY", default=""
+)
 
 # ── Sentry ────────────────────────────────────────────────────────────────────
 

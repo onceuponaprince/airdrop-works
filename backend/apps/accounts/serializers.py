@@ -34,6 +34,12 @@ class WalletVerifySerializer(serializers.Serializer):
     signature = serializers.CharField()
 
 
+class EmailVerifySerializer(serializers.Serializer):
+    """Supabase Auth access token after client-side email OTP verification."""
+
+    access_token = serializers.CharField()
+
+
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Mutable profile fields for PATCH ``/auth/me/`` (no wallet change here)."""
 
