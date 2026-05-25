@@ -69,7 +69,7 @@ function MarqueeAvatar({ handle }: { handle: string }) {
         <img
           src={src}
           alt=""
-          loading="lazy"
+          loading="eager"
           decoding="async"
           width={48}
           height={48}
@@ -113,7 +113,6 @@ function MarqueeColumn({ handles, direction, duration }: MarqueeColumnConfig) {
 export function HeroMarquee() {
   return (
     <div className="hero-marquee-container pointer-events-none" aria-hidden="true">
-      <div className="hero-marquee-fade-center absolute inset-0 z-[1]" />
       <div className="hero-marquee-grid">
         {MARQUEE_COLUMNS.map((col, i) => (
           <MarqueeColumn key={i} {...col} />
