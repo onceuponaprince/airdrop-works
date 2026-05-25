@@ -1,6 +1,6 @@
 "use client"
 
-/** Well-known crypto Twitter personas for ambient hero marquee */
+import { useState } from "react"
 const CRYPTO_TWITTER_HANDLES = [
   "VitalikButerin",
   "cz_binance",
@@ -50,22 +50,37 @@ function buildColumns(): MarqueeColumnConfig[] {
 const MARQUEE_COLUMNS = buildColumns()
 
 function avatarUrl(handle: string) {
-  return `https://unavatar.io/twitter/${handle}`
+  return `https://unavatar.io/x/${encodeURIComponent(handle)}?size=96`
+}
+
+function fallbackAvatarUrl(handle: string) {
+  const label = encodeURIComponent(handle.replace(/_/g, " ").slice(0, 2))
+  return `https://ui-avatars.com/api/?name=${label}&size=96&background=13141D&color=10B981&bold=true`
 }
 
 function MarqueeAvatar({ handle }: { handle: string }) {
+  const [src, setSrc] = useState(() => avatarUrl(handle))
+  const [failed, setFailed] = useState(false)
+
   return (
     <div className="hero-marquee-avatar group shrink-0">
-      <div className="size-12 shrink-0 overflow-hidden rounded-full">
+      <div className="size-12 shrink-0 overflow-hidden rounded-full bg-card/80 ring-1 ring-primary/20">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={avatarUrl(handle)}
+          src={src}
           alt=""
           loading="lazy"
           decoding="async"
           width={48}
           height={48}
+          referrerPolicy="no-referrer"
           className="size-12 rounded-full object-cover"
+          onError={() => {
+            if (!failed) {
+              setFailed(true)
+              setSrc(fallbackAvatarUrl(handle))
+            }
+          }}
         />
       </div>
       <span className="hero-marquee-handle font-mono text-[8px] uppercase tracking-wider text-muted-foreground/50 truncate max-w-[72px]">

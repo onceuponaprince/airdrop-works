@@ -36,6 +36,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "pbs.twimg.com" },
       { protocol: "https", hostname: "unavatar.io" },
+      { protocol: "https", hostname: "ui-avatars.com" },
     ],
   },
   turbopack: {
