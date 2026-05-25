@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { useWeb3Auth } from "@/hooks/useWeb3Auth"
+import { postAuthPath } from "@/lib/onboarding"
 import { cn } from "@/lib/utils"
 
 type MarketingAuthActionsProps = {
@@ -23,7 +24,8 @@ export function MarketingAuthActions({
   className,
 }: MarketingAuthActionsProps) {
   const router = useRouter()
-  const { isAuthenticated, loading } = useWeb3Auth()
+  const { isAuthenticated, loading, user } = useWeb3Auth()
+  const appPath = postAuthPath(user)
 
   if (loading) {
     return null
@@ -33,7 +35,7 @@ export function MarketingAuthActions({
     if (layout === "inline") {
       return (
         <Link
-          href="/dashboard"
+          href={appPath}
           className={cn(
             "font-mono text-xs text-primary hover:text-primary/80 transition-colors underline underline-offset-4",
             className,
@@ -48,7 +50,7 @@ export function MarketingAuthActions({
       <ArcadeButton
         size={layout === "sticky" ? "sm" : "sm"}
         className={cn(fullWidth && "w-full", layout === "sticky" && "flex-1", className)}
-        onClick={() => router.push("/dashboard")}
+        onClick={() => router.push(appPath)}
       >
         Open App
       </ArcadeButton>
@@ -102,7 +104,6 @@ export function MarketingAuthActions({
       href="/login"
       className={cn(
         "font-body text-sm text-muted-foreground hover:text-foreground transition-colors",
-        layout === "sticky" && "flex-1 text-center py-2",
         className,
       )}
     >
