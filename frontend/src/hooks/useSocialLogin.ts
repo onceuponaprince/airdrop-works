@@ -2,10 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { api } from "@/lib/api"
+import { telegramLoginPollPath } from "@/lib/backendUrls"
 import { setPostAuthDestination } from "@/lib/postAuthRedirect"
-
-const BACKEND_URL =
-  process.env.NEXT_PUBLIC_BACKEND_URL ?? process.env.BACKEND_URL ?? "http://localhost:8001"
 
 type SocialProvider = "twitter" | "discord" | "telegram" | "github"
 
@@ -58,9 +56,7 @@ export function useSocialLogin(applySession: (access: string, refresh: string) =
       }
       pollRef.current = window.setInterval(async () => {
         try {
-          const res = await fetch(
-            `${BACKEND_URL}/api/v1/auth/telegram/login/poll/?poll_key=${encodeURIComponent(pollKey)}`,
-          )
+          const res = await fetch(telegramLoginPollPath(pollKey))
           if (res.status === 404) {
             setError("Telegram login expired. Try again.")
             if (pollRef.current) window.clearInterval(pollRef.current)

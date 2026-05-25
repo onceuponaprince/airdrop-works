@@ -4,8 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server"
-
-const BACKEND_URL = (process.env.BACKEND_URL || "http://localhost:8000").replace(/\/$/, "")
+import { mergeConfirmBackendUrl } from "@/lib/backendUrls"
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "")
 
 export async function GET(req: NextRequest) {
@@ -21,7 +20,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${BACKEND_URL}/api/v1/auth/merge/confirm/`, {
+    const response = await fetch(mergeConfirmBackendUrl(process.env.BACKEND_URL), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token }),
