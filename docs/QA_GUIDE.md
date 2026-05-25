@@ -137,11 +137,70 @@ password: AirdropQA!2026
 
 Expected result: Django admin loads and account, contribution, payment, quest, and scoring models are visible according to registered admin classes.
 
+## Auth Provider Matrix (`/login`)
+
+All six sign-in paths are available on `/login`. Wallet SIWE remains the primary Web3 path; email and social providers are wallet-optional (S1–S5).
+
+| Provider | UI control | Backend flow | Post-auth default (S5) | Post-auth with S7 |
+| --- | --- | --- | --- | --- |
+| **Wallet (SIWE)** | Connect wallet → sign message | `POST /api/v1/auth/wallet-verify/` | `/dashboard` | `/dashboard` |
+| **Email OTP** | Email → 6-digit code | Supabase `signInWithOtp` + `verifyOtp` → `POST /api/v1/auth/email/verify/` | `/dashboard` | `/onboarding` if no wallet on profile |
+| **X (Twitter)** | Continue with X | `GET /auth/twitter/start/?mode=login` → OAuth → callback `?twitter=login&access=…` | `/dashboard` | `/onboarding` if social-only |
+| **Discord** | Continue with Discord | Same pattern via `/auth/discord/start/` | `/dashboard` | `/onboarding` if social-only |
+| **GitHub** | Continue with GitHub | Same pattern via `/auth/github/start/` | `/dashboard` | `/onboarding` if social-only |
+| **Telegram** | Continue with Telegram | Deep link + poll `GET /auth/telegram/login/poll/?poll_key=…` | `/dashboard` | `/onboarding` if social-only |
+
+### Email OTP local QA
+
+1. Ensure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are set in `frontend/.env.local`.
+2. Start backend + frontend; open `http://localhost:3000/login`.
+3. Enter a fresh email (e.g. `qa+email-otp@<your-domain>`), click **Send verification code**.
+4. Check inbox; enter the 6-digit code and click **Verify and continue**.
+5. Expected: JWT stored in `localStorage.auth_token`; redirect to `/dashboard` (or `/onboarding` once S7 lands for wallet-less profiles).
+
+### Social login local QA
+
+1. Configure provider env vars on backend (see `.env.example` for `TWITTER_*`, `DISCORD_*`, `GITHUB_*`, `TELEGRAM_*`).
+2. Open `/login`; click a social provider button.
+3. Complete OAuth (or Telegram deep link + **Start**).
+4. Expected: return to `/login?{provider}=login&access=…&refresh=…`; session applied; URL cleaned; redirect to app.
+5. Telegram: keep the login tab open while completing the bot flow — polling detects completion within ~2s.
+
+### Identity merge flow (S6 — Resend confirm)
+
+When email OTP or social login matches an **existing** account (same email, different auth method), the backend must **not** auto-merge.
+
+| Step | Actor | Expected |
+| --- | --- | --- |
+| 1 | User signs in with email/social that matches an existing account | HTTP `202` or UI message: confirmation email sent (Resend) |
+| 2 | User clicks link in email | `GET /api/auth/merge/confirm?token=…` (Next.js route → Django merge endpoint) |
+| 3 | Token valid, single-use, unexpired | Accounts linked; user retains wallet + social links; JWT issued or session refreshed |
+| 4 | Token reused or expired | Error page / toast; no duplicate merge; user must restart login |
+
+QA negative cases:
+
+- Request merge confirm with expired token → expect failure, no DB link.
+- Request merge confirm twice with same token → second attempt fails (single-use).
+- Merge wallet account A with social account B → both identities visible on `GET /auth/social/me/`.
+
+## Landing ↔ App Paths
+
+| Touchpoint | Anonymous | Authenticated (JWT in `localStorage`) |
+| --- | --- | --- |
+| `Navigation` (`MarketingAuthActions`) | **Log in** → `/login` | **Open App** → `/dashboard` |
+| `MarketingStickyCta` (mobile) | **Log in** → `/login` | **Open App** → `/dashboard` |
+| `HeroSection` inline link | **Log in** → `/login` | **Open app** → `/dashboard` |
+| Waitlist success (`StepSubmit`) | **Approved? Enter app** → `/signup`; **Log in** → `/login` | Same CTAs (signup checks whitelist approval) |
+| `/login` footer | Cross-link **Enter via signup** → `/signup` | Redirect to `/dashboard` (or `/onboarding` per S7) |
+| `/signup` | Email whitelist check → wallet connect → SIWE | Redirect to `/dashboard` when approved + authed |
+| `/onboarding` | Redirect to `/login` via `AuthGuard` | Social-only onboarding checklist (S7); wallet users skip |
+| Protected app routes (`/dashboard`, etc.) | `AuthGuard` → `/login` | Content renders |
+
 ## Core QA Flows
 
 1. Auth and profile
-   - Login with the dev button or the wallet endpoint.
-   - Visit `/dashboard`.
+   - Login with the dev button, email OTP, social provider, or the wallet endpoint.
+   - Visit `/dashboard` (or `/onboarding` for social-only once S7 is merged).
    - Expected: no auth redirect loop; profile-dependent panels render.
 
 2. Admin access

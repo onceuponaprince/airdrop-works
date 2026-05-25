@@ -378,3 +378,67 @@ Inferred from `frontend/src/lib/supabase.ts`. The Next.js server tolerates missi
 - [`docs/AIRDROP_WORKS_QA_ONBOARDING.md`](./AIRDROP_WORKS_QA_ONBOARDING.md) — human-facing onboarding for testers walking the logged-in product.
 - [`docs/qa-fixtures/`](./qa-fixtures/) — JSON fixtures + identity table for the integrity/allocate admin path.
 - [`docs/qa-findings/`](./qa-findings/) — per-session QA findings logs (e.g. `session-01.md`).
+
+---
+
+## 7 — App Auth Flow (login / signup / onboarding)
+
+**Scope:** logged-in app surfaces reached via `/login`, `/signup`, `/onboarding`, and the landing ↔ app bridge. Complements the waitlist-only flow in §2.
+
+**Providers:** wallet SIWE + five login methods on `/login` — email OTP, X, Discord, GitHub, Telegram.
+
+### 7.1 Landing ↔ app bridge
+
+| Touchpoint | Anonymous user | Authenticated user (JWT) |
+|---|---|---|
+| Nav `MarketingAuthActions` | **Log in** → `/login` | **Open App** → `/dashboard` |
+| Mobile sticky CTA | **Log in** → `/login` | **Open App** → `/dashboard` |
+| Hero inline link | **Log in** | **Open app** |
+| Waitlist success (`StepSubmit`) | **Approved? Enter app** → `/signup`; **Log in** → `/login` | Same CTAs available |
+| Footer | **Login** → `/login` | — |
+
+### 7.2 `/login` flow
+
+| # | Action | Expected UI / redirect |
+|---|---|---|
+| L1 | Visit `/login` unauthenticated | Email OTP panel + four social buttons + wallet connect + dev login (dev only) |
+| L2 | Email OTP happy path | Code sent → verify → JWT in `localStorage` → `/dashboard` (S7: `/onboarding` if no wallet) |
+| L3 | Social OAuth happy path | Provider redirect → return `?{provider}=login&access=…` → session applied → app redirect |
+| L4 | Telegram login | Deep link opens → user taps Start → poll completes → session applied |
+| L5 | Wallet SIWE | Connect → sign → `POST /auth/wallet-verify/` → `/dashboard` |
+| L6 | Dev login (local) | `Dev Login (no wallet)` → `qa-superadmin` wallet → `/dashboard` |
+| L7 | Footer cross-link | **Enter via signup** → `/signup` for approved waitlist users |
+
+### 7.3 `/signup` flow (approved waitlist)
+
+| # | Action | Expected |
+|---|---|---|
+| S1 | Enter approved waitlist email | Whitelist check passes → wallet connect step |
+| S2 | Connect wallet + SIWE | JWT issued → `/dashboard` |
+| S3 | Unapproved email | Stays on email step; no wallet step |
+
+### 7.4 `/onboarding` (S7 — social-only users)
+
+| # | Action | Expected |
+|---|---|---|
+| O1 | Social-only JWT (no wallet) after login | Redirect to `/onboarding` instead of `/dashboard` |
+| O2 | Wallet user after login | Skip onboarding → `/dashboard` |
+| O3 | Complete or skip onboarding | Persist choice → `/dashboard` (or SPORE Lab per workspace flow) |
+
+### 7.5 Identity merge (S6 — Resend confirm)
+
+When login email matches an existing account tied to a different auth method:
+
+1. **No auto-merge** — backend sends Resend confirmation email.
+2. User clicks confirm link → `GET /api/auth/merge/confirm?token=…` validates token (single-use, expiry).
+3. On success: identities linked; wallet + social accounts retained on merged user.
+4. On failure (expired/reused token): show error; user must restart login.
+
+QA must verify merge is impossible without clicking the email link.
+
+### 7.6 Auth guard
+
+| Route group | Unauthenticated | Authenticated |
+|---|---|---|
+| `(app)/*` e.g. `/dashboard` | `AuthGuard` → `/login` | Renders protected content |
+| `/login`, `/signup` | Renders auth UI | Redirect to `/dashboard` (or `/onboarding` per S7) |
