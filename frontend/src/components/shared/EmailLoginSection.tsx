@@ -11,12 +11,27 @@ import {
 
 type EmailLoginSectionProps = {
   applySession: (access: string, refresh: string) => void
+  /** Pre-fill email (e.g. approved waitlist address on /signup). */
+  initialEmail?: string
+  /** When true, email cannot be edited — use parent UI to change address. */
+  lockEmail?: boolean
 }
 
-export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
-  const { sendOtp, verifyOtpAndLogin, isSubmitting, error, setError } =
-    useEmailAuth(applySession)
-  const [email, setEmail] = useState("")
+export function EmailLoginSection({
+  applySession,
+  initialEmail = "",
+  lockEmail = false,
+}: EmailLoginSectionProps) {
+  const {
+    sendOtp,
+    verifyOtpAndLogin,
+    isSubmitting,
+    error,
+    setError,
+    mergePending,
+    clearMergePending,
+  } = useEmailAuth(applySession)
+  const [email, setEmail] = useState(initialEmail)
   const [otp, setOtp] = useState("")
   const [otpSent, setOtpSent] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
@@ -27,6 +42,7 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
     event.preventDefault()
     setLocalError(null)
     setError(null)
+    clearMergePending()
     try {
       await sendOtp(email)
       setOtpSent(true)
@@ -39,8 +55,10 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
     event.preventDefault()
     setLocalError(null)
     setError(null)
+    clearMergePending()
     try {
       const response = await verifyOtpAndLogin(email, otp)
+      if (!response) return
       setPostAuthDestination(
         resolvePostAuthDestination({
           authMethod: "email",
@@ -67,7 +85,28 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
         </div>
       </div>
 
-      {!otpSent ? (
+      {mergePending && (
+        <div
+          className="rounded-sm border border-primary/40 bg-primary/10 px-3 py-3 space-y-1"
+          role="status"
+        >
+          <p className="text-sm text-primary font-body font-medium">
+            Check your email to link accounts
+          </p>
+          <p className="text-xs text-muted-foreground font-body">
+            {mergePending.detail}
+            {mergePending.email ? (
+              <>
+                {" "}
+                We sent a confirmation link to{" "}
+                <span className="text-foreground font-medium">{mergePending.email}</span>.
+              </>
+            ) : null}
+          </p>
+        </div>
+      )}
+
+      {!mergePending && !otpSent ? (
         <form onSubmit={handleSendOtp} className="space-y-3">
           <input
             type="email"
@@ -75,7 +114,9 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
             placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-sm border border-border bg-background px-3 py-2.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-ring"
+            readOnly={lockEmail}
+            aria-readonly={lockEmail || undefined}
+            className="w-full rounded-sm border border-border bg-background px-3 py-2.5 text-sm font-body focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-80"
             required
           />
           <ArcadeButton
@@ -89,7 +130,7 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
             Send verification code
           </ArcadeButton>
         </form>
-      ) : (
+      ) : !mergePending ? (
         <form onSubmit={handleVerify} className="space-y-3">
           <p className="text-xs text-muted-foreground">
             Code sent to <span className="text-foreground font-medium">{email}</span>
@@ -113,18 +154,20 @@ export function EmailLoginSection({ applySession }: EmailLoginSectionProps) {
           >
             Verify and continue
           </ArcadeButton>
-          <button
-            type="button"
-            onClick={() => {
-              setOtpSent(false)
-              setOtp("")
-            }}
-            className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Use a different email
-          </button>
+          {!lockEmail && (
+            <button
+              type="button"
+              onClick={() => {
+                setOtpSent(false)
+                setOtp("")
+              }}
+              className="w-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Use a different email
+            </button>
+          )}
         </form>
-      )}
+      ) : null}
 
       {displayError && (
         <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-sm px-3 py-2">

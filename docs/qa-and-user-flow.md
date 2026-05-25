@@ -411,11 +411,23 @@ Inferred from `frontend/src/lib/supabase.ts`. The Next.js server tolerates missi
 
 ### 7.3 `/signup` flow (approved waitlist)
 
+**Current (main):** Two-step flow — (1) verify approved waitlist email, (2) create account via **email OTP**, **four social providers** (X, Discord, GitHub, Telegram), or **wallet SIWE**. Matches S5 six-provider matrix after whitelist gate.
+
+**Wave 2B note:** Email/social paths on `/signup` are the intended end state; if your branch still shows wallet-only step 2, pull latest `main` or wait for Wave 2B merge. Approved users may also skip `/signup` and use `/login` directly with any provider.
+
 | # | Action | Expected |
 |---|---|---|
-| S1 | Enter approved waitlist email | Whitelist check passes → wallet connect step |
-| S2 | Connect wallet + SIWE | JWT issued → `/dashboard` |
-| S3 | Unapproved email | Stays on email step; no wallet step |
+| S1 | Enter approved waitlist email + **Verify Whitelist Status** | `checkWhitelistApproval` passes → step 2 “Create Account” |
+| S2a | Email OTP (email locked to approved address) | `EmailLoginSection` with `lockEmail` → JWT → `postAuthPath(user)` (`/dashboard` or `/onboarding`) |
+| S2b | Social OAuth (X, Discord, GitHub, Telegram) | `SocialLoginButtons` → provider redirect → session applied → same post-auth redirect as login |
+| S2c | Wallet connect + SIWE | `WalletButton` / auto sign-in when connected → JWT → post-auth redirect |
+| S3 | Email on waitlist but not **approved** | Pending card; stays on step 1 |
+| S4 | Email not on waitlist | “Not on the waitlist” + link to `/#waitlist` |
+| S5 | Dev only | “Skip to account setup” bypasses whitelist (must not appear in production builds) |
+
+**Merge (S6):** If email/social login collides with an existing wallet-backed account, backend returns merge-required (409 or `merge=pending` redirect). User must confirm via Resend email link — same rules as §7.5. QA: verify on GitHub first; other providers should match after Wave 1A.
+
+**Alternative path:** Waitlist success CTAs in `StepSubmit` link to `/signup` and `/login`; either works once `approved=true` in Supabase.
 
 ### 7.4 `/onboarding` (S7 — social-only users)
 

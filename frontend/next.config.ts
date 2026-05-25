@@ -25,7 +25,7 @@ try {
  * must NOT be intercepted by these rewrites.
  */
 const BACKEND_URL = (
-  process.env.BACKEND_URL || "http://localhost:8000"
+  process.env.BACKEND_URL || "http://localhost:8001"
 ).replace(/\/$/, "")
 
 const nextConfig: NextConfig = {

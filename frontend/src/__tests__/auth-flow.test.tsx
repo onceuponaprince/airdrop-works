@@ -8,6 +8,8 @@ const signInMock = vi.fn()
 const applySessionMock = vi.hoisted(() => vi.fn())
 const sendOtpMock = vi.hoisted(() => vi.fn())
 const verifyOtpAndLoginMock = vi.hoisted(() => vi.fn())
+const clearMergePendingMock = vi.hoisted(() => vi.fn())
+const searchParamsMock = vi.hoisted(() => new URLSearchParams())
 const apiGetMock = vi.hoisted(() => vi.fn())
 const apiPostMock = vi.hoisted(() => vi.fn())
 const apiSetTokenMock = vi.hoisted(() => vi.fn())
@@ -45,6 +47,7 @@ vi.mock("next/navigation", () => ({
     replace: replaceMock,
   }),
   usePathname: () => "/dashboard",
+  useSearchParams: () => searchParamsMock,
 }))
 
 vi.mock("@/hooks/useWeb3Auth", () => ({
@@ -85,6 +88,8 @@ vi.mock("@/hooks/useEmailAuth", () => ({
     isSubmitting: false,
     error: null,
     setError: vi.fn(),
+    mergePending: null,
+    clearMergePending: clearMergePendingMock,
   }),
 }))
 
@@ -112,6 +117,10 @@ describe("wallet login flow", () => {
     applySessionMock.mockReset()
     sendOtpMock.mockReset()
     verifyOtpAndLoginMock.mockReset()
+    clearMergePendingMock.mockReset()
+    searchParamsMock.forEach((_, key) => {
+      searchParamsMock.delete(key)
+    })
     apiGetMock.mockReset()
     apiGetMock.mockResolvedValue({})
     apiPostMock.mockReset()
@@ -174,6 +183,59 @@ describe("wallet login flow", () => {
     })
     expect(apiSetTokenMock).toHaveBeenCalledWith("token-123")
     expect(replaceMock).not.toHaveBeenCalled()
+  })
+})
+
+describe("login merge callback handling", () => {
+  beforeEach(() => {
+    applySessionMock.mockReset()
+    replaceMock.mockReset()
+    searchParamsMock.forEach((_, key) => {
+      searchParamsMock.delete(key)
+    })
+  })
+
+  it("shows pending merge banner from login query params", async () => {
+    searchParamsMock.set("merge", "pending")
+    searchParamsMock.set("email", "wallet-user@example.com")
+
+    render(<LoginPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/check your email to link accounts/i)).toBeTruthy()
+    })
+    expect(screen.getByText(/wallet-user@example.com/)).toBeTruthy()
+    expect(replaceMock).toHaveBeenCalledWith("/login")
+  })
+
+  it("shows merge error banner from login query params", async () => {
+    searchParamsMock.set("merge", "error")
+    searchParamsMock.set("reason", "invalid_token")
+
+    render(<LoginPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid or has expired/i)).toBeTruthy()
+    })
+    expect(replaceMock).toHaveBeenCalledWith("/login")
+  })
+
+  it("consumes merge=confirmed callback and applies session", () => {
+    Object.defineProperty(window, "location", {
+      value: {
+        search: "?merge=confirmed&access=merge-access&refresh=merge-refresh",
+        pathname: "/login",
+      },
+      configurable: true,
+    })
+    Object.defineProperty(window, "history", {
+      value: { replaceState: vi.fn() },
+      configurable: true,
+    })
+
+    render(<LoginPage />)
+
+    expect(applySessionMock).toHaveBeenCalledWith("merge-access", "merge-refresh")
   })
 })
 

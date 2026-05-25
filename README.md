@@ -45,8 +45,8 @@ docker compose exec backend uv run python manage.py seed_demo
 # Phase 2: docs/PHASE_2_COMPLETE.md · gate: ./scripts/verify_phase2_gate.sh
 
 # Frontend → http://localhost:3000
-# Backend API → http://localhost:8000
-# Health check → http://localhost:8000/api/v1/health/
+# Backend API → http://localhost:8001
+# Health check → http://localhost:8001/api/v1/health/
 ```
 
 ### Local Development (without Docker)

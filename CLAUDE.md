@@ -19,7 +19,7 @@ cd frontend && pnpm install && pnpm dev
 
 # Backend (separate terminal)
 cd backend && uv sync && python manage.py migrate && python manage.py runserver
-# → http://localhost:8000
+# → http://localhost:8001
 
 # Full stack (Docker)
 docker compose up --build
@@ -472,7 +472,7 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/airdrop_works
 REDIS_URL=redis://localhost:6379/0
 
 # ── Frontend ──
-BACKEND_URL=http://localhost:8000
+BACKEND_URL=http://localhost:8001
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=

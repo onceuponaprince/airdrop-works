@@ -7,9 +7,11 @@ import { useParticleWallet } from "@/hooks/useParticleWallet"
 
 interface StepWalletProps {
   onComplete: (address: string) => void
+  onSkip?: () => void
+  onBack?: () => void
 }
 
-export function StepWallet({ onComplete }: StepWalletProps) {
+export function StepWallet({ onComplete, onSkip, onBack }: StepWalletProps) {
   const { available, address, isConnected, openConnectModal, lastError, retryConnect } = useParticleWallet()
 
   if (isConnected && address) {
@@ -31,6 +33,16 @@ export function StepWallet({ onComplete }: StepWalletProps) {
         >
           Continue →
         </ArcadeButton>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-full font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                       transition-colors uppercase tracking-widest"
+          >
+            ← Back
+          </button>
+        )}
       </ArcadeCard>
     )
   }
@@ -38,7 +50,7 @@ export function StepWallet({ onComplete }: StepWalletProps) {
   return (
     <ArcadeCard className="space-y-4">
       <p className="font-body text-sm text-muted-foreground">
-        Your wallet is your identity on AI(r)Drop. One wallet, one rank — no alts, no bots.
+        Link a wallet for beta priority access. You can skip and add one later.
       </p>
       {available ? (
         lastError && lastError.message ? (
@@ -73,6 +85,26 @@ export function StepWallet({ onComplete }: StepWalletProps) {
       <p className="font-mono text-[10px] text-muted-foreground/40 text-center uppercase tracking-widest">
         MetaMask · WalletConnect · Coinbase Wallet
       </p>
+      {onSkip && (
+        <button
+          type="button"
+          onClick={onSkip}
+          className="w-full font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                     transition-colors uppercase tracking-widest"
+        >
+          Skip for now →
+        </button>
+      )}
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full font-mono text-[10px] text-muted-foreground/50 hover:text-muted-foreground
+                     transition-colors uppercase tracking-widest"
+        >
+          ← Back
+        </button>
+      )}
     </ArcadeCard>
   )
 }

@@ -16,6 +16,7 @@ from rest_framework.views import APIView
 from apps.accounts.models import TwitterConnection
 from apps.accounts.social_login_helpers import (
     frontend_redirect,
+    merge_pending_redirect,
     redirect_with_jwt,
     resolve_social_user,
 )
@@ -137,6 +138,20 @@ class TwitterOAuthCallbackView(APIView):
         if not twitter_user_id or not username:
             return HttpResponseRedirect(_frontend_redirect("/sources?twitter=error&reason=no_user"))
 
+        twitter_email = str(twitter_user.get("email") or "").strip()
+
+        session["provider"] = "twitter"
+        provider_payload = {
+            "provider": "twitter",
+            "twitter_user_id": twitter_user_id,
+            "twitter_username": username,
+            "display_name": str(twitter_user.get("name") or username),
+            "avatar_url": str(twitter_user.get("profile_image_url") or ""),
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_expires_at": None,
+            "watch_enabled": True,
+        }
         user, _created = resolve_social_user(
             session,
             connection_model=TwitterConnection,
@@ -146,10 +161,20 @@ class TwitterOAuthCallbackView(APIView):
             username_prefix="tw",
             display_name=str(twitter_user.get("name") or username),
             avatar_url=str(twitter_user.get("profile_image_url") or ""),
+            email=twitter_email,
+            provider_payload=provider_payload,
         )
+
+        if session.get("mode") == "login" and session.get("merge_required"):
+            return HttpResponseRedirect(merge_pending_redirect(session))
+
+        if user is None:
+            return HttpResponseRedirect(_frontend_redirect("/sources?twitter=error&reason=no_user"))
+
         expires_at = None
         if expires_in:
             expires_at = datetime.now(tz=UTC) + timedelta(seconds=expires_in)
+        provider_payload["token_expires_at"] = expires_at
 
         connection, _ = TwitterConnection.objects.update_or_create(
             twitter_user_id=twitter_user_id,
@@ -175,7 +200,6 @@ class TwitterOAuthCallbackView(APIView):
 
         redirect_after = session.get("redirect_uri") or _frontend_redirect("/sources?twitter=connected")
         if session.get("mode") == "login":
-            session["provider"] = "twitter"
             return HttpResponseRedirect(redirect_with_jwt(session, user, default_path="/login"))
 
         return HttpResponseRedirect(redirect_after)

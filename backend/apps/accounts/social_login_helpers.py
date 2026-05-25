@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 
@@ -15,6 +15,12 @@ from .views import get_tokens_for_user
 def frontend_redirect(path: str = "/sources") -> str:
     base = str(settings.FRONTEND_URL or "http://localhost:3000").rstrip("/")
     return f"{base}{path}"
+
+
+def merge_pending_redirect(session: dict) -> str:
+    """Frontend URL when social login must confirm email merge before JWT."""
+    email = session.get("merge_email", "")
+    return frontend_redirect(f"/login?merge=pending&email={quote(email)}")
 
 
 def redirect_with_jwt(session: dict, user: User, *, default_path: str) -> str:
@@ -46,11 +52,12 @@ def resolve_social_user(
     avatar_url: str = "",
     connection_extra_filter: dict | None = None,
     email: str = "",
-) -> tuple[User, bool]:
+    provider_payload: dict | None = None,
+) -> tuple[User | None, bool]:
     """
     Link mode: attach to session user_id.
     Login mode: reuse connection owner or create wallet-less user.
-    Returns (user, created).
+    Returns (user, created). user is None when merge confirmation is required.
     """
     user_id = session.get("user_id")
     if user_id:
@@ -64,6 +71,24 @@ def resolve_social_user(
     if existing:
         return existing.user, False
 
+    if email and session.get("mode") == "login":
+        from .merge_service import find_user_by_email, initiate_email_merge, requires_email_merge_confirmation
+
+        target = find_user_by_email(email)
+        if target and requires_email_merge_confirmation(target, incoming_user=None):
+            payload = dict(provider_payload or {})
+            payload.setdefault("provider", session.get("provider"))
+            initiate_email_merge(
+                email=email,
+                target_user=target,
+                source_user=None,
+                provider=session.get("provider"),
+                provider_payload=payload,
+            )
+            session["merge_required"] = True
+            session["merge_email"] = email
+            return None, False
+
     safe_username = username or platform_user_id
     candidate = f"{username_prefix}_{safe_username}"[:150]
     if User.objects.filter(username=candidate).exists():
@@ -75,19 +100,5 @@ def resolve_social_user(
         avatar_url=avatar_url or "",
     )
     session["created"] = True
-
-    if email and session.get("mode") == "login":
-        from .merge_service import find_user_by_email, initiate_email_merge, requires_email_merge_confirmation
-
-        target = find_user_by_email(email)
-        if target and requires_email_merge_confirmation(target, incoming_user=user):
-            initiate_email_merge(
-                email=email,
-                target_user=target,
-                source_user=user,
-                provider=session.get("provider"),
-            )
-            session["merge_required"] = True
-            session["merge_email"] = email
 
     return user, True

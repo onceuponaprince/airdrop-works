@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { Loader2, Search, Twitter } from "lucide-react"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
@@ -8,6 +9,11 @@ import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { AccountScoreCard } from "@/components/app/AccountScoreCard"
 import { AnimatedSection } from "@/components/shared/AnimatedSection"
 import { useTwitterAnalyze } from "@/hooks/useTwitterAnalyze"
+import { useAccountScoreVisibility } from "@/hooks/useAccountScoreVisibility"
+import {
+  buildAccountScoreLoginUrl,
+  isAuthenticatedForAccountScore,
+} from "@/lib/canShowAccountScore"
 import { cn } from "@/lib/utils"
 import { FARMING_FLAGS, type FarmingFlag } from "@/lib/constants"
 import type { TweetScore } from "@/types/api"
@@ -15,6 +21,8 @@ import { fadeInUp } from "@/styles/theme"
 import { events } from "@/lib/analytics"
 
 export function TwitterAnalyzer() {
+  const router = useRouter()
+  const { visible } = useAccountScoreVisibility()
   const [handle, setHandle] = useState("")
   const {
     status,
@@ -38,6 +46,10 @@ export function TwitterAnalyzer() {
   const handleAnalyze = () => {
     const cleaned = handle.trim().replace(/^@/, "")
     if (!cleaned) return
+    if (!isAuthenticatedForAccountScore()) {
+      router.push(buildAccountScoreLoginUrl())
+      return
+    }
     analyze(cleaned)
   }
 
@@ -54,6 +66,8 @@ export function TwitterAnalyzer() {
 
   const isLoading = status === "fetching" || status === "scoring"
   const hasResult = status === "complete" && analysis
+
+  if (!visible) return null
   // Derive a human-readable status message from the hook's status enum
   const statusMessage =
     status === "fetching" ? "Fetching tweets…" :

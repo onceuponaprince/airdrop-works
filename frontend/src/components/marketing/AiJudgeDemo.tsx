@@ -13,6 +13,7 @@ import { ArcadeCard } from "@/components/themed/ArcadeCard"
 import { ScoreCard } from "@/components/app/ScoreCard"
 import { AnimatedSection } from "@/components/shared/AnimatedSection"
 import { useAiJudge } from "@/hooks/useAiJudge"
+import { markJudgeDemoTried } from "@/lib/canShowAccountScore"
 import { DEMO_TWEETS } from "@/lib/constants"
 import { cn } from "@/lib/utils"
 import { fadeInUp } from "@/styles/theme"
@@ -33,6 +34,7 @@ export function AiJudgeDemo() {
     const text = inputText.trim()
     if (!text) return
     setActiveDemoId(null)
+    markJudgeDemoTried()
     score(text)
   }
 

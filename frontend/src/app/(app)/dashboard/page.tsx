@@ -93,8 +93,11 @@ export default function DashboardPage() {
 
   const handleManageBilling = async () => {
     try {
-      const res = await api.post<{ url: string }>('/payments/user-portal/');
-      window.location.assign(res.url);
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      api.setToken(token);
+      const res = await api.post<{ portal_url: string }>('/payments/user-portal/');
+      window.location.assign(res.portal_url);
     } catch {
       // Stripe portal not configured — silently fail
     }

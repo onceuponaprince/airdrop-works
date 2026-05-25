@@ -293,7 +293,7 @@ export async function installApiV1Mocks(page: Page, opts: ApiMockOptions = {}) {
     }
 
     if (path.endsWith('/api/v1/payments/user-portal/')) {
-      return jsonResponse(route, 200, { url: 'https://example.test/portal' })
+      return jsonResponse(route, 200, { portal_url: 'https://example.test/portal' })
     }
 
     if (path.endsWith('/api/v1/auth/twitter/me/')) {

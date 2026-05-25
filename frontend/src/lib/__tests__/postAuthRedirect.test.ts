@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   consumePostAuthDestination,
+  consumePostAuthReturnPath,
   hasCompletedOnboarding,
+  isSafeReturnPath,
   markOnboardingComplete,
   resolvePostAuthDestination,
   setPostAuthDestination,
+  setPostAuthReturnPath,
 } from "@/lib/postAuthRedirect"
 
 function createStorage() {
@@ -67,5 +70,18 @@ describe("postAuthRedirect", () => {
     setPostAuthDestination("/onboarding")
     expect(consumePostAuthDestination()).toBe("/onboarding")
     expect(consumePostAuthDestination()).toBeNull()
+  })
+
+  it("rejects unsafe return paths", () => {
+    expect(isSafeReturnPath("/dashboard")).toBe(true)
+    expect(isSafeReturnPath("/#twitter-analyzer")).toBe(true)
+    expect(isSafeReturnPath("//evil.com")).toBe(false)
+    expect(isSafeReturnPath("https://evil.com")).toBe(false)
+  })
+
+  it("consumes arbitrary safe return path once", () => {
+    setPostAuthReturnPath("/#twitter-analyzer")
+    expect(consumePostAuthReturnPath()).toBe("/#twitter-analyzer")
+    expect(consumePostAuthReturnPath()).toBeNull()
   })
 })

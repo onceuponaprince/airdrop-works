@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getWaitlistCount } from '@/lib/supabase';
+import { resolveBackendUrl } from '@/lib/backendUrls';
 
 function nowMs(): number {
   return performance.now();
@@ -12,7 +13,7 @@ async function timedFetch(url: string, init?: RequestInit): Promise<{ ok: boolea
 }
 
 export async function GET() {
-  const backendBase = (process.env.BACKEND_URL || 'http://localhost:8000').replace(/\/$/, '');
+  const backendBase = resolveBackendUrl(process.env.BACKEND_URL);
 
   const [health, judgeProbe, waitlistCount] = await Promise.allSettled([
     timedFetch(`${backendBase}/health/`),

@@ -9,7 +9,31 @@ export type PostAuthContext = {
 }
 
 const POST_AUTH_DEST_KEY = "post_auth_dest"
+const POST_AUTH_NEXT_KEY = "post_auth_next"
 const ONBOARDING_COMPLETE_KEY = "onboarding_completed"
+
+/** Same-origin relative paths only (blocks open redirects). */
+export function isSafeReturnPath(path: string): boolean {
+  const trimmed = path.trim()
+  if (!trimmed.startsWith("/")) return false
+  if (trimmed.startsWith("//")) return false
+  if (trimmed.includes("://")) return false
+  return true
+}
+
+export function setPostAuthReturnPath(path: string): void {
+  if (typeof window === "undefined") return
+  if (!isSafeReturnPath(path)) return
+  window.sessionStorage.setItem(POST_AUTH_NEXT_KEY, path.trim())
+}
+
+export function consumePostAuthReturnPath(): string | null {
+  if (typeof window === "undefined") return null
+  const stored = window.sessionStorage.getItem(POST_AUTH_NEXT_KEY)
+  window.sessionStorage.removeItem(POST_AUTH_NEXT_KEY)
+  if (stored && isSafeReturnPath(stored)) return stored
+  return null
+}
 
 export function markOnboardingComplete(): void {
   if (typeof window === "undefined") return

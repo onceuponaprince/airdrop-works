@@ -4,10 +4,13 @@ import { motion, type Variants } from "framer-motion"
 import Link from "next/link"
 import { ArcadeButton } from "@/components/themed/ArcadeButton"
 import { MarketingAuthActions } from "@/components/marketing/MarketingAuthActions"
+import { HeroMarquee } from "@/components/marketing/HeroMarquee"
 import { CrtOverlay } from "@/components/themed/CrtOverlay"
+import { useAccountScoreVisibility } from "@/hooks/useAccountScoreVisibility"
 import { staggerContainer, staggerItem } from "@/styles/theme"
 
 export function HeroSection() {
+  const { visible: accountScoreVisible } = useAccountScoreVisibility()
   const scrollTo = (id: string) =>
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" })
 
@@ -31,17 +34,20 @@ export function HeroSection() {
         }}
       />
 
+      {/* Ambient crypto Twitter avatar marquee — behind copy/CTAs */}
+      <HeroMarquee />
+
       <div className="relative z-10 max-w-[960px] mx-auto px-4 sm:px-6 text-center">
         <motion.div
           variants={staggerContainer as Variants}
           initial="initial"
           animate="animate"
-          className="space-y-6"
+          className="hero-copy-scrim space-y-6 rounded-2xl px-4 py-8 sm:px-8 sm:py-10"
         >
           {/* Overline */}
           <motion.p
             variants={staggerItem as Variants}
-            className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground"
+            className="font-mono text-[10px] uppercase tracking-[0.25em] text-foreground/75"
           >
             Airdrops Are Broken
           </motion.p>
@@ -49,10 +55,10 @@ export function HeroSection() {
           {/* Main headline */}
           <motion.h1
             variants={staggerItem as Variants}
-            className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold text-foreground leading-[1.1] tracking-tight"
+            className="hero-headline font-heading text-4xl sm:text-5xl md:text-6xl font-bold text-foreground leading-[1.1] tracking-tight"
           >
             Bots Get Rewarded.{" "}
-            <span className="text-foreground/50">You Don&apos;t.</span>
+            <span className="text-foreground/70">You Don&apos;t.</span>
             <br />
             <span className="text-primary glow-green">We Fixed That.</span>
           </motion.h1>
@@ -60,7 +66,7 @@ export function HeroSection() {
           {/* Sub-headline */}
           <motion.p
             variants={staggerItem as Variants}
-            className="font-body text-base sm:text-lg text-muted-foreground max-w-[580px] mx-auto leading-relaxed"
+            className="font-body text-base sm:text-lg text-foreground/85 max-w-[580px] mx-auto leading-relaxed"
           >
             Fair distribution starts with judging contributions — not counting
             wallets. The AI Judge scores teaching value, originality, and impact,
@@ -86,8 +92,8 @@ export function HeroSection() {
               </ArcadeButton>
             </div>
 
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
-              Free demo — no login. Waitlist: email + wallet, ~2 min.
+            <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/70">
+              Free demo — no login. Waitlist: email first, wallet optional, ~2 min.
             </p>
 
             <div className="flex flex-wrap justify-center gap-2 pt-1">
@@ -98,7 +104,7 @@ export function HeroSection() {
               ].map((label) => (
                 <span
                   key={label}
-                  className="px-2.5 py-1 rounded-sm border border-border bg-secondary/30 font-mono text-[10px] uppercase tracking-widest text-muted-foreground"
+                  className="px-2.5 py-1 rounded-sm border border-border/80 bg-background/50 font-mono text-[10px] uppercase tracking-widest text-foreground/75"
                 >
                   {label}
                 </span>
@@ -106,12 +112,15 @@ export function HeroSection() {
             </div>
 
             <div className="flex flex-wrap justify-center gap-4 pt-2">
-              <button
-                onClick={() => scrollTo("twitter-analyzer")}
-                className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
-              >
-                Prefer accounts? Score an account
-              </button>
+              {accountScoreVisible && (
+                <button
+                  type="button"
+                  onClick={() => scrollTo("twitter-analyzer")}
+                  className="font-mono text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+                >
+                  Prefer accounts? Score an account
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => scrollTo("campaign-integrity-pilot")}
@@ -132,7 +141,7 @@ export function HeroSection() {
           {/* Social proof microline */}
           <motion.p
             variants={staggerItem as Variants}
-            className="font-mono text-xs text-muted-foreground/60"
+            className="font-mono text-xs text-foreground/65"
           >
             Join the contributors who are done with broken airdrops.
           </motion.p>

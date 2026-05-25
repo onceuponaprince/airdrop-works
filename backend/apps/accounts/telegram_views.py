@@ -18,6 +18,7 @@ from apps.payments.services import get_or_create_user_sub
 from .telegram_oauth import (
     build_telegram_deep_link,
     complete_telegram_login_poll,
+    complete_telegram_login_poll_merge,
     consume_telegram_link_token,
     generate_telegram_link_token,
     get_telegram_login_poll,
@@ -66,6 +67,8 @@ class TelegramLoginPollView(APIView):
             return Response({"status": "expired"}, status=status.HTTP_404_NOT_FOUND)
         if payload.get("status") == "complete":
             return Response(payload)
+        if payload.get("status") == "merge_pending":
+            return Response(payload)
         return Response({"status": "pending"})
 
 
@@ -104,6 +107,15 @@ class TelegramLinkView(APIView):
         tg_user_id = str(tg_user_id)
 
         if mode == "login":
+            session["provider"] = "telegram"
+            link_email = str(request.data.get("email") or "").strip()
+            provider_payload = {
+                "provider": "telegram",
+                "telegram_user_id": tg_user_id,
+                "telegram_username": username,
+                "display_name": display_name,
+                "avatar_url": avatar_url,
+            }
             user, created = resolve_social_user(
                 session,
                 connection_model=TelegramConnection,
@@ -113,7 +125,23 @@ class TelegramLinkView(APIView):
                 username_prefix="tg",
                 display_name=display_name or username,
                 avatar_url=avatar_url,
+                email=link_email,
+                provider_payload=provider_payload,
             )
+            if session.get("merge_required"):
+                poll_key = session.get("poll_key")
+                if poll_key:
+                    complete_telegram_login_poll_merge(poll_key, session.get("merge_email", ""))
+                return Response(
+                    {
+                        "status": "merge_pending",
+                        "mergeRequired": True,
+                        "email": session.get("merge_email", ""),
+                        "message": "Confirmation email sent. Check your inbox to link this account.",
+                    }
+                )
+            if user is None:
+                return Response({"detail": "Unable to resolve login user"}, status=400)
         else:
             user_id = session.get("user_id")
             if not user_id:

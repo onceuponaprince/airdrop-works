@@ -64,6 +64,14 @@ def complete_telegram_login_poll(poll_key: str, access: str, refresh: str) -> No
     )
 
 
+def complete_telegram_login_poll_merge(poll_key: str, email: str) -> None:
+    cache.set(
+        f"{LOGIN_POLL_PREFIX}{poll_key}",
+        {"status": "merge_pending", "mergeRequired": True, "email": email},
+        CACHE_TTL,
+    )
+
+
 def get_telegram_login_poll(poll_key: str) -> dict | None:
     return cache.get(f"{LOGIN_POLL_PREFIX}{poll_key}")
 

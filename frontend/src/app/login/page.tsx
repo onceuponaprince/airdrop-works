@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Wallet } from 'lucide-react';
 import { WalletButton } from '@/components/shared/WalletButton';
@@ -16,16 +16,65 @@ import { useWalletLogin } from '@/hooks/useWalletLogin';
 import { postAuthPath } from '@/lib/onboarding';
 import {
   consumePostAuthDestination,
+  consumePostAuthReturnPath,
+  isSafeReturnPath,
+  setPostAuthReturnPath,
   setPostAuthDestination,
 } from '@/lib/postAuthRedirect';
+import {
+  consumeMergeConfirmedCallback,
+  mergeErrorMessage,
+  parseLoginMergeParams,
+} from '@/lib/loginMergeParams';
+import { ACCOUNT_SCORE_LOGIN_MESSAGE_KEY } from '@/lib/canShowAccountScore';
 
-export default function LoginPage() {
+const LOGIN_MESSAGES: Record<string, string> = {
+  [ACCOUNT_SCORE_LOGIN_MESSAGE_KEY]:
+    'Sign in to see your full account score results.',
+};
+
+function LoginPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isAuthenticated, loading, error: authError, applySession, login, user } = useWeb3Auth();
   const wallet = useParticleWallet();
   const { signIn, isLoggingIn, error: walletLoginError, canSignIn } = useWalletLogin();
   const [loginError, setLoginError] = useState<string | null>(null);
   const [devLoggingIn, setDevLoggingIn] = useState(false);
+  const [mergePendingBanner, setMergePendingBanner] = useState(false);
+  const [mergePendingEmail, setMergePendingEmail] = useState<string | null>(null);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+
+  const loginHint =
+    LOGIN_MESSAGES[searchParams.get('message') ?? ''] ?? null;
+
+  useEffect(() => {
+    if (consumeMergeConfirmedCallback(applySession)) {
+      return;
+    }
+
+    const mergeParams = parseLoginMergeParams(searchParams);
+    if (!mergeParams) return;
+
+    if (mergeParams.status === 'pending') {
+      setMergePendingBanner(true);
+      setMergePendingEmail(mergeParams.email ?? null);
+      setMergeError(null);
+    } else if (mergeParams.status === 'error') {
+      setMergeError(mergeErrorMessage(mergeParams.reason));
+      setMergePendingBanner(false);
+      setMergePendingEmail(null);
+    }
+
+    router.replace('/login');
+  }, [searchParams, applySession, router]);
+
+  useEffect(() => {
+    const next = searchParams.get('next');
+    if (next && isSafeReturnPath(next)) {
+      setPostAuthReturnPath(next);
+    }
+  }, [searchParams]);
 
   const attemptLogin = useCallback(async () => {
     if (!canSignIn || isLoggingIn) return;
@@ -46,6 +95,12 @@ export default function LoginPage() {
   // Post-auth: session override (S5) then profile-aware path (S7).
   useEffect(() => {
     if (!isAuthenticated || !user || loading) return;
+
+    const returnPath = consumePostAuthReturnPath();
+    if (returnPath) {
+      router.push(returnPath);
+      return;
+    }
 
     const stored = consumePostAuthDestination();
     if (stored) {
@@ -95,6 +150,34 @@ export default function LoginPage() {
             <p className="text-sm text-muted-foreground font-body">
               Email, social, or wallet — pick your path into the app.
             </p>
+            {loginHint && (
+              <p className="text-sm text-primary/90 font-body border border-primary/25 bg-primary/5 rounded-[var(--radius)] px-3 py-2">
+                {loginHint}
+              </p>
+            )}
+            {mergePendingBanner && (
+              <div
+                className="text-sm text-primary/90 font-body border border-primary/25 bg-primary/5 rounded-[var(--radius)] px-3 py-2 space-y-1"
+                role="status"
+              >
+                <p className="font-medium">Check your email to link accounts</p>
+                <p className="text-xs text-muted-foreground">
+                  We sent a confirmation link
+                  {mergePendingEmail ? (
+                    <>
+                      {' '}
+                      to <span className="text-foreground">{mergePendingEmail}</span>
+                    </>
+                  ) : null}
+                  . Open it to finish linking your identities.
+                </p>
+              </div>
+            )}
+            {mergeError && (
+              <p className="text-sm text-destructive font-body border border-destructive/30 bg-destructive/10 rounded-[var(--radius)] px-3 py-2">
+                {mergeError}
+              </p>
+            )}
           </div>
 
           <EmailLoginSection applySession={applySession} />
@@ -206,5 +289,13 @@ export default function LoginPage() {
         </ArcadeCard>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

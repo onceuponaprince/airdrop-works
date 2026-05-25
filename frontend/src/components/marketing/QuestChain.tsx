@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils"
 export type QuestStep = "wallet" | "email" | "twitter" | "submit"
 
 const STEPS: { id: QuestStep; label: string; icon: React.ReactNode; subtitle: string }[] = [
-  { id: "wallet",  label: "Forge Your Identity",        icon: <Wallet size={14} />,  subtitle: "Connect wallet to begin" },
   { id: "email",   label: "Verify Your Sigil",          icon: <Mail size={14} />,    subtitle: "Confirm your email" },
+  { id: "wallet",  label: "Forge Your Identity",        icon: <Wallet size={14} />,  subtitle: "Optional — link wallet for beta priority" },
   { id: "twitter", label: "Reveal Your Contributions",  icon: <Twitter size={14} />, subtitle: "Optional — earn a teaser score" },
   { id: "submit",  label: "Claim Your Score",           icon: <Trophy size={14} />,  subtitle: "Join the leaderboard" },
 ]
