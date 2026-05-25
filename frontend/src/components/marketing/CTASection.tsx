@@ -25,7 +25,7 @@ export function CTASection() {
             <span className="text-primary glow-green">Your Name Goes First.</span>
           </h2>
           <p className="font-body text-muted-foreground max-w-[480px] mx-auto">
-            Join the waitlist. Connect your wallet. When scoring goes live, you&apos;ll have a head start.
+            Join with your email. Link a wallet anytime for beta priority when scoring goes live.
           </p>
         </AnimatedSection>
 

@@ -93,7 +93,7 @@ export function HeroSection() {
             </div>
 
             <p className="font-mono text-[10px] uppercase tracking-widest text-foreground/70">
-              Free demo — no login. Waitlist: email + wallet, ~2 min.
+              Free demo — no login. Waitlist: email first, wallet optional, ~2 min.
             </p>
 
             <div className="flex flex-wrap justify-center gap-2 pt-1">
