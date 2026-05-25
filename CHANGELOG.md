@@ -2,6 +2,17 @@
 
 All notable changes to this repository will be documented in this file.
 
+## 0.10.0 - 2026-05-25
+
+### Added
+- **Wave 1:** Login merge pending/confirmed UX; Stripe checkout on pricing and dashboard; Open App routes through `postAuthPath` for onboarding.
+- **Wave 2:** Canonical backend URLs; telegram poll rewrite; identity merge for Discord, GitHub, Telegram, and Twitter; approved signup email and social paths; product audit (sections 2 and 4).
+- **Waitlist:** Bot honeypot with fake 200 for bots; email-only, wallet-optional quest flow; Vitest bot-guard tests and Playwright waitlist journeys.
+- **Marketing:** Account score gated behind waitlist, demo, or auth; crypto Twitter hero marquee; hero avatar and contrast polish; hero/CTA wallet-optional copy.
+
+### Chore
+- Integrated Wave 1–2 login, waitlist, and marketing work via PR #25.
+
 ## 0.9.0 - 2026-05-25
 
 ### Added
