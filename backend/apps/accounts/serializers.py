@@ -40,6 +40,18 @@ class EmailVerifySerializer(serializers.Serializer):
     access_token = serializers.CharField()
 
 
+class IdentityMergeConfirmSerializer(serializers.Serializer):
+    """Single-use merge confirmation token from Resend email link."""
+
+    token = serializers.CharField()
+
+
+class IdentityMergeInitiateSerializer(serializers.Serializer):
+    """Initiate merge when Supabase-verified email matches an existing wallet account."""
+
+    access_token = serializers.CharField()
+
+
 class UserUpdateSerializer(serializers.ModelSerializer):
     """Mutable profile fields for PATCH ``/auth/me/`` (no wallet change here)."""
 

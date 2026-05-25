@@ -19,6 +19,7 @@ from apps.accounts.social_models import UserSocialAccount
 from .github_oauth import (
     build_github_authorize_url,
     exchange_github_code_for_tokens,
+    fetch_github_primary_email,
     fetch_github_user,
 )
 
@@ -118,6 +119,7 @@ class GitHubOAuthCallbackView(APIView):
             )
             access_token = token_payload.get("access_token", "")
             github_user = fetch_github_user(access_token)
+            github_email = fetch_github_primary_email(access_token)
         except ValueError as exc:
             logger.error("[GitHubOAuth] callback failed: %s", exc)
             return HttpResponseRedirect(
@@ -133,6 +135,7 @@ class GitHubOAuthCallbackView(APIView):
                 _frontend_redirect("/sources?github=error&reason=no_user")
             )
 
+        session["provider"] = "github"
         user, _created = resolve_social_user(
             session,
             connection_model=UserSocialAccount,
@@ -143,6 +146,7 @@ class GitHubOAuthCallbackView(APIView):
             display_name=display_name,
             avatar_url=avatar_url,
             connection_extra_filter={"platform": "github"},
+            email=github_email,
         )
 
         UserSocialAccount.objects.update_or_create(
@@ -159,6 +163,11 @@ class GitHubOAuthCallbackView(APIView):
 
         if session.get("mode") == "login":
             session["provider"] = "github"
+            if session.get("merge_required"):
+                email = session.get("merge_email", "")
+                return HttpResponseRedirect(
+                    _frontend_redirect(f"/login?merge=pending&email={email}")
+                )
             return HttpResponseRedirect(redirect_with_jwt(session, user, default_path="/login"))
 
         redirect_after = session.get("redirect_uri") or _frontend_redirect(

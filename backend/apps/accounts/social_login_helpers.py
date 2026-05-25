@@ -45,6 +45,7 @@ def resolve_social_user(
     display_name: str = "",
     avatar_url: str = "",
     connection_extra_filter: dict | None = None,
+    email: str = "",
 ) -> tuple[User, bool]:
     """
     Link mode: attach to session user_id.
@@ -74,4 +75,19 @@ def resolve_social_user(
         avatar_url=avatar_url or "",
     )
     session["created"] = True
+
+    if email and session.get("mode") == "login":
+        from .merge_service import find_user_by_email, initiate_email_merge, requires_email_merge_confirmation
+
+        target = find_user_by_email(email)
+        if target and requires_email_merge_confirmation(target, incoming_user=user):
+            initiate_email_merge(
+                email=email,
+                target_user=target,
+                source_user=user,
+                provider=session.get("provider"),
+            )
+            session["merge_required"] = True
+            session["merge_email"] = email
+
     return user, True
