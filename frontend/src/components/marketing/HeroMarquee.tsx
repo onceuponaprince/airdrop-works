@@ -56,16 +56,18 @@ function avatarUrl(handle: string) {
 function MarqueeAvatar({ handle }: { handle: string }) {
   return (
     <div className="hero-marquee-avatar group shrink-0">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={avatarUrl(handle)}
-        alt=""
-        loading="lazy"
-        decoding="async"
-        width={48}
-        height={48}
-        className="size-12 rounded-sm object-cover"
-      />
+      <div className="size-12 shrink-0 overflow-hidden rounded-full">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={avatarUrl(handle)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          width={48}
+          height={48}
+          className="size-12 rounded-full object-cover"
+        />
+      </div>
       <span className="hero-marquee-handle font-mono text-[8px] uppercase tracking-wider text-muted-foreground/50 truncate max-w-[72px]">
         @{handle}
       </span>
